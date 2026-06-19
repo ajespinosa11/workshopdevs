@@ -16,13 +16,19 @@ export async function sendVoucherEmail({ to, customerName, voucherCode, planName
   let previewUrl = ''
 
   if (useSmtp) {
+    const host = process.env.SMTP_HOST?.replace(/^["']|["']$/g, '').trim()
+    const portStr = process.env.SMTP_PORT?.toString().replace(/^["']|["']$/g, '').trim()
+    const secureStr = process.env.SMTP_SECURE?.toString().replace(/^["']|["']$/g, '').trim()
+    const user = process.env.SMTP_USER?.replace(/^["']|["']$/g, '').trim()
+    const pass = process.env.SMTP_PASS?.replace(/^["']|["']$/g, '').replace(/\s+/g, '')
+
     transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true',
+      host,
+      port: parseInt(portStr || '587', 10),
+      secure: secureStr === 'true',
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        user,
+        pass,
       },
     })
   } else {
