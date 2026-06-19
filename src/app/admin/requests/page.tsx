@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { markAsPaid } from './actions'
 import SyncButton from './SyncButton'
+import SendEmailButton from './SendEmailButton'
 
 export default async function AdminRequests() {
   const requests = await prisma.planRequest.findMany({
@@ -88,7 +89,10 @@ export default async function AdminRequests() {
                       </form>
                     )}
                     {req.status === 'PAID' && (
-                      <span className="badge badge-blue">Voucher Active</span>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
+                        <span className="badge badge-blue">Voucher Active</span>
+                        <SendEmailButton requestId={req.id} customerEmail={req.customerEmail} />
+                      </div>
                     )}
                   </td>
                 </tr>

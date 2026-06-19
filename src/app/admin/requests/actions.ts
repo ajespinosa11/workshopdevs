@@ -89,3 +89,44 @@ export async function markAsPaid(formData: FormData) {
     console.error('Error marking as paid:', error)
   }
 }
+
+export async function sendEmailAction(requestId: string) {
+  if (!requestId) return { error: 'Request ID is required' }
+
+  try {
+    const request = await prisma.planRequest.findUnique({
+      where: { id: requestId },
+      include: { selectedPlan: true }
+    })
+
+    if (!request) return { error: 'Request not found' }
+    if (request.status !== 'PAID') return { error: 'Plan request has not been paid yet' }
+
+    // Find the voucher associated with this request
+    const voucher = await prisma.voucher.findFirst({
+      where: { sourcePlanRequestId: request.id }
+    })
+
+    if (!voucher) return { error: 'No active voucher found for this request' }
+
+    // Dynamic import to resolve sendVoucherEmail
+    const { sendVoucherEmail } = await import('@/lib/email')
+
+    const result = await sendVoucherEmail({
+      to: request.customerEmail,
+      customerName: request.customerName,
+      voucherCode: voucher.voucherCode,
+      planName: request.selectedPlan.name,
+      creditHours: voucher.totalCreditHours
+    })
+
+    console.log(`[EMAIL SEND ACTION] Email sent successfully. Message ID: ${result.messageId}, Preview URL: ${result.previewUrl}`)
+
+    revalidatePath('/admin/requests')
+    return { success: true, previewUrl: result.previewUrl }
+  } catch (error: any) {
+    console.error('Error sending voucher email:', error)
+    return { error: error.message || 'Failed to send email' }
+  }
+}
+
