@@ -100,6 +100,8 @@ export default function BookSessionForm() {
         format: [140, 80] // Custom ticket size: 140mm x 80mm
       })
 
+      const selSession = sessions.find(s => s.id === selectedSessionId)
+
       // Background
       doc.setFillColor(248, 250, 252) // #f8fafc
       doc.rect(0, 0, 140, 80, 'F')
@@ -122,11 +124,13 @@ export default function BookSessionForm() {
       doc.setTextColor(15, 37, 64)
       doc.setFont('Helvetica', 'bold')
       doc.setFontSize(10)
-      doc.text('PASSENGER / CUSTOMER', 8, 24)
+      doc.text('CUSTOMER NAME', 8, 24)
       doc.setFont('Helvetica', 'normal')
       doc.setFontSize(11)
       doc.setTextColor(74, 85, 104)
-      doc.text(successData.customerName || 'Customer', 8, 29)
+      
+      const custName = voucher?.customerName || successData.customerName || 'Customer'
+      doc.text(custName, 8, 29)
 
       doc.setTextColor(15, 37, 64)
       doc.setFont('Helvetica', 'bold')
@@ -136,14 +140,22 @@ export default function BookSessionForm() {
       doc.setFontSize(10)
       doc.setTextColor(74, 85, 104)
       
-      const dateStr = new Date(successData.sessionDate).toLocaleDateString(undefined, {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      })
+      const sessionDateRaw = selSession?.sessionDate || successData.sessionDate
+      const dateStr = sessionDateRaw 
+        ? new Date(sessionDateRaw).toLocaleDateString(undefined, {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          })
+        : 'N/A'
+      
+      const startTime = selSession?.startTime || successData.startTime || '00:00'
+      const endTime = selSession?.endTime || successData.endTime || '00:00'
+      const category = selSession?.category || successData.category || 'N/A'
+
       doc.text(`${dateStr}`, 8, 43)
-      doc.text(`${successData.startTime} - ${successData.endTime} (${successData.category})`, 8, 48)
+      doc.text(`${startTime} - ${endTime} (${category})`, 8, 48)
 
       doc.setTextColor(15, 37, 64)
       doc.setFont('Helvetica', 'bold')
@@ -152,8 +164,12 @@ export default function BookSessionForm() {
       doc.setFont('Helvetica', 'normal')
       doc.setFontSize(9)
       doc.setTextColor(74, 85, 104)
-      doc.text(`Voucher Code: ${successData.voucherCode}`, 8, 62)
-      doc.text(`Credits: ${successData.creditHoursToDeduct} hrs`, 8, 67)
+      
+      const vCode = voucher?.voucherCode || successData.voucherCode || 'N/A'
+      const creditHours = successData.creditHoursToDeduct || Math.min(voucher?.remainingCreditHours || 0, selSession?.durationHours || 0)
+
+      doc.text(`Voucher Code: ${vCode}`, 8, 62)
+      doc.text(`Credits: ${creditHours} hrs`, 8, 67)
       
       if (successData.status === 'BALANCE_DUE') {
         doc.setTextColor(220, 38, 38)
