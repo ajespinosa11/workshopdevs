@@ -12,6 +12,93 @@ export default function CheckInClient() {
 
   const [voucherCode, setVoucherCode] = useState('')
   const [bookingReference, setBookingReference] = useState('')
+  const [scanning, setScanning] = useState(false)
+  const [html5Qrcode, setHtml5Qrcode] = useState<any>(null)
+
+  useEffect(() => {
+    return () => {
+      if (html5Qrcode) {
+        html5Qrcode.stop().catch(console.error)
+      }
+    }
+  }, [html5Qrcode])
+
+  const startScanning = async () => {
+    setScanning(true)
+    setError('')
+    try {
+      const { Html5Qrcode } = await import('html5-qrcode')
+      const qrScanner = new Html5Qrcode('qr-reader')
+      setHtml5Qrcode(qrScanner)
+
+      await qrScanner.start(
+        { facingMode: 'environment' },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 }
+        },
+        async (decodedText) => {
+          let vCode = ''
+          let bRef = ''
+          
+          if (decodedText.includes('?')) {
+            const urlParams = new URLSearchParams(decodedText.split('?')[1])
+            vCode = urlParams.get('voucherCode') || ''
+            bRef = urlParams.get('bookingReference') || ''
+          } else if (decodedText.includes(',')) {
+            const parts = decodedText.split(',')
+            vCode = parts[0]?.trim() || ''
+            bRef = parts[1]?.trim() || ''
+          } else {
+            vCode = decodedText
+          }
+
+          if (vCode) setVoucherCode(vCode)
+          if (bRef) setBookingReference(bRef)
+
+          try {
+            await qrScanner.stop()
+          } catch (stopErr) {
+            console.error('Error stopping scanner during success callback:', stopErr)
+          }
+          setScanning(false)
+          setHtml5Qrcode(null)
+
+          if (vCode && bRef) {
+            setLoading(true)
+            const formData = new FormData()
+            formData.append('voucherCode', vCode)
+            formData.append('bookingReference', bRef)
+            const res = await validateCheckInDetails(formData)
+            if (res.error) {
+              setError(res.error)
+            } else if (res.success) {
+              setDetails({ voucher: res.voucher, booking: res.booking })
+              setStep(2)
+            }
+            setLoading(false)
+          }
+        },
+        () => {}
+      )
+    } catch (err: any) {
+      console.error(err)
+      setError('Could not access camera: ' + (err.message || err))
+      setScanning(false)
+    }
+  }
+
+  const stopScanning = async () => {
+    if (html5Qrcode) {
+      try {
+        await html5Qrcode.stop()
+      } catch (err) {
+        console.error('Error stopping scanner:', err)
+      }
+      setHtml5Qrcode(null)
+    }
+    setScanning(false)
+  }
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -165,6 +252,46 @@ export default function CheckInClient() {
     <form onSubmit={handleValidate} className="flex flex-col gap-4">
       {error && <div className="p-3 bg-red-100 text-red-700 rounded-md">{error}</div>}
       
+      {/* Webcam scanner interface */}
+      {scanning ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', margin: '1rem 0', padding: '1rem', background: '#f8fafc', borderRadius: '1rem', border: '1px solid #e2e8f0' }}>
+          <div id="qr-reader" style={{ width: '100%', maxWidth: '320px', overflow: 'hidden', borderRadius: '0.75rem', border: '2px solid var(--accent)' }}></div>
+          <button type="button" onClick={stopScanning} className="btn btn-secondary" style={{ padding: '0.4rem 1.2rem', fontSize: '0.85rem' }}>
+            Cancel Scanning
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={startScanning}
+          className="admin-btn-outline"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            padding: '0.75rem',
+            borderRadius: '0.75rem',
+            backgroundColor: 'var(--accent)',
+            borderColor: 'var(--accent)',
+            color: 'white',
+            fontWeight: 600,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            boxShadow: '0 4px 6px rgba(249, 115, 22, 0.15)',
+            marginBottom: '0.5rem',
+            width: '100%',
+            height: '42px'
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+          Scan QR Code Ticket
+        </button>
+      )}
+
       <div className="input-group">
         <label htmlFor="voucherCode">Voucher Code</label>
         <input 
