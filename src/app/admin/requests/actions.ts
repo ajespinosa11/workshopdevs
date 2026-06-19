@@ -1,0 +1,91 @@
+'use server'
+
+import { prisma } from '@/lib/prisma'
+import { revalidatePath } from 'next/cache'
+
+// Helper function to generate a unique voucher code
+async function generateVoucherCode() {
+  const count = await prisma.voucher.count()
+  const paddedCount = String(count + 1).padStart(6, '0')
+  return `MLWS-VCH-${paddedCount}`
+}
+
+export async function markAsPaid(formData: FormData) {
+  const requestId = formData.get('requestId') as string
+  if (!requestId) return
+
+  try {
+    const request = await prisma.planRequest.findUnique({
+      where: { id: requestId },
+      include: { selectedPlan: true }
+    })
+
+    if (!request || request.status !== 'PENDING_PAYMENT') {
+      return
+    }
+
+    // 1. Mark request as PAID
+    await prisma.planRequest.update({
+      where: { id: requestId },
+      data: { status: 'PAID' }
+    })
+
+    // 2. Generate Voucher
+    const voucherCode = await generateVoucherCode()
+    
+    // Generate QR code data using dynamic import to avoid Turbopack bundling issues
+    let qrCodeData = ''
+    try {
+      const QRCode = await import('qrcode')
+      qrCodeData = await QRCode.default.toDataURL(voucherCode)
+    } catch {
+      // Fallback: store voucher code as-is if QR generation fails
+      qrCodeData = voucherCode
+    }
+
+    const voucher = await prisma.voucher.create({
+      data: {
+        voucherCode,
+        qrCodeData,
+        customerName: request.customerName,
+        customerEmail: request.customerEmail,
+        customerPhone: request.customerPhone,
+        planId: request.selectedPlanId,
+        sourcePlanRequestId: request.id,
+        totalCreditHours: request.selectedPlan.creditHours,
+        remainingCreditHours: request.selectedPlan.creditHours,
+        status: 'ACTIVE'
+      }
+    })
+
+    // 3. Record Initial Credit Transaction
+    await prisma.creditTransaction.create({
+      data: {
+        voucherId: voucher.id,
+        transactionType: 'CREDIT_ADDED',
+        hoursAdded: request.selectedPlan.creditHours,
+        description: `Initial credit for ${request.selectedPlan.name}`,
+      }
+    })
+
+    // 4. Mock Email Sending
+    console.log(`
+      [EMAIL SENT]
+      To: ${request.customerEmail}
+      Subject: Payment Received - Your 3D Printing Workshop Voucher
+      
+      Hi ${request.customerName},
+      
+      Your payment for the ${request.selectedPlan.name} has been received!
+      Your unique voucher code is: ${voucherCode}
+      Total Credit Hours: ${request.selectedPlan.creditHours}
+      
+      You can now book sessions using this voucher code on our website.
+      Remember that credits are consumed only during physical check-in.
+    `)
+
+    revalidatePath('/admin/requests')
+  } catch (error) {
+    console.error('Error marking as paid:', error)
+  }
+}

@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model StaffUser {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  password_hash String
+  role          String   // "ADMIN" or "RECEPTIONIST"
+  status        String   @default("ACTIVE")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  createdTransactions CreditTransaction[]
+  checkedInAttendances Attendance[]
+}
+
+model Plan {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  price         Float
+  creditHours   Int
+  isActive      Boolean  @default(true)
+  storehubSku   String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  vouchers      Voucher[]
+  requests      PlanRequest[]
+}
+
+model PlanRequest {
+  id                    String   @id @default(uuid())
+  customerName          String
+  customerEmail         String
+  customerPhone         String
+  selectedPlanId        String
+  selectedPlan          Plan     @relation(fields: [selectedPlanId], references: [id])
+  status                String   @default("PENDING_PAYMENT") // PENDING_PAYMENT, PAID, REJECTED
+  adminNotes            String?
+  storehubTransactionId String?  @unique
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  vouchers         Voucher[]
+}
+
+model Voucher {
+  id                     String   @id @default(uuid())
+  voucherCode            String   @unique
+  qrCodeData             String?  
+  customerName           String
+  customerEmail          String
+  customerPhone          String
+  planId                 String
+  plan                   Plan     @relation(fields: [planId], references: [id])
+  sourcePlanRequestId    String?
+  sourcePlanRequest      PlanRequest? @relation(fields: [sourcePlanRequestId], references: [id])
+  totalCreditHours       Int
+  remainingCreditHours   Int
+  status                 String   @default("ACTIVE") // ACTIVE, FULLY_USED, SUSPENDED, CANCELLED
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  bookings               Booking[]
+  transactions           CreditTransaction[]
+  attendances            Attendance[]
+}
+
+model WorkshopSession {
+  id               String   @id @default(uuid())
+  category         String   // BEGINNER, INTERMEDIATE, ADVANCED
+  sessionDate      DateTime
+  startTime        String
+  endTime          String
+  durationHours    Int
+  capacity         Int      @default(20)
+  availableSlots   Int
+  status           String   @default("OPEN") // OPEN, FULL, CANCELLED, COMPLETED
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  bookings         Booking[]
+  attendances      Attendance[]
+}
+
+model Booking {
+  id                      String   @id @default(uuid())
+  bookingReference        String   @unique
+  bookingQrCodeData       String?
+  voucherId               String
+  voucher                 Voucher  @relation(fields: [voucherId], references: [id])
+  sessionId               String
+  session                 WorkshopSession @relation(fields: [sessionId], references: [id])
+  customerName            String
+  customerEmail           String
+  customerPhone           String
+  status                  String   @default("RESERVED") // RESERVED, BALANCE_DUE, CANCELLED_BY_CUSTOMER, RELEASED_TO_WALKIN, NO_SHOW, CHECKED_IN, COMPLETED_CONSUMED, WALKIN_CONFIRMED
+  sessionDurationHours    Int
+  creditHoursToDeduct     Int
+  balanceDueHours         Int      @default(0)
+  balanceDueAmount        Float    @default(0)
+  balanceDuePaid          Boolean  @default(true)
+  checkedInAt             DateTime?
+  cancelledAt             DateTime?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  transactions            CreditTransaction[]
+  attendance              Attendance?
+}
+
+model CreditTransaction {
+  id                    String   @id @default(uuid())
+  voucherId             String
+  voucher               Voucher  @relation(fields: [voucherId], references: [id])
+  bookingId             String?
+  booking               Booking? @relation(fields: [bookingId], references: [id])
+  transactionType       String   // CREDIT_ADDED, CREDIT_DEDUCTED, MANUAL_ADJUSTMENT, BALANCE_DUE_PAYMENT
+  hoursAdded            Int      @default(0)
+  hoursDeducted         Int      @default(0)
+  amountPaid            Float    @default(0)
+  description           String?
+  createdByStaffId      String?
+  createdByStaff        StaffUser? @relation(fields: [createdByStaffId], references: [id])
+  createdAt             DateTime @default(now())
+}
+
+model Attendance {
+  id                    String   @id @default(uuid())
+  bookingId             String   @unique
+  booking               Booking  @relation(fields: [bookingId], references: [id])
+  voucherId             String
+  voucher               Voucher  @relation(fields: [voucherId], references: [id])
+  sessionId             String
+  session               WorkshopSession @relation(fields: [sessionId], references: [id])
+  checkInMethod         String   // VOUCHER_QR, MANUAL_ENTRY, WALK_IN
+  checkedInByStaffId    String
+  checkedInByStaff      StaffUser @relation(fields: [checkedInByStaffId], references: [id])
+  checkedInAt           DateTime @default(now())
+  notes                 String?
+}
+
+model SystemSetting {
+  id            String   @id @default(uuid())
+  settingKey    String   @unique
+  settingValue  String
+}
