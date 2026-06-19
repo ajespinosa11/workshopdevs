@@ -10,7 +10,10 @@ export async function checkBookingStatusAction(formData: FormData) {
 
   const booking = await prisma.booking.findUnique({
     where: { bookingReference },
-    include: { session: true }
+    include: { 
+      session: true,
+      voucher: true
+    }
   })
 
   if (!booking || booking.customerEmail !== email) {
