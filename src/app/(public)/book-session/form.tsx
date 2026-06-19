@@ -91,6 +91,110 @@ export default function BookSessionForm() {
 
   const changeMonth = (offset: number) => setCurrentDate(new Date(year, month + offset, 1))
 
+  const downloadTicketPDF = async () => {
+    try {
+      const { jsPDF } = await import('jspdf')
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: [140, 80] // Custom ticket size: 140mm x 80mm
+      })
+
+      // Background
+      doc.setFillColor(248, 250, 252) // #f8fafc
+      doc.rect(0, 0, 140, 80, 'F')
+
+      // Header Banner
+      doc.setFillColor(15, 37, 64) // #0f2540
+      doc.rect(0, 0, 140, 15, 'F')
+
+      // Header text
+      doc.setTextColor(255, 255, 255)
+      doc.setFont('Helvetica', 'bold')
+      doc.setFontSize(14)
+      doc.text('MAKERLAB 3D WORKSHOP', 8, 10)
+
+      doc.setFont('Helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.text('ENTRY TICKET', 132, 10, { align: 'right' })
+
+      // Ticket Body details
+      doc.setTextColor(15, 37, 64)
+      doc.setFont('Helvetica', 'bold')
+      doc.setFontSize(10)
+      doc.text('PASSENGER / CUSTOMER', 8, 24)
+      doc.setFont('Helvetica', 'normal')
+      doc.setFontSize(11)
+      doc.setTextColor(74, 85, 104)
+      doc.text(successData.customerName || 'Customer', 8, 29)
+
+      doc.setTextColor(15, 37, 64)
+      doc.setFont('Helvetica', 'bold')
+      doc.setFontSize(10)
+      doc.text('SESSION DETAILS', 8, 38)
+      doc.setFont('Helvetica', 'normal')
+      doc.setFontSize(10)
+      doc.setTextColor(74, 85, 104)
+      
+      const dateStr = new Date(successData.sessionDate).toLocaleDateString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      })
+      doc.text(`${dateStr}`, 8, 43)
+      doc.text(`${successData.startTime} - ${successData.endTime} (${successData.category})`, 8, 48)
+
+      doc.setTextColor(15, 37, 64)
+      doc.setFont('Helvetica', 'bold')
+      doc.setFontSize(10)
+      doc.text('VOUCHER & STATUS', 8, 57)
+      doc.setFont('Helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(74, 85, 104)
+      doc.text(`Voucher Code: ${successData.voucherCode}`, 8, 62)
+      doc.text(`Credits: ${successData.creditHoursToDeduct} hrs`, 8, 67)
+      
+      if (successData.status === 'BALANCE_DUE') {
+        doc.setTextColor(220, 38, 38)
+        doc.setFont('Helvetica', 'bold')
+        doc.text(`BALANCE DUE: PHP ${successData.balanceDueAmount}`, 8, 72)
+      } else {
+        doc.setTextColor(22, 163, 74)
+        doc.setFont('Helvetica', 'bold')
+        doc.text('STATUS: CONFIRMED', 8, 72)
+      }
+
+      // Ticket Divider Dash Line
+      doc.setDrawColor(203, 213, 225)
+      doc.setLineDashPattern([2, 2], 0)
+      doc.line(95, 15, 95, 80)
+
+      // QR Code Section
+      doc.setLineDashPattern([], 0)
+      if (successData.bookingQrCodeData) {
+        doc.addImage(successData.bookingQrCodeData, 'PNG', 98, 20, 36, 36)
+      }
+
+      // QR label
+      doc.setTextColor(15, 37, 64)
+      doc.setFont('Helvetica', 'bold')
+      doc.setFontSize(9)
+      doc.text(successData.bookingReference, 116, 61, { align: 'center' })
+
+      doc.setFont('Helvetica', 'normal')
+      doc.setFontSize(7)
+      doc.setTextColor(113, 128, 150)
+      doc.text('SCAN AT RECEPTION', 116, 66, { align: 'center' })
+
+      // Save PDF
+      doc.save(`Ticket-${successData.bookingReference}.pdf`)
+    } catch (err) {
+      console.error('Failed to generate PDF', err)
+      alert('Error generating PDF ticket. Please try again.')
+    }
+  }
+
   // ─── Step 3: Confirmation ─────────────────────────────
   if (step === 3 && successData) {
     return (
@@ -117,8 +221,28 @@ export default function BookSessionForm() {
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-          <button onClick={() => router.push('/')} className="pricing-btn pricing-btn-solid" style={{ maxWidth: '200px' }}>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1.5rem' }}>
+          <button 
+            onClick={downloadTicketPDF} 
+            className="pricing-btn pricing-btn-solid" 
+            style={{ 
+              maxWidth: '240px', 
+              background: 'var(--accent)', 
+              borderColor: 'var(--accent)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Download PDF Ticket
+          </button>
+          <button onClick={() => router.push('/')} className="pricing-btn pricing-btn-outline" style={{ maxWidth: '200px' }}>
             Return to Home
           </button>
         </div>

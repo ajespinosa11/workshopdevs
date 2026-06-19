@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { validateCheckInDetails, processCheckIn, markBalancePaid } from './actions'
 
 export default function CheckInClient() {
@@ -9,6 +9,40 @@ export default function CheckInClient() {
   const [step, setStep] = useState(1)
   const [details, setDetails] = useState<any>(null)
   const [success, setSuccess] = useState(false)
+
+  const [voucherCode, setVoucherCode] = useState('')
+  const [bookingReference, setBookingReference] = useState('')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const vCode = params.get('voucherCode')
+      const bRef = params.get('bookingReference')
+      
+      if (vCode) setVoucherCode(vCode)
+      if (bRef) setBookingReference(bRef)
+
+      if (vCode && bRef) {
+        const autoSubmit = async () => {
+          setLoading(true)
+          setError('')
+          const formData = new FormData()
+          formData.append('voucherCode', vCode)
+          formData.append('bookingReference', bRef)
+          
+          const res = await validateCheckInDetails(formData)
+          if (res.error) {
+            setError(res.error)
+          } else if (res.success) {
+            setDetails({ voucher: res.voucher, booking: res.booking })
+            setStep(2)
+          }
+          setLoading(false)
+        }
+        autoSubmit()
+      }
+    }
+  }, [])
 
   async function handleValidate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -133,12 +167,30 @@ export default function CheckInClient() {
       
       <div className="input-group">
         <label htmlFor="voucherCode">Voucher Code</label>
-        <input type="text" id="voucherCode" name="voucherCode" required className="input-field" placeholder="MLWS-VCH-XXXXXX" />
+        <input 
+          type="text" 
+          id="voucherCode" 
+          name="voucherCode" 
+          required 
+          value={voucherCode}
+          onChange={(e) => setVoucherCode(e.target.value)}
+          className="input-field" 
+          placeholder="MLWS-VCH-XXXXXX" 
+        />
       </div>
 
       <div className="input-group">
         <label htmlFor="bookingReference">Booking Reference Number</label>
-        <input type="text" id="bookingReference" name="bookingReference" required className="input-field" placeholder="MLWS-BK-XXXXXX" />
+        <input 
+          type="text" 
+          id="bookingReference" 
+          name="bookingReference" 
+          required 
+          value={bookingReference}
+          onChange={(e) => setBookingReference(e.target.value)}
+          className="input-field" 
+          placeholder="MLWS-BK-XXXXXX" 
+        />
       </div>
 
       <button type="submit" className="btn btn-primary mt-4" disabled={loading}>

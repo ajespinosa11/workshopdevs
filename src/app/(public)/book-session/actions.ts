@@ -139,10 +139,22 @@ export async function createBooking(formData: FormData) {
 
     const bookingReference = await generateBookingReference()
     
+    // Generate QR code with receptionist check-in link
+    let bookingQrCodeData = ''
+    try {
+      const QRCode = await import('qrcode')
+      const hostUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+      const qrValue = `${hostUrl}/receptionist?voucherCode=${voucher.voucherCode}&bookingReference=${bookingReference}`
+      bookingQrCodeData = await QRCode.default.toDataURL(qrValue)
+    } catch (err) {
+      console.error('Failed to generate booking QR code:', err)
+    }
+
     const booking = await prisma.$transaction(async (tx) => {
       const b = await tx.booking.create({
         data: {
           bookingReference,
+          bookingQrCodeData,
           voucherId: voucher.id,
           sessionId: session.id,
           customerName: voucher.customerName,
@@ -167,7 +179,22 @@ export async function createBooking(formData: FormData) {
 
     console.log(`[EMAIL SENT] Booking Confirmation ${bookingReference} to ${voucher.customerEmail}. Status: ${status}`)
 
-    return { success: true, bookingReference, status, balanceDueAmount }
+    return { 
+      success: true, 
+      bookingReference, 
+      status, 
+      balanceDueAmount,
+      bookingQrCodeData,
+      customerName: voucher.customerName,
+      customerEmail: voucher.customerEmail,
+      sessionDate: session.sessionDate.toISOString(),
+      startTime: session.startTime,
+      endTime: session.endTime,
+      category: session.category,
+      durationHours: session.durationHours,
+      creditHoursToDeduct: Math.min(effectiveRemainingHours, duration),
+      voucherCode: voucher.voucherCode
+    }
   } catch (error) {
     console.error('Booking error:', error)
     return { error: 'Internal server error during booking.' }
