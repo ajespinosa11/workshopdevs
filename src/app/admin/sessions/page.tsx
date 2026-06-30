@@ -9,6 +9,7 @@ export default async function AdminSessionsPage() {
     orderBy: { sessionDate: 'asc' },
     where: { sessionDate: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
     include: {
+      module: true,
       bookings: {
         select: {
           id: true,
@@ -20,6 +21,10 @@ export default async function AdminSessionsPage() {
         }
       }
     }
+  })
+
+  const modules = await prisma.module.findMany({
+    orderBy: { name: 'asc' }
   })
 
   // Serialize for the client component
@@ -34,7 +39,13 @@ export default async function AdminSessionsPage() {
     availableSlots: s.availableSlots,
     status: s.status,
     bookingsCount: s.bookings.filter(b => b.status === 'RESERVED' || b.status === 'BALANCE_DUE').length,
-    bookings: s.bookings
+    bookings: s.bookings,
+    module: {
+      id: s.module.id,
+      name: s.module.name,
+      description: s.module.description,
+      units: s.module.units
+    }
   }))
 
   return (
@@ -44,7 +55,7 @@ export default async function AdminSessionsPage() {
         <p style={{ color: 'var(--admin-text-secondary)', fontSize: '0.95rem' }}>Browse the calendar to view and manage workshop time slots.</p>
       </div>
 
-      <AdminSessionsCalendar sessions={serialized} />
+      <AdminSessionsCalendar sessions={serialized} modules={modules} />
     </div>
   )
 }

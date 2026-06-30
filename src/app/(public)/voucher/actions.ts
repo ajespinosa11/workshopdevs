@@ -13,7 +13,7 @@ export async function checkVoucherStatusAction(formData: FormData) {
     include: { plan: true }
   })
 
-  if (!voucher || voucher.customerEmail !== email) {
+  if (!voucher || voucher.customerEmail.toLowerCase().trim() !== email.toLowerCase().trim()) {
     return { error: 'Invalid voucher code or email address.' }
   }
 

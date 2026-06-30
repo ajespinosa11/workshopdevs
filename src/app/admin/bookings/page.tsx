@@ -7,7 +7,11 @@ export default async function AdminBookingsPage() {
   const bookings = await prisma.booking.findMany({
     orderBy: { createdAt: 'desc' },
     include: {
-      session: true,
+      session: {
+        include: {
+          module: true
+        }
+      },
       voucher: true
     }
   })
@@ -40,7 +44,7 @@ export default async function AdminBookingsPage() {
                 <th>Customer</th>
                 <th>Voucher Used</th>
                 <th>Session details</th>
-                <th>Deducted Credits</th>
+                <th>Units Deducted</th>
                 <th>Status</th>
                 <th>Booked At</th>
               </tr>
@@ -66,10 +70,10 @@ export default async function AdminBookingsPage() {
                       {b.session.startTime} - {b.session.endTime}
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--admin-text-secondary)' }}>
-                      Category: {b.session.category}
+                      Category: {b.session.category} | Module: {b.session.module?.name}
                     </div>
                   </td>
-                  <td style={{ fontWeight: 600 }}>{b.creditHoursToDeduct} hrs</td>
+                  <td style={{ fontWeight: 600 }}>{b.unitsToDeduct} units</td>
                   <td>
                     <span className={`badge ${
                       b.status === 'CHECKED_IN' || b.status === 'WALKIN_CONFIRMED' ? 'badge-green' : 

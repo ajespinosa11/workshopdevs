@@ -38,7 +38,7 @@ export default function VoucherLookupPage() {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '2rem' }}>
         {/* Left Column: Input Form */}
         <div className="glass-card" style={{ height: 'fit-content', borderRadius: '1.5rem', padding: '2.5rem' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '1.5rem' }}>Search Voucher</h2>
@@ -113,14 +113,14 @@ export default function VoucherLookupPage() {
                 </div>
                 
                 <div className="cal-details-row">
-                  <span className="cal-details-label">Total Credit Hours:</span>
-                  <span className="cal-details-value">{voucher.totalCreditHours} hours</span>
+                  <span className="cal-details-label">Total Units:</span>
+                  <span className="cal-details-value">{voucher.totalUnits} units</span>
                 </div>
 
                 <div className="cal-details-row" style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem', marginTop: '0.5rem' }}>
-                  <span className="cal-details-label" style={{ fontWeight: 700 }}>Remaining Credit:</span>
+                  <span className="cal-details-label" style={{ fontWeight: 700 }}>Remaining Balance:</span>
                   <span className="cal-details-value" style={{ color: 'var(--accent)', fontSize: '1.2rem', fontWeight: 800 }}>
-                    {voucher.remainingCreditHours} hours
+                    {voucher.remainingUnits} units
                   </span>
                 </div>
               </div>

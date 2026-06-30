@@ -162,8 +162,8 @@ export async function syncStoreHubTransactions(daysAgo: number = 30): Promise<Sy
             customerPhone,
             planId: plan.id,
             sourcePlanRequestId: planRequest.id,
-            totalCreditHours: plan.creditHours,
-            remainingCreditHours: plan.creditHours,
+            totalUnits: plan.creditUnits,
+            remainingUnits: plan.creditUnits,
             status: 'ACTIVE'
           }
         })
@@ -173,8 +173,8 @@ export async function syncStoreHubTransactions(daysAgo: number = 30): Promise<Sy
           data: {
             voucherId: voucher.id,
             transactionType: 'CREDIT_ADDED',
-            hoursAdded: plan.creditHours,
-            description: `Initial credit for ${plan.name} (StoreHub POS Purchase)`,
+            unitsAdded: plan.creditUnits,
+            description: `Initial units for ${plan.name} (StoreHub POS Purchase)`,
           }
         })
 
@@ -188,7 +188,7 @@ export async function syncStoreHubTransactions(daysAgo: number = 30): Promise<Sy
           
           We received your payment on StoreHub for the ${plan.name}!
           Your unique voucher code is: ${voucherCode}
-          Total Credit Hours: ${plan.creditHours}
+          Total Units: ${plan.creditUnits}
           
           You can now book sessions using this voucher code on our website.
         `)

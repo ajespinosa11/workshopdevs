@@ -14,7 +14,7 @@ export async function validateVoucherAndGetSessions(formData: FormData) {
     include: { plan: true }
   })
 
-  if (!voucher || voucher.customerEmail !== email) {
+  if (!voucher || voucher.customerEmail.toLowerCase().trim() !== email.toLowerCase().trim()) {
     return { error: 'Invalid voucher details or contact information.' }
   }
 
@@ -22,37 +22,53 @@ export async function validateVoucherAndGetSessions(formData: FormData) {
     return { error: 'Voucher is not active.' }
   }
 
-  // Calculate total credit hours already committed by upcoming active bookings
-  const reservedBookings = await prisma.booking.findMany({
+  // Find all modules the customer has already completed or reserved
+  const customerBookings = await prisma.booking.findMany({
     where: {
-      voucherId: voucher.id,
+      customerEmail: { equals: voucher.customerEmail, mode: 'insensitive' },
       status: {
-        in: ['RESERVED', 'BALANCE_DUE']
+        in: ['RESERVED', 'BALANCE_DUE', 'CHECKED_IN', 'COMPLETED_CONSUMED', 'WALKIN_CONFIRMED']
       }
+    },
+    include: {
+      session: true
     }
   })
 
-  const totalReservedHours = reservedBookings.reduce((sum, b) => sum + b.creditHoursToDeduct, 0)
-  const effectiveRemainingHours = Math.max(0, voucher.remainingCreditHours - totalReservedHours)
+  const bookedModuleIds = customerBookings.map(b => b.session.moduleId)
 
-  if (effectiveRemainingHours <= 0) {
-    return { error: 'You have already reserved bookings up to your voucher credit limit. Please cancel an existing booking first.' }
+  // Calculate total units already committed by upcoming active bookings
+  const reservedBookings = customerBookings.filter(b => b.status === 'RESERVED' || b.status === 'BALANCE_DUE')
+  const totalReservedUnits = reservedBookings.reduce((sum, b) => sum + b.unitsToDeduct, 0)
+  const effectiveRemainingUnits = Math.max(0, voucher.remainingUnits - totalReservedUnits)
+
+  if (effectiveRemainingUnits <= 0) {
+    return { error: 'You have already reserved bookings up to your voucher unit limit. Please cancel an existing booking first.' }
   }
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
+  // Load upcoming sessions including their module details
   const sessions = await prisma.workshopSession.findMany({
     where: {
       sessionDate: { gte: today },
       status: 'OPEN',
       availableSlots: { gt: 0 }
     },
+    include: {
+      module: true
+    },
     orderBy: { sessionDate: 'asc' }
   })
 
   const now = new Date()
   const activeSessions = sessions.filter(session => {
+    // Check if customer already booked/accomplished this module
+    if (bookedModuleIds.includes(session.moduleId)) {
+      return false
+    }
+
     const startParts = session.startTime.split(':')
     const startHours = parseInt(startParts[0], 10)
     const startMinutes = parseInt(startParts[1], 10)
@@ -63,13 +79,32 @@ export async function validateVoucherAndGetSessions(formData: FormData) {
     return sessionStart > now
   })
 
-  // Attach effectiveRemainingHours to the voucher object returned
+  // Attach effectiveRemainingUnits to the voucher object returned
   const voucherWithEffective = {
     ...voucher,
-    remainingCreditHours: effectiveRemainingHours
+    remainingUnits: effectiveRemainingUnits
   }
 
-  return { success: true, voucher: voucherWithEffective, sessions: activeSessions }
+  // Format active sessions for calendar mapping
+  const formattedSessions = activeSessions.map(s => ({
+    id: s.id,
+    category: s.category,
+    sessionDate: s.sessionDate.toISOString(),
+    startTime: s.startTime,
+    endTime: s.endTime,
+    durationHours: s.durationHours,
+    capacity: s.capacity,
+    availableSlots: s.availableSlots,
+    status: s.status,
+    module: {
+      id: s.module.id,
+      name: s.module.name,
+      description: s.module.description,
+      units: s.module.units
+    }
+  }))
+
+  return { success: true, voucher: voucherWithEffective, sessions: formattedSessions }
 }
 
 async function generateBookingReference() {
@@ -83,16 +118,51 @@ export async function createBooking(formData: FormData) {
 
   const voucherId = formData.get('voucherId') as string
   const sessionId = formData.get('sessionId') as string
+  const notes = formData.get('notes') as string
 
   if (!voucherId || !sessionId) return { error: 'Missing information.' }
 
   try {
     const voucher = await prisma.voucher.findUnique({ where: { id: voucherId } })
-    const session = await prisma.workshopSession.findUnique({ where: { id: sessionId } })
+    const session = await prisma.workshopSession.findUnique({ 
+      where: { id: sessionId },
+      include: { module: true }
+    })
     const settings = await prisma.systemSetting.findUnique({ where: { settingKey: 'fixed_hourly_rate' } })
     
     if (!voucher || !session) return { error: 'Invalid voucher or session.' }
     if (session.availableSlots <= 0) return { error: 'Session is full.' }
+
+    // Enforce booking restriction
+    const existingBooking = await prisma.booking.findFirst({
+      where: {
+        customerEmail: { equals: voucher.customerEmail, mode: 'insensitive' },
+        sessionId: session.id,
+        status: {
+          in: ['RESERVED', 'BALANCE_DUE', 'CHECKED_IN', 'COMPLETED_CONSUMED', 'WALKIN_CONFIRMED']
+        }
+      }
+    })
+
+    if (existingBooking) {
+      return { error: 'You have already booked this session.' }
+    }
+
+    const sameModuleBooking = await prisma.booking.findFirst({
+      where: {
+        customerEmail: { equals: voucher.customerEmail, mode: 'insensitive' },
+        session: {
+          moduleId: session.moduleId
+        },
+        status: {
+          in: ['RESERVED', 'BALANCE_DUE', 'CHECKED_IN', 'COMPLETED_CONSUMED', 'WALKIN_CONFIRMED']
+        }
+      }
+    })
+
+    if (sameModuleBooking) {
+      return { error: 'You have already completed or reserved this module.' }
+    }
 
     // Enforce that session start time is in the future
     const startParts = session.startTime.split(':')
@@ -106,7 +176,7 @@ export async function createBooking(formData: FormData) {
       return { error: 'This session has already started or ended.' }
     }
 
-    // Double check reserved hours on actual booking creation
+    // Double check reserved units on actual booking creation
     const reservedBookings = await prisma.booking.findMany({
       where: {
         voucherId: voucher.id,
@@ -116,24 +186,24 @@ export async function createBooking(formData: FormData) {
       }
     })
 
-    const totalReservedHours = reservedBookings.reduce((sum, b) => sum + b.creditHoursToDeduct, 0)
-    const effectiveRemainingHours = Math.max(0, voucher.remainingCreditHours - totalReservedHours)
+    const totalReservedUnits = reservedBookings.reduce((sum, b) => sum + b.unitsToDeduct, 0)
+    const effectiveRemainingUnits = Math.max(0, voucher.remainingUnits - totalReservedUnits)
 
-    if (effectiveRemainingHours <= 0) {
-      return { error: 'You have already reserved bookings up to your voucher credit limit. Please cancel an existing booking first.' }
+    if (effectiveRemainingUnits <= 0) {
+      return { error: 'You have already reserved bookings up to your voucher unit limit. Please cancel an existing booking first.' }
     }
 
-    const hourlyRate = settings ? parseFloat(settings.settingValue) : 300
-    const duration = session.durationHours
+    const ratePerUnit = settings ? parseFloat(settings.settingValue) : 300
+    const moduleUnits = session.module.units
     let status = 'RESERVED'
-    let balanceDueHours = 0
+    let balanceDueUnits = 0
     let balanceDueAmount = 0
     let balanceDuePaid = true
 
-    if (effectiveRemainingHours < duration) {
+    if (effectiveRemainingUnits < moduleUnits) {
       status = 'BALANCE_DUE'
-      balanceDueHours = duration - effectiveRemainingHours
-      balanceDueAmount = balanceDueHours * hourlyRate
+      balanceDueUnits = moduleUnits - effectiveRemainingUnits
+      balanceDueAmount = balanceDueUnits * ratePerUnit
       balanceDuePaid = false
     }
 
@@ -161,11 +231,12 @@ export async function createBooking(formData: FormData) {
           customerEmail: voucher.customerEmail,
           customerPhone: voucher.customerPhone,
           status,
-          sessionDurationHours: duration,
-          creditHoursToDeduct: Math.min(effectiveRemainingHours, duration),
-          balanceDueHours,
+          sessionDurationHours: session.durationHours,
+          unitsToDeduct: Math.min(effectiveRemainingUnits, moduleUnits),
+          balanceDueUnits,
           balanceDueAmount,
           balanceDuePaid,
+          notes,
         }
       })
 
@@ -192,12 +263,14 @@ export async function createBooking(formData: FormData) {
       endTime: session.endTime,
       category: session.category,
       durationHours: session.durationHours,
-      creditHoursToDeduct: Math.min(effectiveRemainingHours, duration),
-      voucherCode: voucher.voucherCode
+      unitsToDeduct: Math.min(effectiveRemainingUnits, moduleUnits),
+      voucherCode: voucher.voucherCode,
+      moduleName: session.module.name
     }
   } catch (error) {
     console.error('Booking error:', error)
     return { error: 'Internal server error during booking.' }
   }
 }
+
 

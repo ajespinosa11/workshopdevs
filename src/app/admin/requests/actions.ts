@@ -52,8 +52,8 @@ export async function markAsPaid(formData: FormData) {
         customerPhone: request.customerPhone,
         planId: request.selectedPlanId,
         sourcePlanRequestId: request.id,
-        totalCreditHours: request.selectedPlan.creditHours,
-        remainingCreditHours: request.selectedPlan.creditHours,
+        totalUnits: request.selectedPlan.creditUnits,
+        remainingUnits: request.selectedPlan.creditUnits,
         status: 'ACTIVE'
       }
     })
@@ -63,8 +63,8 @@ export async function markAsPaid(formData: FormData) {
       data: {
         voucherId: voucher.id,
         transactionType: 'CREDIT_ADDED',
-        hoursAdded: request.selectedPlan.creditHours,
-        description: `Initial credit for ${request.selectedPlan.name}`,
+        unitsAdded: request.selectedPlan.creditUnits,
+        description: `Initial units for ${request.selectedPlan.name}`,
       }
     })
 
@@ -78,10 +78,10 @@ export async function markAsPaid(formData: FormData) {
       
       Your payment for the ${request.selectedPlan.name} has been received!
       Your unique voucher code is: ${voucherCode}
-      Total Credit Hours: ${request.selectedPlan.creditHours}
+      Total Units: ${request.selectedPlan.creditUnits}
       
       You can now book sessions using this voucher code on our website.
-      Remember that credits are consumed only during physical check-in.
+      Remember that units are consumed only during physical check-in.
     `)
 
     revalidatePath('/admin/requests')
@@ -117,10 +117,20 @@ export async function sendEmailAction(requestId: string) {
       customerName: request.customerName,
       voucherCode: voucher.voucherCode,
       planName: request.selectedPlan.name,
-      creditHours: voucher.totalCreditHours
+      creditHours: voucher.totalUnits
     })
 
     console.log(`[EMAIL SEND ACTION] Email sent successfully. Message ID: ${result.messageId}, Preview URL: ${result.previewUrl}`)
+
+    // Stamp emailSentAt — best-effort, a failure here should NOT affect the success response
+    try {
+      await prisma.planRequest.update({
+        where: { id: requestId },
+        data: { emailSentAt: new Date() }
+      })
+    } catch (stampErr) {
+      console.warn('[EMAIL SEND ACTION] Could not stamp emailSentAt (non-critical):', stampErr)
+    }
 
     revalidatePath('/admin/requests')
     return { success: true, previewUrl: result.previewUrl }

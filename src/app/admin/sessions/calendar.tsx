@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createModule, createSession } from './actions'
 
 interface SessionData {
   id: string
@@ -14,9 +16,81 @@ interface SessionData {
   status: string
   bookingsCount: number
   bookings: any[]
+  module?: {
+    id: string
+    name: string
+    description: string | null
+    units: number
+  }
 }
 
-export default function AdminSessionsCalendar({ sessions }: { sessions: SessionData[] }) {
+export default function AdminSessionsCalendar({ sessions, modules }: { sessions: SessionData[], modules: any[] }) {
+  const router = useRouter()
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showModuleModal, setShowModuleModal] = useState(false)
+  const [selectedModuleId, setSelectedModuleId] = useState(modules.length > 0 ? modules[0].id : '')
+  const [startTime, setStartTime] = useState('09:00')
+  const [endTime, setEndTime] = useState('11:00')
+  const [capacity, setCapacity] = useState(20)
+  const [actionError, setActionError] = useState('')
+  const [actionLoading, setActionLoading] = useState(false)
+
+  // Inline module states
+  const [moduleName, setModuleName] = useState('')
+  const [moduleDesc, setModuleDesc] = useState('')
+  const [moduleCategory, setModuleCategory] = useState('BEGINNER')
+  const [moduleUnits, setModuleUnits] = useState(2)
+
+  async function handleScheduleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!selectedDate) return
+    setActionLoading(true)
+    setActionError('')
+
+    const formData = new FormData()
+    formData.append('moduleId', selectedModuleId)
+    formData.append('sessionDate', selectedDate.toISOString())
+    formData.append('startTime', startTime)
+    formData.append('endTime', endTime)
+    formData.append('capacity', capacity.toString())
+
+    const res = await createSession(formData)
+    if (res.error) {
+      setActionError(res.error)
+    } else {
+      setShowCreateModal(false)
+      router.refresh()
+    }
+    setActionLoading(false)
+  }
+
+  async function handleModuleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setActionLoading(true)
+    setActionError('')
+
+    const formData = new FormData()
+    formData.append('name', moduleName)
+    formData.append('description', moduleDesc)
+    formData.append('category', moduleCategory)
+    formData.append('units', moduleUnits.toString())
+
+    const res = await createModule(formData)
+    if (res.error) {
+      setActionError(res.error)
+    } else if (res.success && res.module) {
+      setSelectedModuleId(res.module.id)
+      setModuleName('')
+      setModuleDesc('')
+      setModuleCategory('BEGINNER')
+      setModuleUnits(2)
+      setShowModuleModal(false)
+      // Trigger Next.js router refresh to update modules list in client
+      router.refresh()
+    }
+    setActionLoading(false)
+  }
+
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
     // Default to today
@@ -25,6 +99,9 @@ export default function AdminSessionsCalendar({ sessions }: { sessions: SessionD
     return today
   })
   const [selectedSession, setSelectedSession] = useState<SessionData | null>(null)
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
@@ -127,13 +204,15 @@ export default function AdminSessionsCalendar({ sessions }: { sessions: SessionD
               const hasSessions = dateHasSessions(day)
               const isSelected = selectedDate && day.getDate() === selectedDate.getDate() && day.getMonth() === selectedDate.getMonth() && day.getFullYear() === selectedDate.getFullYear()
               const count = getSessionCount(day)
+              const isPast = day < today
 
               return (
                 <button
                   key={`day-${day.getDate()}`}
                   type="button"
-                  className={`calendar-day-cell ${isSelected ? 'active-day' : ''} ${hasSessions ? 'has-sessions' : ''}`}
-                  onClick={() => setSelectedDate(day)}
+                  className={`calendar-day-cell ${isSelected ? 'active-day' : ''} ${hasSessions ? 'has-sessions' : ''} ${isPast ? 'disabled' : ''}`}
+                  onClick={() => !isPast && setSelectedDate(day)}
+                  disabled={isPast}
                   style={{ position: 'relative' }}
                 >
                   {day.getDate()}
@@ -150,13 +229,37 @@ export default function AdminSessionsCalendar({ sessions }: { sessions: SessionD
 
         {/* Right: Session detail list for selected day */}
         <div className="slots-box" style={{ background: '#f8fafc' }}>
-          <div className="slots-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>
-              {selectedDate ? selectedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'Select a date'}
-            </span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--admin-text-secondary)', fontWeight: 600 }}>
-              {filteredSessions.length} session{filteredSessions.length !== 1 ? 's' : ''}
-            </span>
+          <div className="slots-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--primary)' }}>
+                {selectedDate ? selectedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'Select a date'}
+              </span>
+              {selectedDate && selectedDate >= today && (
+                <button
+                  type="button"
+                  onClick={() => { setShowCreateModal(true); setActionError(''); }}
+                  style={{
+                    padding: '0.4rem 0.85rem',
+                    fontSize: '0.8rem',
+                    background: 'var(--accent)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 4px rgba(249, 115, 22, 0.1)'
+                  }}
+                >
+                  + Schedule Event
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--admin-text-secondary)' }}>
+              <span>Scheduled events:</span>
+              <span style={{ fontWeight: 600 }}>
+                {filteredSessions.length} session{filteredSessions.length !== 1 ? 's' : ''}
+              </span>
+            </div>
           </div>
 
           <div className="slots-list" style={{ maxHeight: '400px' }}>
@@ -180,6 +283,16 @@ export default function AdminSessionsCalendar({ sessions }: { sessions: SessionD
                     }`}>
                       {s.category}
                     </span>
+                  </div>
+
+                  {/* Module Details */}
+                  <div style={{ margin: '2px 0 6px 0', borderLeft: '3px solid var(--accent)', paddingLeft: '8px' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--admin-text-primary)' }}>
+                      {s.module?.name}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--admin-text-secondary)' }}>
+                      Academic Cost: {s.module?.units} units
+                    </div>
                   </div>
 
                   {/* Stats row */}
@@ -325,6 +438,137 @@ export default function AdminSessionsCalendar({ sessions }: { sessions: SessionD
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Session Modal */}
+      {showCreateModal && selectedDate && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1.5rem' }}>
+          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '500px', borderRadius: '1.5rem', background: '#ffffff', color: 'var(--foreground)', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>
+                Schedule Workshop Event
+              </h3>
+              <button onClick={() => setShowCreateModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: 'var(--admin-text-secondary)', cursor: 'pointer' }}>&times;</button>
+            </div>
+
+            <form onSubmit={handleScheduleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {actionError && <div style={{ padding: '0.5rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.375rem', fontSize: '0.85rem' }}>{actionError}</div>}
+              
+              <div style={{ fontSize: '0.85rem', color: 'var(--admin-text-secondary)', fontWeight: 600 }}>
+                Date: {selectedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              </div>
+
+              <div className="input-group">
+                <label style={{ fontWeight: 600 }}>Select Module</label>
+                {modules.length === 0 ? (
+                  <div style={{ fontSize: '0.85rem', color: '#b91c1c', margin: '4px 0' }}>
+                    No modules exist. Please create one first.
+                  </div>
+                ) : (
+                  <select 
+                    value={selectedModuleId} 
+                    onChange={(e) => setSelectedModuleId(e.target.value)}
+                    className="input-field"
+                    style={{ borderRadius: '0.5rem', width: '100%', padding: '0.5rem' }}
+                  >
+                    {modules.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} ({m.category} - {m.units} units)
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <div style={{ marginTop: '6px', fontSize: '0.8rem' }}>
+                  <button 
+                    type="button" 
+                    onClick={() => { setShowModuleModal(true); setActionError(''); }} 
+                    style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0, textDecoration: 'underline', fontWeight: 600 }}
+                  >
+                    + Create New Module
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="input-group">
+                  <label style={{ fontWeight: 600 }}>Start Time</label>
+                  <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="input-field" required style={{ borderRadius: '0.5rem' }} />
+                </div>
+                <div className="input-group">
+                  <label style={{ fontWeight: 600 }}>End Time</label>
+                  <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="input-field" required style={{ borderRadius: '0.5rem' }} />
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label style={{ fontWeight: 600 }}>Session Capacity</label>
+                <input type="number" min="1" value={capacity} onChange={(e) => setCapacity(parseInt(e.target.value, 10))} className="input-field" required style={{ borderRadius: '0.5rem' }} />
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                <button type="button" onClick={() => setShowCreateModal(false)} className="admin-btn-outline" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem' }}>Cancel</button>
+                <button type="submit" disabled={actionLoading || modules.length === 0} className="pricing-btn pricing-btn-solid" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem', background: 'var(--accent)', border: 'none', color: 'white', fontWeight: 600 }}>
+                  {actionLoading ? 'Scheduling...' : 'Schedule Event'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Module Modal */}
+      {showModuleModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1010, padding: '1.5rem' }}>
+          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '450px', borderRadius: '1.5rem', background: '#ffffff', color: 'var(--foreground)', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>
+                Create Academic Module
+              </h3>
+              <button onClick={() => setShowModuleModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: 'var(--admin-text-secondary)', cursor: 'pointer' }}>&times;</button>
+            </div>
+
+            <form onSubmit={handleModuleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {actionError && <div style={{ padding: '0.5rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.375rem', fontSize: '0.85rem' }}>{actionError}</div>}
+
+              <div className="input-group">
+                <label style={{ fontWeight: 600 }}>Module Title / Name</label>
+                <input type="text" value={moduleName} onChange={(e) => setModuleName(e.target.value)} className="input-field" placeholder="e.g. Intro to 3D Printing" required style={{ borderRadius: '0.5rem' }} />
+              </div>
+
+              <div className="input-group">
+                <label style={{ fontWeight: 600 }}>Description</label>
+                <textarea value={moduleDesc} onChange={(e) => setModuleDesc(e.target.value)} className="input-field" placeholder="Brief description of the module" style={{ borderRadius: '0.5rem', minHeight: '80px', padding: '0.5rem' }} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1rem' }}>
+                <div className="input-group">
+                  <label style={{ fontWeight: 600 }}>Category Level</label>
+                  <select 
+                    value={moduleCategory} 
+                    onChange={(e) => setModuleCategory(e.target.value)}
+                    className="input-field"
+                    style={{ borderRadius: '0.5rem', padding: '0.5rem' }}
+                  >
+                    <option value="BEGINNER">BEGINNER</option>
+                    <option value="INTERMEDIATE">INTERMEDIATE</option>
+                    <option value="ADVANCED">ADVANCED</option>
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label style={{ fontWeight: 600 }}>Units Cost</label>
+                  <input type="number" min="1" value={moduleUnits} onChange={(e) => setModuleUnits(parseInt(e.target.value, 10))} className="input-field" required style={{ borderRadius: '0.5rem' }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                <button type="button" onClick={() => setShowModuleModal(false)} className="admin-btn-outline" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem' }}>Cancel</button>
+                <button type="submit" disabled={actionLoading} className="pricing-btn pricing-btn-solid" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem', background: 'var(--accent)', border: 'none', color: 'white', fontWeight: 600 }}>
+                  {actionLoading ? 'Creating...' : 'Create Module'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

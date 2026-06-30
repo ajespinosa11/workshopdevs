@@ -204,7 +204,7 @@ export default function CheckInClient() {
               <span className="text-secondary-foreground">Customer:</span>
               <span className="font-medium">{voucher.customerName}</span>
               <span className="text-secondary-foreground">Remaining Credits:</span>
-              <span className="font-bold text-primary">{voucher.remainingCreditHours} hours</span>
+              <span className="font-bold text-primary">{voucher.remainingUnits} units</span>
               <span className="text-secondary-foreground">Voucher Status:</span>
               <span><span className="badge badge-green">{voucher.status}</span></span>
             </div>
@@ -214,10 +214,12 @@ export default function CheckInClient() {
             <div className="grid grid-cols-2 gap-2 text-sm">
               <span className="text-secondary-foreground">Reference:</span>
               <span className="font-medium">{booking.bookingReference}</span>
-              <span className="text-secondary-foreground">Session:</span>
+              <span className="text-secondary-foreground">Session Category:</span>
               <span>{booking.session.category}</span>
-              <span className="text-secondary-foreground">Duration:</span>
-              <span>{booking.sessionDurationHours} hours</span>
+              <span className="text-secondary-foreground">Module:</span>
+              <span className="font-medium text-accent">{booking.session.module?.name}</span>
+              <span className="text-secondary-foreground">Cost:</span>
+              <span className="font-bold text-primary">{booking.unitsToDeduct} units</span>
               <span className="text-secondary-foreground">Status:</span>
               <span><span className={`badge ${needsPayment ? 'badge-red' : 'badge-blue'}`}>{booking.status}</span></span>
             </div>
@@ -241,7 +243,7 @@ export default function CheckInClient() {
         <div className="flex gap-4 mt-4">
           <button onClick={() => setStep(1)} className="btn btn-secondary flex-1" disabled={loading}>Cancel</button>
           <button onClick={handleCheckIn} disabled={loading || needsPayment} className="btn btn-success flex-1">
-            {loading ? 'Processing...' : 'Confirm Check-in & Deduct Credits'}
+            {loading ? 'Processing...' : 'Confirm Check-in & Deduct Units'}
           </button>
         </div>
       </div>

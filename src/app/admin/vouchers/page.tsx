@@ -33,8 +33,8 @@ export default async function AdminVouchersPage() {
                 <th>Voucher Code</th>
                 <th>Customer Name</th>
                 <th>Plan Package</th>
-                <th>Total Credits</th>
-                <th>Remaining Credits</th>
+                <th>Total Units</th>
+                <th>Remaining Balance</th>
                 <th>Status</th>
                 <th>Generated Date</th>
               </tr>
@@ -48,8 +48,8 @@ export default async function AdminVouchersPage() {
                     <div style={{ fontSize: '0.8rem', color: 'var(--admin-text-secondary)' }}>{v.customerEmail}</div>
                   </td>
                   <td>{v.plan.name}</td>
-                  <td>{v.totalCreditHours} hrs</td>
-                  <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{v.remainingCreditHours} hrs</td>
+                  <td>{v.totalUnits} units</td>
+                  <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{v.remainingUnits} units</td>
                   <td>
                     <span className={`badge ${
                       v.status === 'ACTIVE' ? 'badge-green' : 

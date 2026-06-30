@@ -181,8 +181,8 @@ export async function sendVoucherEmail({ to, customerName, voucherCode, planName
               <span class="info-value"><strong>${planName}</strong></span>
             </div>
             <div class="info-row">
-              <span class="info-label">Total Credit Hours:</span>
-              <span class="info-value">${creditHours} hours</span>
+              <span class="info-label">Total Units:</span>
+              <span class="info-value">${creditHours} units</span>
             </div>
             
             <div class="voucher-highlight">
@@ -198,7 +198,7 @@ export async function sendVoucherEmail({ to, customerName, voucherCode, planName
           </div>
         </div>
         <div class="footer">
-          <p>Please note: Voucher credits are deducted only when you physically check-in for your session.</p>
+          <p>Please note: Voucher units are deducted only when you physically check-in for your session.</p>
           <p>&copy; ${new Date().getFullYear()} Makerlab Workshop. All rights reserved.</p>
         </div>
       </div>

@@ -167,10 +167,10 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
                       <div style={{ marginTop: '0.5rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--admin-text-secondary)', marginBottom: '4px' }}>
                           <span>Credit Meter:</span>
-                          <strong>{v.remainingCreditHours} / {v.totalCreditHours} hrs remaining</strong>
+                          <strong>{v.remainingUnits} / {v.totalUnits} units remaining</strong>
                         </div>
                         <div style={{ width: '100%', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div style={{ width: `${(v.remainingCreditHours / v.totalCreditHours) * 100}%`, height: '100%', background: 'var(--accent)', borderRadius: '3px' }}></div>
+                          <div style={{ width: `${(v.remainingUnits / v.totalUnits) * 100}%`, height: '100%', background: 'var(--accent)', borderRadius: '3px' }}></div>
                         </div>
                       </div>
                     </div>
@@ -212,9 +212,11 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
                                   {' | '}
                                   {b.session.startTime} - {b.session.endTime}
                                 </div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>Category: {b.session.category}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>
+                                  Category: {b.session.category} | Module: {b.session.moduleName}
+                                </div>
                               </td>
-                              <td style={{ fontWeight: 600 }}>{b.creditHoursToDeduct} hrs</td>
+                              <td style={{ fontWeight: 600 }}>{b.unitsToDeduct} units</td>
                               <td>
                                 <span className={`badge ${b.status === 'RESERVED' ? 'badge-blue' : 'badge-yellow'}`}>
                                   {b.status.replace(/_/g, ' ')}
@@ -257,9 +259,11 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
                                   {' | '}
                                   {b.session.startTime} - {b.session.endTime}
                                 </div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>Category: {b.session.category}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>
+                                  Category: {b.session.category} | Module: {b.session.moduleName}
+                                </div>
                               </td>
-                              <td style={{ fontWeight: 600 }}>{b.creditHoursToDeduct} hrs</td>
+                              <td style={{ fontWeight: 600 }}>{b.unitsToDeduct} units</td>
                               <td>
                                 <span className={`badge ${
                                   b.status === 'CHECKED_IN' || b.status === 'WALKIN_CONFIRMED' ? 'badge-green' : 

@@ -19,7 +19,7 @@ export async function validateCheckInDetails(formData: FormData) {
 
   const booking = await prisma.booking.findUnique({
     where: { bookingReference },
-    include: { session: true }
+    include: { session: { include: { module: true } } }
   })
 
   if (!booking) return { error: 'Booking not found.' }
@@ -82,11 +82,11 @@ export async function processCheckIn(formData: FormData) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Deduct credits from Voucher
+      // 1. Deduct units from Voucher
       const voucher = await tx.voucher.update({
         where: { id: booking.voucherId },
         data: {
-          remainingCreditHours: { decrement: booking.creditHoursToDeduct }
+          remainingUnits: { decrement: booking.unitsToDeduct }
         }
       })
 
@@ -96,8 +96,8 @@ export async function processCheckIn(formData: FormData) {
           voucherId: voucher.id,
           bookingId: booking.id,
           transactionType: 'CREDIT_DEDUCTED',
-          hoursDeducted: booking.creditHoursToDeduct,
-          description: `Check-in deduction for booking ${booking.bookingReference}`,
+          unitsDeducted: booking.unitsToDeduct,
+          description: `Check-in unit deduction for booking ${booking.bookingReference}`,
           createdByStaffId: sessionUser.id
         }
       })
@@ -123,7 +123,7 @@ export async function processCheckIn(formData: FormData) {
       })
 
       // Update voucher status if fully used
-      if (voucher.remainingCreditHours <= 0) {
+      if (voucher.remainingUnits <= 0) {
         await tx.voucher.update({
           where: { id: voucher.id },
           data: { status: 'FULLY_USED' }

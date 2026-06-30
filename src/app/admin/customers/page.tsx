@@ -4,7 +4,11 @@ import CustomersClient from './client'
 export default async function AdminCustomersPage() {
   const bookings = await prisma.booking.findMany({
     include: {
-      session: true,
+      session: {
+        include: {
+          module: true
+        }
+      },
       voucher: true
     },
     orderBy: {
@@ -43,8 +47,8 @@ export default async function AdminCustomersPage() {
       id: v.id,
       voucherCode: v.voucherCode,
       planName: v.plan.name,
-      totalCreditHours: v.totalCreditHours,
-      remainingCreditHours: v.remainingCreditHours,
+      totalUnits: v.totalUnits,
+      remainingUnits: v.remainingUnits,
       status: v.status,
       createdAt: v.createdAt.toISOString()
     })
@@ -70,7 +74,7 @@ export default async function AdminCustomersPage() {
         id: b.id,
         bookingReference: b.bookingReference,
         status: b.status,
-        creditHoursToDeduct: b.creditHoursToDeduct,
+        unitsToDeduct: b.unitsToDeduct,
         balanceDueAmount: b.balanceDueAmount,
         balanceDuePaid: b.balanceDuePaid,
         createdAt: b.createdAt.toISOString(),
@@ -80,7 +84,8 @@ export default async function AdminCustomersPage() {
           sessionDate: b.session.sessionDate.toISOString(),
           startTime: b.session.startTime,
           endTime: b.session.endTime,
-          durationHours: b.session.durationHours
+          durationHours: b.session.durationHours,
+          moduleName: b.session.module?.name
         }
       })
     }
