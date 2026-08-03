@@ -1,47 +1,206 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { validateVoucherAndGetSessions, createBooking } from './actions'
-import { useRouter } from 'next/navigation'
+import { validateFreeRegistrationAndGetSessions, createFreeBooking } from './free-actions'
+import { useRouter, useSearchParams } from 'next/navigation'
+
+function TermsAndConditionsContainer({ checked, onChange }: { checked: boolean, onChange: (val: boolean) => void }) {
+  return (
+    <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div 
+        style={{ 
+          border: '1px solid var(--admin-border)', 
+          borderRadius: '0.75rem', 
+          padding: '1rem', 
+          maxHeight: '150px', 
+          overflowY: 'auto', 
+          background: '#f8fafc',
+          fontSize: '0.8rem',
+          color: 'var(--secondary-foreground)',
+          lineHeight: '1.4'
+        }}
+      >
+        <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: 800, color: 'var(--primary)', fontSize: '0.9rem' }}>Workshop Voucher Terms & Conditions</h4>
+        <ol style={{ paddingLeft: '1.25rem', margin: 0 }}>
+          <li style={{ marginBottom: '0.5rem' }}><strong>Voucher Value:</strong> Each voucher ticket is equivalent to <strong>1 Event Session booking</strong>.</li>
+          <li style={{ marginBottom: '0.5rem' }}><strong>Validity:</strong> Vouchers are valid only until the expiration date indicated and cannot be used after expiry.</li>
+          <li style={{ marginBottom: '0.5rem' }}><strong>Non-Transferable & Non-Refundable:</strong> Vouchers are non-transferable, non-refundable, and cannot be exchanged for cash.</li>
+          <li style={{ marginBottom: '0.5rem' }}><strong>Booking & Availability:</strong> Advance booking is required. Workshop schedules are subject to slot availability.</li>
+          <li style={{ marginBottom: '0.5rem' }}><strong>Rescheduling:</strong> Rescheduling requests must be made at least <strong>48 hours</strong> before the scheduled workshop. Requests made after this period may result in voucher forfeiture.</li>
+          <li style={{ marginBottom: '0.5rem' }}><strong>No-Show Policy:</strong> Failure to attend without prior notice will be treated as a redeemed voucher.</li>
+          <li style={{ marginBottom: '0.5rem' }}><strong>Voucher Redemption:</strong> Vouchers must be redeemed for the designated workshop and cannot be partially redeemed unless otherwise specified.</li>
+          <li style={{ marginBottom: '0.5rem' }}><strong>Lost or Damaged Vouchers:</strong> Lost, stolen, or damaged vouchers will not be replaced.</li>
+          <li style={{ marginBottom: '0.5rem' }}><strong>Workshop Changes:</strong> Makerlab reserves the right to reschedule, postpone, or cancel workshops due to unforeseen circumstances. An alternative schedule will be provided when applicable.</li>
+          <li style={{ marginBottom: '0.5rem' }}><strong>Participant Responsibilities:</strong> Participants must bring the required equipment and software and comply with all workshop safety guidelines and code of conduct.</li>
+        </ol>
+      </div>
+      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary)' }}>
+        <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} style={{ accentColor: 'var(--accent)', cursor: 'pointer' }} />
+        <span>I have read and agree to the Terms & Conditions</span>
+      </label>
+    </div>
+  )
+}
 
 export default function BookSessionForm() {
-  const [step, setStep] = useState(1)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Panel State machine
+  // activePanel: null (landing with 3 cards), 'voucher', 'free', 'manage'
+  const [activePanel, setActivePanel] = useState<'voucher' | 'free' | 'manage' | null>(null)
+
+  // Booking Flow Steps
+  const [step, setStep] = useState(1) // 1: Form entry/Details lookup, 2: Calendar scheduling, 3: Confirmed screen
+  const [bookingStep, setBookingStep] = useState(2) // 1: Level/Difficulty (paid only), 2: Choose Schedule, 3: Review info/Notes
+  
+  // Shared States
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [voucher, setVoucher] = useState<any>(null)
   const [sessions, setSessions] = useState<any[]>([])
   const [successData, setSuccessData] = useState<any>(null)
   const [selectedSessionId, setSelectedSessionId] = useState('')
-
-  // Booking Flow Steps (1: Difficulty, 2: Date & Time, 3: Review Details)
-  const [bookingStep, setBookingStep] = useState(1)
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null)
   const [notes, setNotes] = useState('')
-  const [agreeTerms, setAgreeTerms] = useState(true)
+  const [showTCModal, setShowTCModal] = useState(false)
+  const [agreedToTC, setAgreedToTC] = useState(false)
 
-  // Calendar states
-  const [currentDate, setCurrentDate] = useState(new Date())
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  // Paid Voucher Form Fields
+  const [voucherCodeInput, setVoucherCodeInput] = useState('')
+  const [voucherEmailInput, setVoucherEmailInput] = useState('')
 
-  // State to switch between Booking tab and Manage Booking tab
-  const [activeTab, setActiveTab] = useState<'book' | 'manage'>('book')
-  
-  // Manage Booking tab states
-  const [manageRef, setManageRef] = useState('')
-  const [manageEmail, setManageEmail] = useState('')
-  const [manageLoading, setManageLoading] = useState(false)
-  const [manageError, setManageError] = useState('')
+  // Free Workshop Form Fields
+  const [freeName, setFreeName] = useState('')
+  const [freeEmail, setFreeEmail] = useState('')
+  const [freePhone, setFreePhone] = useState('')
+  const [freePaxCount, setFreePaxCount] = useState(1)
+
+  // My Bookings Form Fields
+  const [bookingRefInput, setBookingRefInput] = useState('')
+  const [bookingEmailInput, setBookingEmailInput] = useState('')
+  const [myBookings, setMyBookings] = useState<any[]>([])
   const [manageSuccessMessage, setManageSuccessMessage] = useState('')
   const [activeBooking, setActiveBooking] = useState<any>(null)
 
-  const router = useRouter()
+  // Reschedule & Cancel Flow states
+  const [showReschedulePanel, setShowReschedulePanel] = useState(false)
+  const [rescheduleLoading, setRescheduleLoading] = useState(false)
+  const [rescheduleSessions, setRescheduleSessions] = useState<any[]>([])
+  const [selectedRescheduleSessionId, setSelectedRescheduleSessionId] = useState('')
+  const [rescheduleError, setRescheduleError] = useState('')
+  const [rescheduleSuccess, setRescheduleSuccess] = useState<any>(null)
+  
+  // Cancellation flow specific states
+  const [showCancelPanel, setShowCancelPanel] = useState(false)
+  const [cancelReason, setCancelReason] = useState('Personal schedule conflict')
+  const [cancelCustomNotes, setCancelCustomNotes] = useState('')
+  const [cancelError, setCancelError] = useState('')
 
-  async function handleValidate(e: React.FormEvent<HTMLFormElement>) {
+  // Level Selection (Paid Only)
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null)
+  const [kidPaxCount, setKidPaxCount] = useState(1)
+  const [kidNames, setKidNames] = useState<string[]>([''])
+
+  // Calendar views
+  const [currentDate, setCurrentDate] = useState(new Date())
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+
+  // Listen to navigation query params to pre-select panel
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab === 'voucher') {
+      handleResetAll()
+      setActivePanel('voucher')
+    } else if (tab === 'free') {
+      handleResetAll()
+      setActivePanel('free')
+    } else if (tab === 'manage') {
+      handleResetAll()
+      setActivePanel('manage')
+    }
+  }, [searchParams])
+
+  // Automatically load free sessions when Free Workshop panel is active in Step 1
+  useEffect(() => {
+    if (activePanel === 'free' && step === 1) {
+      const loadFreeSessions = async () => {
+        setLoading(true)
+        setError('')
+        const res = await validateFreeRegistrationAndGetSessions(freePaxCount)
+        if (res.error) {
+          setError(res.error)
+        } else if (res.success) {
+          setSessions(res.sessions)
+          if (res.sessions && res.sessions.length > 0) {
+            const firstSessionDate = new Date(res.sessions[0].sessionDate)
+            setSelectedDate(firstSessionDate)
+            setCurrentDate(firstSessionDate)
+          } else {
+            setSelectedDate(null)
+          }
+        }
+        setLoading(false)
+      }
+      loadFreeSessions()
+    }
+  }, [activePanel, step, freePaxCount])
+
+  // Clear selected session if pax count changes
+  useEffect(() => {
+    setSelectedSessionId('')
+  }, [freePaxCount])
+
+  const handleResetAll = () => {
+    setActivePanel(null)
+    setStep(1)
+    setBookingStep(2)
+    setLoading(false)
+    setError('')
+    setVoucher(null)
+    setSessions([])
+    setSuccessData(null)
+    setSelectedSessionId('')
+    setNotes('')
+    setShowTCModal(false)
+    setAgreedToTC(false)
+    setVoucherCodeInput('')
+    setVoucherEmailInput('')
+    setFreeName('')
+    setFreeEmail('')
+    setFreePhone('')
+    setFreePaxCount(1)
+    setBookingRefInput('')
+    setBookingEmailInput('')
+    setMyBookings([])
+    setManageSuccessMessage('')
+    setActiveBooking(null)
+    setShowReschedulePanel(false)
+    setRescheduleLoading(false)
+    setRescheduleSessions([])
+    setSelectedRescheduleSessionId('')
+    setRescheduleError('')
+    setRescheduleSuccess(null)
+    setShowCancelPanel(false)
+    setCancelReason('Personal schedule conflict')
+    setCancelCustomNotes('')
+    setCancelError('')
+    setSelectedDifficulty(null)
+    setKidPaxCount(1)
+    setKidNames([''])
+  }
+
+  // --- ACTIONS HANDLERS ---
+
+  async function handleValidateVoucher(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoading(true)
     setError('')
     
-    const formData = new FormData(e.currentTarget)
+    const formData = new FormData()
+    formData.append('voucherCode', voucherCodeInput)
+    formData.append('email', voucherEmailInput)
+
     const res = await validateVoucherAndGetSessions(formData)
     
     if (res.error) {
@@ -50,6 +209,29 @@ export default function BookSessionForm() {
       setVoucher(res.voucher)
       setSessions(res.sessions)
       setStep(2)
+      setBookingStep(1) // Show Level picker first for vouchers
+
+      if (res.sessions && res.sessions.length > 0) {
+        const firstSessionDate = new Date(res.sessions[0].sessionDate)
+        setSelectedDate(firstSessionDate)
+        setCurrentDate(firstSessionDate)
+      }
+    }
+    setLoading(false)
+  }
+
+  async function handleValidateFree(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    const res = await validateFreeRegistrationAndGetSessions(freePaxCount)
+    if (res.error) {
+      setError(res.error)
+    } else if (res.success) {
+      setSessions(res.sessions)
+      setStep(2)
+      setBookingStep(2) // Jump straight to calendar for free workshops
 
       if (res.sessions && res.sessions.length > 0) {
         const firstSessionDate = new Date(res.sessions[0].sessionDate)
@@ -65,11 +247,21 @@ export default function BookSessionForm() {
       setError('Please select a session slot.')
       return
     }
-    if (!agreeTerms) {
-      setError('You must agree to the Terms & Conditions to complete booking.')
-      return
+    if (selectedDifficulty === 'KIDS') {
+      const empty = kidNames.some(n => !n.trim())
+      if (empty) {
+        setError('Please enter the name of each kid/participant.')
+        return
+      }
     }
+    setError('')
+    setAgreedToTC(false)
+    setShowTCModal(true)
+  }
 
+  async function handleConfirmBook() {
+    if (!agreedToTC) return
+    setShowTCModal(false)
     setLoading(true)
     setError('')
 
@@ -77,6 +269,9 @@ export default function BookSessionForm() {
     formData.append('voucherId', voucher.id)
     formData.append('sessionId', selectedSessionId)
     formData.append('notes', notes)
+    if (selectedDifficulty === 'KIDS' && kidNames.length > 0) {
+      formData.append('kidNames', JSON.stringify(kidNames))
+    }
 
     const res = await createBooking(formData)
 
@@ -89,1381 +284,1073 @@ export default function BookSessionForm() {
     setLoading(false)
   }
 
-  // Calendar helpers
+  async function handleFreeBook() {
+    if (!selectedSessionId) {
+      setError('Please select a session slot.')
+      return
+    }
+    setError('')
+    setLoading(true)
+
+    const formData = new FormData()
+    formData.append('name', freeName)
+    formData.append('email', freeEmail)
+    formData.append('phone', freePhone)
+    formData.append('sessionId', selectedSessionId)
+    formData.append('paxCount', String(freePaxCount))
+
+    const res = await createFreeBooking(formData)
+
+    if (res.error) {
+      setError(res.error)
+    } else if (res.success) {
+      setSuccessData(res)
+      setStep(3)
+    }
+    setLoading(false)
+  }
+
+  async function handleLookupBookings(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    setManageSuccessMessage('')
+    setActiveBooking(null)
+    setMyBookings([])
+
+    const formData = new FormData()
+    formData.append('bookingReference', bookingRefInput)
+    formData.append('email', bookingEmailInput)
+
+    try {
+      const { checkBookingStatusAction } = await import('../booking-status/actions')
+      const res = await checkBookingStatusAction(formData)
+      if (res.error) {
+        setError(res.error)
+      } else if (res.success) {
+        setMyBookings([res.booking]) // Display the found booking card
+      }
+    } catch {
+      setError('An error occurred while finding your booking details.')
+    }
+    setLoading(false)
+  }
+
+  async function handleCancelBooking() {
+    if (!activeBooking) return
+    setLoading(true)
+    setError('')
+
+    const formData = new FormData()
+    formData.append('bookingReference', activeBooking.bookingReference)
+    formData.append('email', activeBooking.customerEmail)
+    formData.append('reason', cancelReason)
+    if (cancelCustomNotes) {
+      formData.append('customNotes', cancelCustomNotes)
+    }
+
+    try {
+      const { cancelBookingAction } = await import('../cancel-booking/actions')
+      const res = await cancelBookingAction(formData)
+      if (res.error) {
+        setError(res.error)
+      } else if (res.success) {
+        setManageSuccessMessage('Your booking has been successfully cancelled.')
+        setShowCancelPanel(false)
+        setActiveBooking(null)
+        setMyBookings([])
+      }
+    } catch (err) {
+      setError('An error occurred while canceling this booking session.')
+    }
+    setLoading(false)
+  }
+
+  async function handleStartReschedule(booking: any) {
+    setActiveBooking(booking)
+    setRescheduleLoading(true)
+    setRescheduleError('')
+    setRescheduleSuccess(null)
+    setSelectedRescheduleSessionId('')
+    setRescheduleSessions([])
+
+    const formData = new FormData()
+    formData.append('bookingReference', booking.bookingReference)
+    formData.append('email', booking.customerEmail)
+
+    try {
+      const { getAvailableRescheduleSessions } = await import('./reschedule-actions')
+      const res = await getAvailableRescheduleSessions(formData)
+      if (res.error) {
+        setRescheduleError(res.error)
+      } else if (res.success) {
+        setRescheduleSessions(res.availableSessions)
+        setShowReschedulePanel(true)
+      }
+    } catch {
+      setRescheduleError('Failed to fetch future open schedules.')
+    }
+    setRescheduleLoading(false)
+  }
+
+  async function handleConfirmReschedule() {
+    if (!activeBooking || !selectedRescheduleSessionId) return
+    setRescheduleLoading(true)
+    setRescheduleError('')
+
+    const formData = new FormData()
+    formData.append('bookingReference', activeBooking.bookingReference)
+    formData.append('email', activeBooking.customerEmail)
+    formData.append('newSessionId', selectedRescheduleSessionId)
+
+    try {
+      const { rescheduleBookingAction } = await import('./reschedule-actions')
+      const res = await rescheduleBookingAction(formData)
+      if (res.error) {
+        setRescheduleError(res.error)
+      } else if (res.success) {
+        setRescheduleSuccess(res.newSession)
+        setShowReschedulePanel(false)
+        setActiveBooking(null)
+        setMyBookings([])
+        setManageSuccessMessage(`Rescheduled successfully to ${new Date((res.newSession as any).sessionDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} at ${(res.newSession as any).startTime}.`)
+      }
+    } catch {
+      setRescheduleError('Reschedule action failed.')
+    }
+    setRescheduleLoading(false)
+  }
+
+  const downloadTicketPDF = async () => {
+    try {
+      const { jsPDF } = await import('jspdf')
+      const bookingsList = successData?.bookings || [{
+        bookingReference: successData.bookingReference,
+        bookingQrCodeData: successData.bookingQrCodeData,
+        kidName: null,
+        status: successData.status,
+        balanceDueAmount: successData.balanceDueAmount
+      }]
+
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [140, 80] })
+
+      bookingsList.forEach((bItem: any, index: number) => {
+        if (index > 0) doc.addPage([140, 80], 'landscape')
+        doc.setFillColor(248, 250, 252)
+        doc.rect(0, 0, 140, 80, 'F')
+
+        doc.setFillColor(15, 37, 64)
+        doc.rect(0, 0, 140, 15, 'F')
+
+        doc.setTextColor(255, 255, 255)
+        doc.setFont('Helvetica', 'bold')
+        doc.setFontSize(14)
+        doc.text('MAKERLAB 3D WORKSHOP', 8, 10)
+        doc.setFont('Helvetica', 'normal').setFontSize(9)
+        doc.text('ENTRY TICKET', 132, 10, { align: 'right' })
+
+        doc.setTextColor(15, 37, 64).setFont('Helvetica', 'bold').setFontSize(10)
+        if (bItem.kidName) {
+          doc.text('PARTICIPANT / KID', 8, 24)
+          doc.setFont('Helvetica', 'normal').setFontSize(11).setTextColor(74, 85, 104)
+          doc.text(bItem.kidName, 8, 29)
+        } else {
+          doc.text('CUSTOMER NAME', 8, 24)
+          doc.setFont('Helvetica', 'normal').setFontSize(11).setTextColor(74, 85, 104)
+          doc.text(voucher?.customerName || successData.customerName || 'Customer', 8, 29)
+        }
+
+        doc.setTextColor(15, 37, 64).setFont('Helvetica', 'bold').setFontSize(10)
+        doc.text('SESSION DETAILS', 8, 39)
+        doc.setFont('Helvetica', 'normal').setFontSize(10).setTextColor(74, 85, 104)
+
+        const selS = sessions.find(s => s.id === selectedSessionId)
+        const dateStr = new Date(selS?.sessionDate || successData.sessionDate).toLocaleDateString(undefined, {
+          weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+        })
+        doc.text(`${dateStr}`, 8, 44)
+        doc.text(`${selS?.startTime || successData.startTime} - ${selS?.endTime || successData.endTime}`, 8, 49)
+        doc.setFont('Helvetica', 'italic').text(`Module: ${selS?.module?.name || successData.moduleName}`, 8, 54)
+
+        doc.setTextColor(15, 37, 64).setFont('Helvetica', 'bold').setFontSize(10)
+        doc.text('VOUCHER & STATUS', 8, 61)
+        doc.setFont('Helvetica', 'normal').setFontSize(9).setTextColor(74, 85, 104)
+        doc.text(`Voucher: ${voucher?.voucherCode || successData.voucherCode || 'FREE WORKSHOP'}`, 8, 66)
+
+        if (bItem.status === 'BALANCE_DUE') {
+          doc.setTextColor(220, 38, 38).setFont('Helvetica', 'bold')
+          doc.text(`BALANCE DUE: PHP ${bItem.balanceDueAmount}`, 8, 72)
+        } else {
+          doc.setTextColor(22, 163, 74).setFont('Helvetica', 'bold')
+          doc.text('STATUS: CONFIRMED', 8, 72)
+        }
+
+        doc.setDrawColor(203, 213, 225).setLineDashPattern([2, 2], 0).line(95, 15, 95, 80)
+        if (bItem.bookingQrCodeData) {
+          doc.setLineDashPattern([], 0)
+          doc.addImage(bItem.bookingQrCodeData, 'PNG', 98, 20, 36, 36)
+        }
+        doc.setTextColor(15, 37, 64).setFont('Helvetica', 'bold').setFontSize(9)
+        doc.text(bItem.bookingReference, 116, 61, { align: 'center' })
+      })
+
+      doc.save(`Ticket-${successData.bookingReference}.pdf`)
+    } catch (err) {
+      console.error(err)
+      alert('Error generating PDF ticket.')
+    }
+  }
+
+  // --- CALENDAR HELPERS ---
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
-  const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7
-  const totalDays = new Date(year, month + 1, 0).getDate()
-
-  const calendarDays: (Date | null)[] = []
-  for (let i = 0; i < firstDayIndex; i++) calendarDays.push(null)
-  for (let day = 1; day <= totalDays; day++) calendarDays.push(new Date(year, month, day))
 
   const filteredSessions = sessions.filter(s => {
     if (!selectedDate) return false
-    if (selectedDifficulty && s.category !== selectedDifficulty) return false
+    if (activePanel === 'voucher' && selectedDifficulty && s.category !== selectedDifficulty) return false
     const sDate = new Date(s.sessionDate)
     return sDate.getFullYear() === selectedDate.getFullYear() && sDate.getMonth() === selectedDate.getMonth() && sDate.getDate() === selectedDate.getDate()
   })
 
   const dateHasSessions = (date: Date) =>
     sessions.some(s => {
-      if (selectedDifficulty && s.category !== selectedDifficulty) return false
+      if (activePanel === 'voucher' && selectedDifficulty && s.category !== selectedDifficulty) return false
       const sDate = new Date(s.sessionDate)
       return sDate.getFullYear() === date.getFullYear() && sDate.getMonth() === date.getMonth() && sDate.getDate() === date.getDate()
     })
 
   const changeMonth = (offset: number) => setCurrentDate(new Date(year, month + offset, 1))
 
-  const downloadTicketPDF = async () => {
-    try {
-      const { jsPDF } = await import('jspdf')
-      const doc = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm',
-        format: [140, 80] // Custom ticket size: 140mm x 80mm
-      })
+  const morningSlots = filteredSessions.filter(s => parseInt(s.startTime.split(':')[0], 10) < 12)
+  const afternoonSlots = filteredSessions.filter(s => {
+    const h = parseInt(s.startTime.split(':')[0], 10)
+    return h >= 12 && h < 17
+  })
+  const eveningSlots = filteredSessions.filter(s => parseInt(s.startTime.split(':')[0], 10) >= 17)
 
-      const selSession = sessions.find(s => s.id === selectedSessionId)
+  const selSession = selectedSessionId ? sessions.find(s => s.id === selectedSessionId) : null
 
-      // Background
-      doc.setFillColor(248, 250, 252) // #f8fafc
-      doc.rect(0, 0, 140, 80, 'F')
-
-      // Header Banner
-      doc.setFillColor(15, 37, 64) // #0f2540
-      doc.rect(0, 0, 140, 15, 'F')
-
-      // Header text
-      doc.setTextColor(255, 255, 255)
-      doc.setFont('Helvetica', 'bold')
-      doc.setFontSize(14)
-      doc.text('MAKERLAB 3D WORKSHOP', 8, 10)
-
-      doc.setFont('Helvetica', 'normal')
-      doc.setFontSize(9)
-      doc.text('ENTRY TICKET', 132, 10, { align: 'right' })
-
-      // Ticket Body details
-      doc.setTextColor(15, 37, 64)
-      doc.setFont('Helvetica', 'bold')
-      doc.setFontSize(10)
-      doc.text('CUSTOMER NAME', 8, 24)
-      doc.setFont('Helvetica', 'normal')
-      doc.setFontSize(11)
-      doc.setTextColor(74, 85, 104)
-      
-      const custName = voucher?.customerName || successData.customerName || 'Customer'
-      doc.text(custName, 8, 29)
-
-      doc.setTextColor(15, 37, 64)
-      doc.setFont('Helvetica', 'bold')
-      doc.setFontSize(10)
-      doc.text('SESSION DETAILS', 8, 38)
-      doc.setFont('Helvetica', 'normal')
-      doc.setFontSize(10)
-      doc.setTextColor(74, 85, 104)
-      
-      const sessionDateRaw = selSession?.sessionDate || successData.sessionDate
-      const dateStr = sessionDateRaw 
-      	? new Date(sessionDateRaw).toLocaleDateString(undefined, {
-      			weekday: 'short',
-      			month: 'short',
-      			day: 'numeric',
-      			year: 'numeric'
-      		})
-      	: 'N/A'
-      
-      const startTime = selSession?.startTime || successData.startTime || '00:00'
-      const endTime = selSession?.endTime || successData.endTime || '00:00'
-      const category = selSession?.category || successData.category || 'N/A'
-      const moduleName = selSession?.module?.name || successData.moduleName || 'N/A'
-
-      doc.text(`${dateStr}`, 8, 43)
-      doc.text(`${startTime} - ${endTime} (${category})`, 8, 48)
-      doc.setFont('Helvetica', 'italic')
-      doc.text(`Module: ${moduleName}`, 8, 53)
-      doc.setFont('Helvetica', 'normal')
-
-      doc.setTextColor(15, 37, 64)
-      doc.setFont('Helvetica', 'bold')
-      doc.setFontSize(10)
-      doc.text('VOUCHER & STATUS', 8, 60)
-      doc.setFont('Helvetica', 'normal')
-      doc.setFontSize(9)
-      doc.setTextColor(74, 85, 104)
-      
-      const vCode = voucher?.voucherCode || successData.voucherCode || 'N/A'
-      const units = successData.unitsToDeduct || selSession?.module?.units || 0
-
-      doc.text(`Voucher Code: ${vCode}`, 8, 65)
-      doc.text(`Credits: ${units} units`, 8, 70)
-      
-      if (successData.status === 'BALANCE_DUE') {
-        doc.setTextColor(220, 38, 38)
-        doc.setFont('Helvetica', 'bold')
-        doc.text(`BALANCE DUE: PHP ${successData.balanceDueAmount}`, 8, 75)
-      } else {
-        doc.setTextColor(22, 163, 74)
-        doc.setFont('Helvetica', 'bold')
-        doc.text('STATUS: CONFIRMED', 8, 75)
-      }
-
-      // Ticket Divider Dash Line
-      doc.setDrawColor(203, 213, 225)
-      doc.setLineDashPattern([2, 2], 0)
-      doc.line(95, 15, 95, 80)
-
-      // QR Code Section
-      doc.setLineDashPattern([], 0)
-      if (successData.bookingQrCodeData) {
-        doc.addImage(successData.bookingQrCodeData, 'PNG', 98, 20, 36, 36)
-      }
-
-      // QR label
-      doc.setTextColor(15, 37, 64)
-      doc.setFont('Helvetica', 'bold')
-      doc.setFontSize(9)
-      doc.text(successData.bookingReference, 116, 61, { align: 'center' })
-
-      doc.setFont('Helvetica', 'normal')
-      doc.setFontSize(7)
-      doc.setTextColor(113, 128, 150)
-      doc.text('SCAN AT RECEPTION', 116, 66, { align: 'center' })
-
-      // Save PDF
-      doc.save(`Ticket-${successData.bookingReference}.pdf`)
-    } catch (err) {
-      console.error('Failed to generate PDF', err)
-      alert('Error generating PDF ticket. Please try again.')
-    }
-  }
-
-  // â”€â”€â”€ Step 3: Confirmation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ──────────────────────────────────────────
+  // STEP 3: Booking Success Screen
+  // ──────────────────────────────────────────
   if (step === 3 && successData) {
     return (
-      <div className="cal-confirmation-card animate-fade-in">
-        <div className="cal-success-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <div className="cal-confirmation-card animate-fade-in" style={{ maxWidth: '600px', margin: '4rem auto', textAlign: 'center', padding: '2.5rem', background: '#fff', borderRadius: '1.5rem', boxShadow: '0 20px 40px rgba(0,0,0,0.06)' }}>
+        <div style={{ background: '#dcfce7', color: '#15803d', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12" />
           </svg>
         </div>
-        <h2 className="cal-confirm-title">Booking Confirmed!</h2>
-        <p className="cal-confirm-desc">
-          Your workshop session has been booked. A confirmation email was sent to <strong>{voucher?.customerEmail}</strong>.
+        <h2 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '0.5rem' }}>Booking Confirmed!</h2>
+        <p style={{ color: 'var(--secondary-foreground)', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.6 }}>
+          Thank you for choosing Makerlab! We have sent a comprehensive receipt and entry ticket instructions to{' '}
+          <strong>{successData.customerEmail || voucher?.customerEmail}</strong>.
         </p>
 
-        <div className="cal-details-list">
-          <div className="cal-details-row">
-            <span className="cal-details-label">Reference Code:</span>
-            <span className="cal-details-value">{successData.bookingReference}</span>
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '1rem', padding: '1.5rem', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '0.85rem', marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+            <span style={{ color: 'var(--secondary-foreground)', fontWeight: 600 }}>Reference Code:</span>
+            <strong style={{ color: 'var(--accent)', fontFamily: 'monospace', fontSize: '1.05rem' }}>{successData.bookingReference}</strong>
           </div>
-          <div className="cal-details-row">
-            <span className="cal-details-label">Module Booked:</span>
-            <span className="cal-details-value" style={{ fontWeight: 600 }}>{successData.moduleName}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: 'var(--secondary-foreground)' }}>Module Booked:</span>
+            <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{successData.moduleName}</span>
           </div>
-          {successData.status === 'BALANCE_DUE' && (
-            <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '0.5rem', color: '#b45309', fontSize: '0.85rem' }}>
-              <strong>Balance Due:</strong> Please pay <strong>₱{successData.balanceDueAmount}</strong> at reception check-in.
-            </div>
-          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: 'var(--secondary-foreground)' }}>Status:</span>
+            <span style={{ background: '#dcfce7', color: '#16a34a', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>RESERVED</span>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1.5rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
           <button 
             onClick={downloadTicketPDF} 
             className="pricing-btn pricing-btn-solid" 
-            style={{ 
-              maxWidth: '240px', 
-              background: 'var(--accent)', 
-              borderColor: 'var(--accent)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px'
-            }}
+            style={{ padding: '0.85rem 1.5rem', borderRadius: '0.75rem', background: 'var(--accent)', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
             Download PDF Ticket
           </button>
-          <button onClick={() => router.push('/')} className="pricing-btn pricing-btn-outline" style={{ maxWidth: '200px' }}>
-            Return to Home
+          <button 
+            onClick={handleResetAll} 
+            className="pricing-btn pricing-btn-outline" 
+            style={{ padding: '0.85rem 1.5rem', borderRadius: '0.75rem', background: 'none', border: '1.5px solid #cbd5e1', color: 'var(--primary)', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Done
           </button>
         </div>
       </div>
     )
   }
 
-
-
-  async function handleCheckStatus(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setManageLoading(true)
-    setManageError('')
-    setManageSuccessMessage('')
-    setActiveBooking(null)
-
-    const formData = new FormData(e.currentTarget)
-    try {
-      const { checkBookingStatusAction } = await import('../booking-status/actions')
-      const res = await checkBookingStatusAction(formData)
-      if (res.error) {
-        setManageError(res.error)
-      } else if (res.success) {
-        setActiveBooking(res.booking)
-      }
-    } catch (err) {
-      setManageError('An error occurred while checking booking status.')
-    }
-    setManageLoading(false)
-  }
-
-  async function handleCancelBooking() {
-    if (!activeBooking) return
-    if (!confirm('Are you sure you want to cancel this booking?')) return
-    
-    setManageLoading(true)
-    setManageError('')
-    setManageSuccessMessage('')
-
-    const formData = new FormData()
-    formData.append('bookingReference', activeBooking.bookingReference)
-    formData.append('email', activeBooking.customerEmail)
-
-    try {
-      const { cancelBookingAction } = await import('../cancel-booking/actions')
-      const res = await cancelBookingAction(formData)
-      if (res.error) {
-        setManageError(res.error)
-      } else if (res.success) {
-        setManageSuccessMessage('Your booking has been successfully cancelled and the slot has been released.')
-        setActiveBooking(null)
-      }
-    } catch (err) {
-      setManageError('An error occurred while cancelling the booking.')
-    }
-    setManageLoading(false)
-  }
-
-  const downloadManageTicketPDF = async () => {
-    if (!activeBooking) return
-    try {
-      const { jsPDF } = await import('jspdf')
-      const doc = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm',
-        format: [140, 80]
-      })
-
-      // Background
-      doc.setFillColor(248, 250, 252)
-      doc.rect(0, 0, 140, 80, 'F')
-
-      // Header Banner
-      doc.setFillColor(15, 37, 64)
-      doc.rect(0, 0, 140, 15, 'F')
-
-      // Header text
-      doc.setTextColor(255, 255, 255)
-      doc.setFont('Helvetica', 'bold')
-      doc.setFontSize(14)
-      doc.text('MAKERLAB 3D WORKSHOP', 8, 10)
-
-      doc.setFont('Helvetica', 'normal')
-      doc.setFontSize(9)
-      doc.text('ENTRY TICKET', 132, 10, { align: 'right' })
-
-      // Ticket Body details
-      doc.setTextColor(15, 37, 64)
-      doc.setFont('Helvetica', 'bold')
-      doc.setFontSize(10)
-      doc.text('CUSTOMER NAME', 8, 24)
-      doc.setFont('Helvetica', 'normal')
-      doc.setFontSize(11)
-      doc.setTextColor(74, 85, 104)
-      doc.text(activeBooking.customerName || 'Customer', 8, 29)
-
-      doc.setTextColor(15, 37, 64)
-      doc.setFont('Helvetica', 'bold')
-      doc.setFontSize(10)
-      doc.text('SESSION DETAILS', 8, 38)
-      doc.setFont('Helvetica', 'normal')
-      doc.setFontSize(10)
-      doc.setTextColor(74, 85, 104)
-      
-      const dateStr = new Date(activeBooking.session.sessionDate).toLocaleDateString(undefined, {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      })
-      doc.text(`${dateStr}`, 8, 43)
-      doc.text(`${activeBooking.session.startTime} - ${activeBooking.session.endTime} (${activeBooking.session.category})`, 8, 48)
-
-      doc.setTextColor(15, 37, 64)
-      doc.setFont('Helvetica', 'bold')
-      doc.setFontSize(10)
-      doc.text('VOUCHER & STATUS', 8, 57)
-      doc.setFont('Helvetica', 'normal')
-      doc.setFontSize(9)
-      doc.setTextColor(74, 85, 104)
-      doc.text(`Voucher Code: ${activeBooking.voucher?.voucherCode || 'N/A'}`, 8, 62)
-      doc.text(`Credits: ${activeBooking.unitsToDeduct || activeBooking.creditHoursToDeduct || 0} units`, 8, 67)
-      
-      if (activeBooking.status === 'BALANCE_DUE') {
-        doc.setTextColor(220, 38, 38)
-        doc.setFont('Helvetica', 'bold')
-        doc.text(`BALANCE DUE: PHP ${activeBooking.balanceDueAmount}`, 8, 72)
-      } else if (activeBooking.status === 'CANCELLED_BY_CUSTOMER') {
-        doc.setTextColor(220, 38, 38)
-        doc.setFont('Helvetica', 'bold')
-        doc.text('STATUS: CANCELLED', 8, 72)
-      } else {
-        doc.setTextColor(22, 163, 74)
-        doc.setFont('Helvetica', 'bold')
-        doc.text('STATUS: CONFIRMED', 8, 72)
-      }
-
-      // Ticket Divider Dash Line
-      doc.setDrawColor(203, 213, 225)
-      doc.setLineDashPattern([2, 2], 0)
-      doc.line(95, 15, 95, 80)
-
-      // QR Code Section
-      doc.setLineDashPattern([], 0)
-      if (activeBooking.bookingQrCodeData) {
-        doc.addImage(activeBooking.bookingQrCodeData, 'PNG', 98, 20, 36, 36)
-      }
-
-      // QR label
-      doc.setTextColor(15, 37, 64)
-      doc.setFont('Helvetica', 'bold')
-      doc.setFontSize(9)
-      doc.text(activeBooking.bookingReference, 116, 61, { align: 'center' })
-
-      doc.setFont('Helvetica', 'normal')
-      doc.setFontSize(7)
-      doc.setTextColor(113, 128, 150)
-      doc.text('SCAN AT RECEPTION', 116, 66, { align: 'center' })
-
-      doc.save(`Ticket-${activeBooking.bookingReference}.pdf`)
-    } catch (err) {
-      console.error('Failed to generate PDF', err)
-      alert('Error generating PDF ticket.')
-    }
-  }
-
-  // --- Step 1: High-Fidelity Location Details & Booking Entry ---
-  if (step === 1) {
-    return (
-      <div className="w-full animate-fade-in" style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1rem 4rem' }}>
-        
-        {/* Header Breadcrumb / Title */}
-        <div style={{ marginBottom: '2rem' }}>
-          <div style={{ fontSize: '0.85rem', color: 'var(--secondary-foreground)', display: 'flex', gap: '6px', marginBottom: '0.5rem' }}>
-            <span>Home</span> &gt; <span>Workshops</span> &gt; <span style={{ color: 'var(--primary)', fontWeight: 600 }}>Makerlab Experience Hub</span>
-          </div>
-          <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--primary)', margin: 0, letterSpacing: '-0.02em' }}>
-            Book Your 3D Printing Session
-          </h1>
-          <p style={{ color: 'var(--secondary-foreground)', fontSize: '0.95rem', margin: '0.25rem 0 0' }}>
-            Select your preferred time, reserve your spot, and bring your designs to life.
-          </p>
-        </div>
-
-        {/* 2-Column Split Layout */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '2rem', alignItems: 'start' }}>
-          
-          {/* LEFT COLUMN: Location Details Card */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            
-            {/* Gallery Card */}
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '1.5rem',
-              overflow: 'hidden',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-              border: '1px solid #f1f5f9'
-            }}>
-              {/* Photo Gallery Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '3px', height: '320px', overflow: 'hidden' }}>
-                <div style={{ overflow: 'hidden', height: '100%' }}>
-                  <img src="/20260629-152952.129-2.jpg" alt="Makerlab Experience Hub Main View"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '3px', height: '100%' }}>
-                  {[
-                    { id: 3, file: '3' },
-                    { id: 5, file: '5' },
-                    { id: 4, file: '4' },
-                    { id: 1, file: '1' }
-                  ].map((img, index) => (
-                    <div key={img.id} style={{ position: 'relative', overflow: 'hidden', height: '100%' }}>
-                      <img src={`/20260629-152952.129-${img.file}.jpg`} alt={`Venue photo ${img.id}`}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: 'brightness(0.95)' }} />
-                      {index === 3 && (
-                        <div style={{
-                          position: 'absolute', inset: 0, background: 'rgba(15,37,64,0.6)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
-                        }}>
-                          <span style={{ color: 'white', fontWeight: 700, fontSize: '0.85rem' }}>See all images</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Main Hub Details Info */}
-              <div style={{ padding: '2rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
-                  <div>
-                    <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>
-                      Makerlab Experience Hub
-                    </h2>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '0.5rem' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-                        {[1,2,3,4,5].map(s => (
-                          <svg key={s} width="14" height="14" viewBox="0 0 24 24" fill="#f97316" stroke="none">
-                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                          </svg>
-                        ))}
-                      </span>
-                      <span style={{ fontSize: '0.88rem', color: 'var(--primary)', fontWeight: 700 }}>5.0</span>
-                      <span style={{ fontSize: '0.85rem', color: 'var(--secondary-foreground)' }}>(1 review)</span>
-                      <span style={{ color: '#e2e8f0' }}>|</span>
-                      <span style={{ fontSize: '0.85rem', color: 'var(--secondary-foreground)', fontWeight: 500 }}>Electronics store</span>
-                    </div>
-                  </div>
-                  
-                  <a
-                    href="https://maps.google.com/?q=Makerlab+Experience+Hub+Ayala+Malls+Manila+Bay"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      padding: '0.6rem 1.25rem', borderRadius: '9999px',
-                      border: '1.5px solid #e2e8f0', background: 'white',
-                      color: 'var(--primary)', fontWeight: 600, fontSize: '0.85rem',
-                      textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                      transition: 'all 0.2s', boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
-                    }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-                    </svg>
-                    Get Directions
-                  </a>
-                </div>
-
-                <hr style={{ borderColor: '#f1f5f9', margin: '0 0 1.5rem' }} />
-
-                {/* Specific Location Fields */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  
-                  {/* Address Field */}
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                    <div style={{ color: '#f97316', flexShrink: 0, marginTop: '3px' }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.9rem', color: 'var(--primary)', lineHeight: 1.6 }}>
-                        2nd Floor, Building A, Macapagal Blvd, cor Asean Ave, Aseana City, Parañaque, 1300 Metro Manila
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Hours Field */}
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                    <div style={{ color: '#f97316', flexShrink: 0, marginTop: '3px' }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.9rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ color: '#16a34a', fontWeight: 600 }}>Open</span>
-                        <span style={{ color: 'var(--secondary-foreground)' }}>•</span>
-                        <span>Closes 9 PM</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Website Field */}
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                    <div style={{ color: '#f97316', flexShrink: 0, marginTop: '3px' }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <a href="https://makerlab.ph" target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.9rem', color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>
-                        makerlab.ph
-                      </a>
-                    </div>
-                  </div>
-
-                  {/* Plus Code Field */}
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                    <div style={{ color: '#f97316', flexShrink: 0, marginTop: '3px' }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"/><path d="m10 10 4 4M14 10l-4 4"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.9rem', color: 'var(--secondary-foreground)' }}>
-                        GXFQ+7V Parañaque, Metro Manila
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-            </div>
-
-            {/* What to Expect Card */}
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '1.5rem',
-              padding: '2rem',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-              border: '1px solid #f1f5f9'
-            }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--primary)', marginTop: 0, marginBottom: '1rem' }}>
-                Workshop Features
-              </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div style={{ display: 'flex', gap: '8px', fontSize: '0.88rem', color: 'var(--secondary-foreground)' }}>
-                  <span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> Access to FDM & SLA printers
-                </div>
-                <div style={{ display: 'flex', gap: '8px', fontSize: '0.88rem', color: 'var(--secondary-foreground)' }}>
-                  <span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> Materials & filaments included
-                </div>
-                <div style={{ display: 'flex', gap: '8px', fontSize: '0.88rem', color: 'var(--secondary-foreground)' }}>
-                  <span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> Real-time expert guidance
-                </div>
-                <div style={{ display: 'flex', gap: '8px', fontSize: '0.88rem', color: 'var(--secondary-foreground)' }}>
-                  <span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓</span> Post-processing station
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* RIGHT COLUMN: Permanent Booking / Management Dashboard Form */}
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '1.5rem',
-            padding: '2.2rem 2rem',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.06)',
-            border: '1px solid #f1f5f9',
-            position: 'sticky',
-            top: '2rem'
-          }}>
-            
-            {/* TAB NAVIGATION */}
-            <div style={{
-              display: 'flex',
-              background: '#f1f5f9',
-              padding: '0.3rem',
-              borderRadius: '0.85rem',
-              marginBottom: '1.75rem'
-            }}>
-              <button
-                type="button"
-                onClick={() => { setActiveTab('book'); setManageError(''); setManageSuccessMessage(''); }}
-                style={{
-                  flex: 1,
-                  padding: '0.6rem',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  borderRadius: '0.6rem',
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: activeTab === 'book' ? 'white' : 'transparent',
-                  color: activeTab === 'book' ? 'var(--primary)' : 'var(--secondary-foreground)',
-                  boxShadow: activeTab === 'book' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
-                  transition: 'all 0.2s'
-                }}
-              >
-                Book Session
-              </button>
-              <button
-                type="button"
-                onClick={() => { setActiveTab('manage'); setError(''); }}
-                style={{
-                  flex: 1,
-                  padding: '0.6rem',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  borderRadius: '0.6rem',
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: activeTab === 'manage' ? 'white' : 'transparent',
-                  color: activeTab === 'manage' ? 'var(--primary)' : 'var(--secondary-foreground)',
-                  boxShadow: activeTab === 'manage' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
-                  transition: 'all 0.2s'
-                }}
-              >
-                Manage Booking
-              </button>
-            </div>
-
-            {/* TAB CONTENT: BOOK SESSION */}
-            {activeTab === 'book' && (
-              <div className="animate-fade-in">
-                <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                  <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary)', margin: '0 0 0.4rem' }}>
-                    Access Booking
-                  </h2>
-                  <p style={{ color: 'var(--secondary-foreground)', fontSize: '0.85rem', margin: 0, lineHeight: 1.5 }}>
-                    Enter your voucher code and registered email to check schedules.
-                  </p>
-                </div>
-
-                {error && (
-                  <div style={{ padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.08)', color: '#dc2626', borderRadius: '0.75rem', fontSize: '0.88rem', marginBottom: '1.25rem', border: '1px solid rgba(239,68,68,0.1)' }}>
-                    {error}
-                  </div>
-                )}
-
-                <form onSubmit={handleValidate} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-                  <div>
-                    <label htmlFor="voucherCode" style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>
-                      Voucher Code
-                    </label>
-                    <input
-                      type="text" id="voucherCode" name="voucherCode" required
-                      className="input-field" placeholder="MLWS-VCH-XXXXXX"
-                      style={{ borderRadius: '0.75rem', width: '100%', padding: '0.75rem 1rem', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '0.92rem', outline: 'none' }}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="email" style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>
-                      Email Address
-                    </label>
-                    <input
-                      type="email" id="email" name="email" required
-                      className="input-field" placeholder="john@example.com"
-                      style={{ borderRadius: '0.75rem', width: '100%', padding: '0.75rem 1rem', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '0.92rem', outline: 'none' }}
-                    />
-                  </div>
-                  
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                      width: '100%', padding: '0.85rem', borderRadius: '0.75rem',
-                      background: loading ? '#cbd5e1' : 'var(--accent)',
-                      color: 'white', fontWeight: 700, border: 'none',
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      fontSize: '0.95rem', marginTop: '0.4rem',
-                      boxShadow: '0 4px 12px rgba(249,115,22,0.25)',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    {loading ? 'Validating...' : 'Find My Sessions'}
-                  </button>
-                </form>
-              </div>
-            )}
-
-            {/* TAB CONTENT: MANAGE BOOKING */}
-            {activeTab === 'manage' && (
-              <div className="animate-fade-in">
-                {!activeBooking ? (
-                  <div>
-                    <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                      <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary)', margin: '0 0 0.4rem' }}>
-                        Look up Booking
-                      </h2>
-                      <p style={{ color: 'var(--secondary-foreground)', fontSize: '0.85rem', margin: 0, lineHeight: 1.5 }}>
-                        Enter your Booking Reference Number and email to manage.
-                      </p>
-                    </div>
-
-                    {manageError && (
-                      <div style={{ padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.08)', color: '#dc2626', borderRadius: '0.75rem', fontSize: '0.88rem', marginBottom: '1.25rem', border: '1px solid rgba(239,68,68,0.1)' }}>
-                        {manageError}
-                      </div>
-                    )}
-                    
-                    {manageSuccessMessage && (
-                      <div style={{ padding: '0.75rem 1rem', background: 'rgba(22,163,74,0.08)', color: '#16a34a', borderRadius: '0.75rem', fontSize: '0.88rem', marginBottom: '1.25rem', border: '1px solid rgba(22,163,74,0.1)', fontWeight: 600 }}>
-                        {manageSuccessMessage}
-                      </div>
-                    )}
-
-                    <form onSubmit={handleCheckStatus} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-                      <div>
-                        <label htmlFor="bookingReference" style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>
-                          Booking Reference
-                        </label>
-                        <input
-                          type="text" id="bookingReference" name="bookingReference" required
-                          className="input-field" placeholder="MLWS-BK-XXXXXX"
-                          style={{ borderRadius: '0.75rem', width: '100%', padding: '0.75rem 1rem', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '0.92rem', outline: 'none' }}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="email" style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>
-                          Email Address
-                        </label>
-                        <input
-                          type="email" id="email" name="email" required
-                          className="input-field" placeholder="john@example.com"
-                          style={{ borderRadius: '0.75rem', width: '100%', padding: '0.75rem 1rem', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '0.92rem', outline: 'none' }}
-                        />
-                      </div>
-                      
-                      <button
-                        type="submit"
-                        disabled={manageLoading}
-                        style={{
-                          width: '100%', padding: '0.85rem', borderRadius: '0.75rem',
-                          background: manageLoading ? '#cbd5e1' : 'var(--primary)',
-                          color: 'white', fontWeight: 700, border: 'none',
-                          cursor: manageLoading ? 'not-allowed' : 'pointer',
-                          fontSize: '0.95rem', marginTop: '0.4rem',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        {manageLoading ? 'Checking...' : 'Check Status'}
-                      </button>
-                    </form>
-                  </div>
-                ) : (
-                  <div className="animate-fade-in">
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary)', marginTop: 0, marginBottom: '1rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.5rem' }}>
-                      Booking Found
-                    </h3>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.85rem', background: '#f8fafc', padding: '1rem', borderRadius: '0.75rem', marginBottom: '1.25rem', border: '1px solid #e2e8f0' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: 'var(--secondary-foreground)' }}>Reference:</span>
-                        <strong style={{ color: 'var(--primary)' }}>{activeBooking.bookingReference}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: 'var(--secondary-foreground)' }}>Category:</span>
-                        <span>{activeBooking.session.category} Workshop</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: 'var(--secondary-foreground)' }}>Date:</span>
-                        <span>{new Date(activeBooking.session.sessionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: 'var(--secondary-foreground)' }}>Time:</span>
-                        <span>{activeBooking.session.startTime} - {activeBooking.session.endTime}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--secondary-foreground)' }}>Status:</span>
-                        <span className={`badge ${
-                          activeBooking.status === 'RESERVED' ? 'badge-blue' :
-                          activeBooking.status === 'BALANCE_DUE' ? 'badge-yellow' :
-                          activeBooking.status === 'CANCELLED_BY_CUSTOMER' ? 'badge-red' : 'badge-green'
-                        }`}>
-                          {activeBooking.status.replace('_', ' ')}
-                        </span>
-                      </div>
-
-                      {activeBooking.status === 'BALANCE_DUE' && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: '0.5rem', marginTop: '0.25rem' }}>
-                          <span style={{ color: 'var(--secondary-foreground)', fontWeight: 600 }}>Balance Due:</span>
-                          <strong style={{ color: '#dc2626' }}>PHP {activeBooking.balanceDueAmount}</strong>
-                        </div>
-                      )}
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <button
-                        onClick={downloadManageTicketPDF}
-                        className="pricing-btn pricing-btn-solid"
-                        style={{
-                          width: '100%', padding: '0.8rem', borderRadius: '0.75rem',
-                          background: 'var(--accent)', color: 'white', fontWeight: 700, border: 'none',
-                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
-                        }}
-                      >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                          <polyline points="7 10 12 15 17 10" />
-                          <line x1="12" y1="15" x2="12" y2="3" />
-                        </svg>
-                        Download PDF Ticket
-                      </button>
-                      
-                      {activeBooking.status !== 'CANCELLED_BY_CUSTOMER' && activeBooking.status !== 'NO_SHOW' && activeBooking.status !== 'CHECKED_IN' && activeBooking.status !== 'COMPLETED_CONSUMED' && (
-                        <button
-                          onClick={handleCancelBooking}
-                          className="pricing-btn pricing-btn-outline"
-                          style={{
-                            width: '100%', padding: '0.8rem', borderRadius: '0.75rem',
-                            color: '#dc2626', borderColor: '#fca5a5', fontWeight: 600
-                          }}
-                        >
-                          Cancel Booking
-                        </button>
-                      )}
-
-                      <button
-                        onClick={() => setActiveBooking(null)}
-                        className="pricing-btn pricing-btn-outline"
-                        style={{ width: '100%', padding: '0.8rem', borderRadius: '0.75rem' }}
-                      >
-                        Back to Search
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--secondary-foreground)', lineHeight: 1.5 }}>
-              Voucher units are only deducted during physical check-in at the hub.
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-    )
-  }
-
-
-
-  // â”€â”€â”€ Step 2: Customer Booking Journey (Two-Column Layout) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const nameParts = voucher?.customerName ? voucher.customerName.split(' ') : ['', '']
-  const firstName = nameParts[0] || ''
-  const lastName = nameParts.slice(1).join(' ') || ''
-
-  // Group slots by time of day for step 2
-  const morningSlots = filteredSessions.filter(s => {
-    const hour = parseInt(s.startTime.split(':')[0], 10)
-    return hour < 12
-  })
-  const afternoonSlots = filteredSessions.filter(s => {
-    const hour = parseInt(s.startTime.split(':')[0], 10)
-    return hour >= 12 && hour < 17
-  })
-  const eveningSlots = filteredSessions.filter(s => {
-    const hour = parseInt(s.startTime.split(':')[0], 10)
-    return hour >= 17
-  })
-
-  // Selected session details
-  const selSession = selectedSessionId ? sessions.find(s => s.id === selectedSessionId) : null
-
+  // ──────────────────────────────────────────
+  // MAIN REDESIGNED 2-COLUMN VIEW
+  // ──────────────────────────────────────────
   return (
-    <div className="w-full animate-fade-in" style={{ marginTop: '1rem' }}>
-      {/* Step Header with back button */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid var(--admin-border)', paddingBottom: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {bookingStep > 1 && (
-            <button 
-              type="button" 
-              onClick={() => setBookingStep(bookingStep - 1)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', color: 'var(--accent)', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}
-            >
-              ←
-            </button>
-          )}
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>
-            {bookingStep === 1 ? 'Choose Category' : bookingStep === 2 ? 'Appointment Time' : 'Your Details'}
-          </h2>
-        </div>
-        <div style={{ fontSize: '0.9rem', color: 'var(--secondary-foreground)', fontWeight: 600 }}>
-          STEP {bookingStep} of 3
-        </div>
+    <div className="w-full animate-fade-in" style={{ maxWidth: '1240px', margin: '0 auto', padding: '2.5rem 1rem 5rem' }}>
+      
+      {/* Page Title & Subtitle */}
+      <div style={{ marginBottom: '2.5rem', textAlign: activePanel ? 'left' : 'center' }}>
+        <h1 style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--primary)', margin: 0, letterSpacing: '-0.025em' }}>
+          Book Your Makerlab Experience
+        </h1>
+        <p style={{ color: 'var(--secondary-foreground)', fontSize: '1.05rem', margin: '0.5rem 0 0', fontWeight: 500 }}>
+          Choose how you would like to visit, learn, or create at Makerlab.
+        </p>
       </div>
 
-      {error && (
-        <div style={{ padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.08)', color: '#dc2626', borderRadius: '0.75rem', fontSize: '0.9rem', marginBottom: '1.5rem', border: '1px solid rgba(239,68,68,0.1)' }}>
-          {error}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: '2.5rem', alignItems: 'start' }} className="booking-layout-grid">
+        
+        {/* ========================================================
+            LEFT COLUMN: Venue details & gallery (secondary focus)
+            ======================================================== */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="booking-location-column">
+          
+          {/* Gallery & Branch Summary Card */}
+          <div style={{ background: '#ffffff', borderRadius: '1.25rem', overflow: 'hidden', boxShadow: '0 4px 18px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9' }}>
+            {/* Photo Gallery Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '3px', height: '320px', overflow: 'hidden' }}>
+              <div style={{ overflow: 'hidden', height: '100%' }}>
+                <img src="/20260629-152952.129-2.jpg" alt="Makerlab Experience Hub Main View"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '3px', height: '100%' }}>
+                {[
+                  { id: 3, file: '3' },
+                  { id: 5, file: '5' },
+                  { id: 4, file: '4' },
+                  { id: 1, file: '1' }
+                ].map((img, index) => (
+                  <div key={img.id} style={{ position: 'relative', overflow: 'hidden', height: '100%' }}>
+                    <img src={`/20260629-152952.129-${img.file}.jpg`} alt={`Venue photo ${img.id}`}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: 'brightness(0.95)' }} />
+                    {index === 3 && (
+                      <div style={{
+                        position: 'absolute', inset: 0, background: 'rgba(15,37,64,0.6)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}>
+                        <span style={{ color: 'white', fontWeight: 700, fontSize: '0.85rem' }}>See all</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Info details */}
+            <div style={{ padding: '1.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>Makerlab Experience Hub</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '0.35rem', fontSize: '0.85rem' }}>
+                    <div style={{ display: 'flex', color: '#ea580c' }}>
+                      {[1,2,3,4,5].map(s => (
+                        <svg key={s} width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                      ))}
+                    </div>
+                    <strong style={{ color: 'var(--primary)' }}>5.0</strong>
+                    <span style={{ color: 'var(--secondary-foreground)' }}>(59 reviews) • Electronics store</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Embedded Google Map */}
+              <div style={{ borderRadius: '0.75rem', overflow: 'hidden', marginBottom: '1.25rem', border: '1px solid #f1f5f9' }}>
+                <iframe
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.3292626308344!2d120.98974386632457!3d14.52314923315507!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397cfaa3ed0cc43%3A0x6391278aa4c2b9eb!2sMakerlab%20Experience%20Hub!5e0!3m2!1sen!2sph!4v1784529958568!5m2!1sen!2sph"
+                  width="100%"
+                  height="220"
+                  style={{ border: 0, display: 'block' }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                />
+              </div>
+
+              <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: '0 0 1.25rem' }} />
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.88rem', color: 'var(--primary)' }}>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <span style={{ color: '#ea580c', fontWeight: 'bold' }}>📍</span>
+                  <span>2nd Floor, Building A, Ayala Malls Manila Bay, Macapagal Blvd, Parañaque City</span>
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <span style={{ color: '#ea580c', fontWeight: 'bold' }}>⏰</span>
+                  <span>Open Daily: 10:00 AM – 9:00 PM</span>
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <span style={{ color: '#ea580c', fontWeight: 'bold' }}>🌐</span>
+                  <a href="https://makerlab.ph" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>makerlab.ph</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Features Card */}
+          <div style={{ background: '#ffffff', borderRadius: '1.25rem', padding: '1.75rem', boxShadow: '0 4px 18px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9' }}>
+            <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary)', margin: '0 0 1rem' }}>Workshop Features</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', fontSize: '0.85rem', color: 'var(--secondary-foreground)' }}>
+              <div>🟢 Access to FDM and SLA printers</div>
+              <div>🟢 Materials and filaments included</div>
+              <div>🟢 Real-time expert guidance</div>
+              <div>🟢 Post-processing station</div>
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================
+            RIGHT COLUMN: Redesigned interactive booking workspace
+            ======================================================== */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          
+          {/* LANDING VIEW: 3 Clear Action Cards */}
+          {!activePanel && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }} className="animate-fade-in">
+              
+              {/* Card 1: Voucher */}
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '1.25rem', padding: '1.75rem', display: 'flex', gap: '1.25rem', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', transition: 'all 0.2s' }}>
+                <div style={{ fontSize: '2rem', display: 'flex', alignItems: 'center' }}>🎟️</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)' }}>Book with a Voucher</h3>
+                  <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--secondary-foreground)', lineHeight: 1.5 }}>
+                    Already purchased a 3D printing session? Use your voucher to reserve your preferred date and time.
+                  </p>
+                  <button 
+                    onClick={() => setActivePanel('voucher')}
+                    style={{ background: 'var(--accent)', color: '#fff', border: 'none', padding: '0.75rem 1.25rem', borderRadius: '0.75rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', width: 'fit-content', marginTop: '0.5rem', boxShadow: '0 4px 12px rgba(249,115,22,0.2)' }}
+                  >
+                    Enter Voucher Code
+                  </button>
+                </div>
+              </div>
+
+              {/* Card 2: Free Workshops */}
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '1.25rem', padding: '1.75rem', display: 'flex', gap: '1.25rem', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', transition: 'all 0.2s' }}>
+                <div style={{ fontSize: '2rem', display: 'flex', alignItems: 'center' }}>🆓</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)' }}>Join a Free Workshop</h3>
+                  <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--secondary-foreground)', lineHeight: 1.5 }}>
+                    Browse upcoming Makerlab workshops and reserve a free slot.
+                  </p>
+                  <button 
+                    onClick={() => setActivePanel('free')}
+                    style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '0.75rem 1.25rem', borderRadius: '0.75rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', width: 'fit-content', marginTop: '0.5rem', boxShadow: '0 4px 12px rgba(22,163,74,0.15)' }}
+                  >
+                    View Workshops
+                  </button>
+                </div>
+              </div>
+
+              {/* Card 3: My Bookings */}
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '1.25rem', padding: '1.75rem', display: 'flex', gap: '1.25rem', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', transition: 'all 0.2s' }}>
+                <div style={{ fontSize: '2rem', display: 'flex', alignItems: 'center' }}>📋</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)' }}>My Bookings</h3>
+                  <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--secondary-foreground)', lineHeight: 1.5 }}>
+                    View, reschedule, or cancel an existing session or workshop registration.
+                  </p>
+                  <button 
+                    onClick={() => setActivePanel('manage')}
+                    style={{ background: 'var(--primary)', color: '#fff', border: 'none', padding: '0.75rem 1.25rem', borderRadius: '0.75rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', width: 'fit-content', marginTop: '0.5rem' }}
+                  >
+                    Find My Booking
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* ACTIVE FLOW CONTENT */}
+          {activePanel && (
+            <div style={{ background: '#ffffff', borderRadius: '1.25rem', padding: '1.75rem', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px rgba(0,0,0,0.03)' }} className="animate-fade-in">
+              
+              {/* Back Button */}
+              {step === 1 && !activeBooking && !showReschedulePanel && (
+                <button 
+                  onClick={handleResetAll} 
+                  style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, padding: 0, display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '1.25rem' }}
+                >
+                  ← Back to choices
+                </button>
+              )}
+
+              {/* VOUCHER SCHEDULING INTERACTIVE WORKSPACE */}
+              {activePanel === 'voucher' && step === 1 && (
+                <div>
+                  <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.3rem', fontWeight: 900, color: 'var(--primary)' }}>Book with a Voucher</h3>
+                  <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.88rem', color: 'var(--secondary-foreground)' }}>Validate your voucher credits to choose dates.</p>
+
+                  {error && <div style={{ padding: '0.75rem 1rem', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '0.75rem', fontSize: '0.85rem', marginBottom: '1.25rem' }}>{error}</div>}
+
+                  <form onSubmit={handleValidateVoucher} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+                    <div>
+                      <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>Voucher Code</label>
+                      <input 
+                        type="text" required value={voucherCodeInput} onChange={e => setVoucherCodeInput(e.target.value)}
+                        placeholder="MLWS-VCH-XXXXXX" className="input-field" style={{ width: '100%', borderRadius: '0.75rem', padding: '0.75rem 1rem', border: '1px solid #cbd5e1' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>Registered Email Address</label>
+                      <input 
+                        type="email" required value={voucherEmailInput} onChange={e => setVoucherEmailInput(e.target.value)}
+                        placeholder="yourname@domain.com" className="input-field" style={{ width: '100%', borderRadius: '0.75rem', padding: '0.75rem 1rem', border: '1px solid #cbd5e1' }}
+                      />
+                    </div>
+                    <button 
+                      type="submit" disabled={loading}
+                      style={{ width: '100%', padding: '0.85rem', borderRadius: '0.75rem', background: loading ? '#cbd5e1' : 'var(--accent)', color: '#fff', border: 'none', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', fontSize: '0.92rem', boxShadow: '0 4px 12px rgba(249,115,22,0.15)' }}
+                    >
+                      {loading ? 'Validating...' : 'Continue to Schedule →'}
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {/* FREE WORKSHOP REGISTER & CHECKOUT (Step 1 - Browse Calendar) */}
+              {activePanel === 'free' && step === 1 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <div>
+                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.3rem', fontWeight: 900, color: 'var(--primary)' }}>Join a Free Workshop</h3>
+                    <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.88rem', color: 'var(--secondary-foreground)' }}>Select the number of attendees and browse available dates & time slots.</p>
+                  </div>
+
+                  {error && <div style={{ padding: '0.75rem 1rem', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '0.75rem', fontSize: '0.85rem', marginBottom: '1.25rem' }}>{error}</div>}
+
+                  {/* Pax Count Selector */}
+                  <div>
+                    <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>Number of Attendees</label>
+                    <select 
+                      value={freePaxCount} onChange={e => setFreePaxCount(parseInt(e.target.value, 10))}
+                      className="input-field" style={{ width: '100%', borderRadius: '0.75rem', padding: '0.75rem 1.25rem' }}
+                    >
+                      {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                        <option key={n} value={n}>{n} pax</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Calendar Widget */}
+                  <div style={{ border: '1px solid #e2e8f0', borderRadius: '1rem', padding: '1.25rem', background: '#f8fafc' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <button type="button" onClick={() => changeMonth(-1)} style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer' }}>‹</button>
+                      <strong style={{ fontSize: '1rem', color: 'var(--primary)' }}>
+                        {currentDate.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
+                      </strong>
+                      <button type="button" onClick={() => changeMonth(1)} style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer' }}>›</button>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--secondary-foreground)', marginBottom: '6px' }}>
+                      {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <span key={d}>{d}</span>)}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+                      {(() => {
+                        const y = currentDate.getFullYear()
+                        const m = currentDate.getMonth()
+                        const firstDayIdx = (new Date(y, m, 1).getDay() + 6) % 7
+                        const totDays = new Date(y, m + 1, 0).getDate()
+                        const days = []
+
+                        for (let i = 0; i < firstDayIdx; i++) days.push(null)
+                        for (let d = 1; d <= totDays; d++) days.push(new Date(y, m, d))
+
+                        return days.map((dObj, idx) => {
+                          if (!dObj) return <div key={idx} />
+                          const isPast = dObj < new Date(new Date().setHours(0,0,0,0))
+                          const hasSess = dateHasSessions(dObj)
+                          const isSel = selectedDate && selectedDate.getDate() === dObj.getDate() && selectedDate.getMonth() === dObj.getMonth()
+
+                          return (
+                            <button
+                              key={idx} type="button" disabled={isPast || !hasSess}
+                              onClick={() => { setSelectedDate(dObj); setSelectedSessionId(''); }}
+                              style={{
+                                padding: '0.5rem 0', borderRadius: '0.5rem', cursor: 'pointer',
+                                background: isSel ? 'var(--accent)' : (hasSess ? '#ffedd5' : 'transparent'),
+                                color: isSel ? '#fff' : (isPast ? '#cbd5e1' : (hasSess ? '#ea580c' : '#64748b')),
+                                fontWeight: (isSel || hasSess) ? 800 : 400,
+                                border: isSel ? 'none' : (hasSess ? '1.5px solid #fdba74' : 'none'),
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              {dObj.getDate()}
+                            </button>
+                          )
+                        })
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Available Time Slots */}
+                  {selectedDate && (
+                    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)' }}>Available Slots</h4>
+                      
+                      {filteredSessions.length === 0 ? (
+                        <div style={{ fontSize: '0.82rem', color: '#64748b', padding: '0.5rem', textAlign: 'center' }}>No sessions open for this date.</div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {filteredSessions.map(s => (
+                            <label 
+                              key={s.id}
+                              style={{ display: 'flex', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid', borderColor: selectedSessionId === s.id ? 'var(--accent)' : '#e2e8f0', background: selectedSessionId === s.id ? '#fffaf5' : '#fff', cursor: 'pointer', fontSize: '0.85rem' }}
+                            >
+                              <input 
+                                type="radio" name="selectedSessionFree" value={s.id} 
+                                checked={selectedSessionId === s.id} onChange={() => setSelectedSessionId(s.id)}
+                                style={{ marginTop: '2px' }}
+                              />
+                              <div>
+                                <strong style={{ color: 'var(--primary)' }}>{s.startTime} - {s.endTime}</strong>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--secondary-foreground)', marginTop: '2px' }}>{s.module?.name} · Slots Left: {s.availableSlots}</div>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Continue Button */}
+                  {selectedSessionId && (
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setError('')
+                        setStep(2)
+                      }}
+                      style={{ width: '100%', padding: '0.85rem', borderRadius: '0.75rem', background: 'var(--accent)', color: '#fff', border: 'none', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer', marginTop: '0.5rem', boxShadow: '0 4px 12px rgba(249,115,22,0.15)' }}
+                    >
+                      Continue to Registration →
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* FREE WORKSHOP REGISTER & CHECKOUT (Step 2 - Details Form) */}
+              {activePanel === 'free' && step === 2 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  {/* Step Back Button */}
+                  <button 
+                    type="button"
+                    onClick={() => setStep(1)}
+                    style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, padding: 0, display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    ← Back to Calendar
+                  </button>
+
+                  <div>
+                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.3rem', fontWeight: 900, color: 'var(--primary)' }}>Join a Free Workshop</h3>
+                    <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.88rem', color: 'var(--secondary-foreground)' }}>Enter your details to complete your free booking.</p>
+                  </div>
+
+                  {/* Chosen Slot Summary */}
+                  {selSession && (
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '1rem', padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.88rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--secondary-foreground)' }}>Selected Date:</span>
+                        <strong style={{ color: 'var(--primary)' }}>
+                          {new Date(selSession.sessionDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                        </strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--secondary-foreground)' }}>Time Slot:</span>
+                        <strong style={{ color: 'var(--primary)' }}>{selSession.startTime} - {selSession.endTime}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--secondary-foreground)' }}>Attendees:</span>
+                        <strong style={{ color: 'var(--primary)' }}>{freePaxCount} pax</strong>
+                      </div>
+                    </div>
+                  )}
+
+                  {error && <div style={{ padding: '0.75rem 1rem', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '0.75rem', fontSize: '0.85rem', marginBottom: '1.25rem' }}>{error}</div>}
+
+                  <form 
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      handleFreeBook()
+                    }} 
+                    style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+                  >
+                    <div>
+                      <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>Full Name</label>
+                      <input 
+                        type="text" required value={freeName} onChange={e => setFreeName(e.target.value)}
+                        placeholder="Aldrin Espinosa" className="input-field" style={{ width: '100%', borderRadius: '0.75rem', padding: '0.75rem 1.25rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>Email Address</label>
+                      <input 
+                        type="email" required value={freeEmail} onChange={e => setFreeEmail(e.target.value)}
+                        placeholder="yourname@domain.com" className="input-field" style={{ width: '100%', borderRadius: '0.75rem', padding: '0.75rem 1.25rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>Mobile Number</label>
+                      <input 
+                        type="tel" required value={freePhone} onChange={e => setFreePhone(e.target.value)}
+                        placeholder="0917XXXXXXX" className="input-field" style={{ width: '100%', borderRadius: '0.75rem', padding: '0.75rem 1.25rem' }}
+                      />
+                    </div>
+                    <button 
+                      type="submit" disabled={loading}
+                      style={{ width: '100%', padding: '0.85rem', borderRadius: '0.75rem', background: loading ? '#cbd5e1' : '#16a34a', color: '#fff', border: 'none', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', fontSize: '0.92rem', boxShadow: '0 4px 12px rgba(22,163,74,0.15)', marginTop: '0.5rem' }}
+                    >
+                      {loading ? 'Confirming Booking...' : 'Confirm Booking Reservation →'}
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {/* MY BOOKINGS LOOKUP & MANAGEMENT */}
+              {activePanel === 'manage' && step === 1 && (
+                <div>
+                  {!showCancelPanel && !showReschedulePanel && (
+                    <>
+                      <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.3rem', fontWeight: 900, color: 'var(--primary)' }}>Manage My Booking</h3>
+                      <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.88rem', color: 'var(--secondary-foreground)' }}>Find, reschedule or cancel your session.</p>
+
+                      {error && <div style={{ padding: '0.75rem 1rem', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '0.75rem', fontSize: '0.85rem', marginBottom: '1.25rem' }}>{error}</div>}
+                      {manageSuccessMessage && <div style={{ padding: '0.75rem 1rem', background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#065f46', borderRadius: '0.75rem', fontSize: '0.85rem', marginBottom: '1.25rem', fontWeight: 600 }}>{manageSuccessMessage}</div>}
+
+                      {myBookings.length === 0 ? (
+                        <form onSubmit={handleLookupBookings} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+                          <div>
+                            <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>Booking Reference or Voucher Code</label>
+                            <input 
+                              type="text" required value={bookingRefInput} onChange={e => setBookingRefInput(e.target.value)}
+                              placeholder="MLWS-BK-XXXXXX" className="input-field" style={{ width: '100%', borderRadius: '0.75rem', padding: '0.75rem 1.25rem' }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>Registered Email Address</label>
+                            <input 
+                              type="email" required value={bookingEmailInput} onChange={e => setBookingEmailInput(e.target.value)}
+                              placeholder="yourname@domain.com" className="input-field" style={{ width: '100%', borderRadius: '0.75rem', padding: '0.75rem 1.25rem' }}
+                            />
+                          </div>
+                          <button 
+                            type="submit" disabled={loading}
+                            style={{ width: '100%', padding: '0.85rem', borderRadius: '0.75rem', background: loading ? '#cbd5e1' : 'var(--primary)', color: '#fff', border: 'none', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', fontSize: '0.92rem' }}
+                          >
+                            {loading ? 'Finding...' : 'Find My Bookings →'}
+                          </button>
+                        </form>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                          {myBookings.map(b => (
+                            <div key={b.bookingReference} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '1rem', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #edf2f7', paddingBottom: '0.5rem' }}>
+                                <span style={{ fontWeight: 800, color: 'var(--primary)' }}>{b.bookingReference}</span>
+                                <span style={{ textTransform: 'capitalize', background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700 }}>
+                                  {b.status.toLowerCase().replace('_', ' ')}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem', color: 'var(--primary)' }}>
+                                <div><strong>Workshop:</strong> {b.session.module?.name || 'Makerlab Session'}</div>
+                                <div><strong>Schedule:</strong> {new Date(b.session.sessionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} at {b.session.startTime} - {b.session.endTime}</div>
+                                <div><strong>Attendee:</strong> {b.customerName} ({b.customerEmail})</div>
+                              </div>
+                              
+                              {(() => {
+                                const dateObj = new Date(b.session.sessionDate)
+                                const sDateStr = dateObj.toISOString().split('T')[0]
+                                const sStart = new Date(`${sDateStr}T${b.session.startTime}:00`)
+                                const hoursUntil = (sStart.getTime() - Date.now()) / (1000 * 60 * 60)
+                                const canReschedule = hoursUntil >= 48 && !b.rescheduled && (b.status === 'RESERVED' || b.status === 'BALANCE_DUE')
+
+                                let disableReason = ''
+                                if (b.rescheduled) {
+                                  disableReason = 'Already rescheduled once.'
+                                } else if (hoursUntil < 48) {
+                                  disableReason = 'Allowed only 48 hours before start.'
+                                } else if (b.status !== 'RESERVED' && b.status !== 'BALANCE_DUE') {
+                                  disableReason = 'Only active bookings can be rescheduled.'
+                                }
+
+                                return (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', marginTop: '0.5rem' }}>
+                                    <div style={{ display: 'flex', gap: '0.65rem' }}>
+                                      <button 
+                                        disabled={!canReschedule}
+                                        onClick={() => handleStartReschedule(b)}
+                                        style={{
+                                          flex: 1, padding: '0.55rem', border: 'none',
+                                          background: canReschedule ? 'var(--accent)' : '#cbd5e1',
+                                          color: canReschedule ? '#fff' : '#64748b',
+                                          borderRadius: '0.5rem', fontWeight: 700, fontSize: '0.82rem',
+                                          cursor: canReschedule ? 'pointer' : 'not-allowed'
+                                        }}
+                                      >
+                                        Reschedule
+                                      </button>
+                                      <button 
+                                        onClick={() => { setActiveBooking(b); setShowCancelPanel(true); }}
+                                        style={{ flex: 1, padding: '0.55rem', border: '1px solid #fca5a5', background: '#fff', color: '#dc2626', borderRadius: '0.5rem', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}
+                                      >
+                                        Cancel Booking
+                                      </button>
+                                    </div>
+                                    {!canReschedule && disableReason && (
+                                      <div style={{ fontSize: '0.78rem', color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.5rem', padding: '0.4rem 0.65rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        ⚠️ <strong>Cannot Reschedule:</strong> {disableReason}
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })()}
+                            </div>
+                          ))}
+                          <button 
+                            onClick={() => { setMyBookings([]); setBookingRefInput(''); }}
+                            style={{ padding: '0.75rem', width: '100%', background: '#f1f5f9', border: 'none', borderRadius: '0.75rem', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}
+                          >
+                            Back to Lookup Search
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Reschedule View */}
+                  {showReschedulePanel && (
+                    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                      <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--primary)' }}>📅 Select Replacement Schedule</h4>
+                      {rescheduleError && <div style={{ padding: '0.65rem', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '0.5rem', fontSize: '0.82rem' }}>{rescheduleError}</div>}
+                      
+                      {rescheduleSessions.length === 0 ? (
+                        <div style={{ fontSize: '0.85rem', color: 'var(--secondary-foreground)', padding: '1.25rem', background: '#f8fafc', borderRadius: '0.75rem', textAlign: 'center', border: '1px dashed #cbd5e1' }}>
+                          No alternative future slots found for this workshop type.
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', maxHeight: '250px', overflowY: 'auto' }}>
+                          {rescheduleSessions.map(s => (
+                            <label 
+                              key={s.id}
+                              style={{ display: 'flex', gap: '0.65rem', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid', borderColor: selectedRescheduleSessionId === s.id ? 'var(--accent)' : '#e2e8f0', background: selectedRescheduleSessionId === s.id ? '#fffaf5' : '#fff', cursor: 'pointer', fontSize: '0.85rem' }}
+                            >
+                              <input 
+                                type="radio" name="resched" value={s.id} 
+                                checked={selectedRescheduleSessionId === s.id} onChange={() => setSelectedRescheduleSessionId(s.id)}
+                                style={{ marginTop: '2px' }}
+                              />
+                              <div>
+                                <strong style={{ color: 'var(--primary)' }}>{new Date(s.sessionDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</strong>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--secondary-foreground)', marginTop: '2px' }}>⏰ {s.startTime} - {s.endTime}</div>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', gap: '0.65rem' }}>
+                        <button onClick={() => setShowReschedulePanel(false)} style={{ flex: 1, padding: '0.65rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', background: '#fff', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                        <button onClick={handleConfirmReschedule} disabled={!selectedRescheduleSessionId || rescheduleLoading} style={{ flex: 2, padding: '0.65rem', borderRadius: '0.5rem', background: selectedRescheduleSessionId ? 'var(--accent)' : '#cbd5e1', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer' }}>
+                          {rescheduleLoading ? 'Saving...' : 'Confirm Reschedule'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cancel View */}
+                  {showCancelPanel && activeBooking && (
+                    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                      <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#dc2626' }}>⚠️ Cancel Booking Reservation</h4>
+                      
+                      <div style={{ background: '#fff5f5', border: '1px solid #fecaca', borderRadius: '0.75rem', padding: '1rem', fontSize: '0.85rem', color: '#991b1b', lineHeight: 1.5 }}>
+                        <strong>Cancellation Policy:</strong> Cancellations must be completed at least 48 hours prior to start. Cancellations within the window or checked-in sessions cannot restore voucher credits.
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                        <div>
+                          <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>Reason for cancellation</label>
+                          <select 
+                            value={cancelReason} onChange={e => setCancelReason(e.target.value)}
+                            className="input-field" style={{ width: '100%', borderRadius: '0.5rem', padding: '0.65rem' }}
+                          >
+                            <option value="Personal schedule conflict">Personal schedule conflict</option>
+                            <option value="Double booked / Change of mind">Double booked / Change of mind</option>
+                            <option value="Health / Emergency">Health / Emergency</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>Optional Notes</label>
+                          <textarea 
+                            value={cancelCustomNotes} onChange={e => setCancelCustomNotes(e.target.value)}
+                            placeholder="Add any extra comments here..." className="input-field" style={{ width: '100%', borderRadius: '0.5rem', padding: '0.65rem', minHeight: '60px' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '0.65rem' }}>
+                        <button onClick={() => setShowCancelPanel(false)} style={{ flex: 1, padding: '0.65rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', background: '#fff', fontWeight: 600, cursor: 'pointer' }}>Go Back</button>
+                        <button onClick={handleCancelBooking} disabled={loading} style={{ flex: 2, padding: '0.65rem', borderRadius: '0.5rem', background: '#dc2626', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer' }}>
+                          {loading ? 'Cancelling...' : 'Confirm Cancellation'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              )}
+
+              {/* CALENDAR & RESERVATION SCHEDULER VIEW (Step 2 - Voucher Only) */}
+              {step === 2 && activePanel === 'voucher' && (
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  
+                  {/* Step Banner */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, color: 'var(--primary)' }}>
+                      Appointment Time
+                    </h3>
+                    <button 
+                      onClick={() => setStep(1)}
+                      style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700 }}
+                    >
+                      ← Back
+                    </button>
+                  </div>
+
+                  {/* Calendar Widget */}
+                  <div style={{ border: '1px solid #e2e8f0', borderRadius: '1rem', padding: '1.25rem', background: '#f8fafc' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <button onClick={() => changeMonth(-1)} style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer' }}>‹</button>
+                      <strong style={{ fontSize: '1rem', color: 'var(--primary)' }}>
+                        {currentDate.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
+                      </strong>
+                      <button onClick={() => changeMonth(1)} style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer' }}>›</button>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--secondary-foreground)', marginBottom: '6px' }}>
+                      {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <span key={d}>{d}</span>)}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+                      {(() => {
+                        const y = currentDate.getFullYear()
+                        const m = currentDate.getMonth()
+                        const firstDayIdx = (new Date(y, m, 1).getDay() + 6) % 7
+                        const totDays = new Date(y, m + 1, 0).getDate()
+                        const days = []
+
+                        for (let i = 0; i < firstDayIdx; i++) days.push(null)
+                        for (let d = 1; d <= totDays; d++) days.push(new Date(y, m, d))
+
+                        return days.map((dObj, idx) => {
+                          if (!dObj) return <div key={idx} />
+                          const isPast = dObj < new Date(new Date().setHours(0,0,0,0))
+                          const hasSess = dateHasSessions(dObj)
+                          const isSel = selectedDate && selectedDate.getDate() === dObj.getDate() && selectedDate.getMonth() === dObj.getMonth()
+
+                          return (
+                            <button
+                              key={idx} type="button" disabled={isPast || !hasSess}
+                              onClick={() => { setSelectedDate(dObj); setSelectedSessionId(''); }}
+                              style={{
+                                padding: '0.5rem 0', borderRadius: '0.5rem', cursor: 'pointer',
+                                background: isSel ? 'var(--accent)' : (hasSess ? '#ffedd5' : 'transparent'),
+                                color: isSel ? '#fff' : (isPast ? '#cbd5e1' : (hasSess ? '#ea580c' : '#64748b')),
+                                fontWeight: (isSel || hasSess) ? 800 : 400,
+                                border: isSel ? 'none' : (hasSess ? '1.5px solid #fdba74' : 'none'),
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              {dObj.getDate()}
+                            </button>
+                          )
+                        })
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Available Time Slots Section */}
+                  {selectedDate && (
+                    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)' }}>Available Slots</h4>
+                      
+                      {filteredSessions.length === 0 ? (
+                        <div style={{ fontSize: '0.82rem', color: '#64748b', padding: '0.5rem', textAlign: 'center' }}>No sessions open for this date.</div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {filteredSessions.map(s => (
+                            <label 
+                              key={s.id}
+                              style={{ display: 'flex', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid', borderColor: selectedSessionId === s.id ? 'var(--accent)' : '#e2e8f0', background: selectedSessionId === s.id ? '#fffaf5' : '#fff', cursor: 'pointer', fontSize: '0.85rem' }}
+                            >
+                              <input 
+                                type="radio" name="selectedSession" value={s.id} 
+                                checked={selectedSessionId === s.id} onChange={() => setSelectedSessionId(s.id)}
+                                style={{ marginTop: '2px' }}
+                              />
+                              <div>
+                                <strong style={{ color: 'var(--primary)' }}>{s.startTime} - {s.endTime}</strong>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--secondary-foreground)', marginTop: '2px' }}>{s.module?.name} · Slots Left: {s.availableSlots}</div>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Summary & Booking Confirmation Form Submit */}
+                  {selectedSessionId && (
+                    <div className="animate-fade-in" style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {activePanel === 'voucher' && (
+                        <div>
+                          <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>Notes / Special Requests</label>
+                          <textarea 
+                            value={notes} onChange={e => setNotes(e.target.value)}
+                            placeholder="Specify design links, filament specifications, or requests..."
+                            style={{ width: '100%', borderRadius: '0.5rem', border: '1px solid #cbd5e1', padding: '0.65rem', minHeight: '60px', outline: 'none' }}
+                          />
+                        </div>
+                      )}
+
+                      <button 
+                        onClick={handleBook}
+                        style={{ width: '100%', padding: '0.85rem', borderRadius: '0.75rem', background: 'var(--accent)', color: '#fff', border: 'none', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}
+                      >
+                        Confirm Booking Reservation
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Voucher Warning Note */}
+                  {activePanel === 'voucher' && (
+                    <div style={{ fontSize: '0.78rem', color: 'var(--secondary-foreground)', background: '#f8fafc', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0', lineHeight: 1.4 }}>
+                      Your voucher will not be deducted when you reserve. It will only be used when you physically check in at the Makerlab Experience Hub.
+                    </div>
+                  )}
+
+                </div>
+              )}
+
+            </div>
+          )}
+
+        </div>
+
+      </div>
+
+      {/* Terms and Conditions Modal */}
+      {showTCModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', padding: '2rem', borderRadius: '1.5rem', width: '90%', maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary)' }}>Terms & Conditions</h3>
+            <TermsAndConditionsContainer checked={agreedToTC} onChange={setAgreedToTC} />
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+              <button onClick={() => setShowTCModal(false)} style={{ flex: 1, padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', background: '#fff', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleConfirmBook} disabled={!agreedToTC} style={{ flex: 2, padding: '0.75rem', borderRadius: '0.5rem', background: agreedToTC ? 'var(--accent)' : '#cbd5e1', color: '#fff', border: 'none', fontWeight: 700, cursor: agreedToTC ? 'pointer' : 'not-allowed' }}>Confirm Booking</button>
+            </div>
+          </div>
         </div>
       )}
 
-      <div className="booking-two-col">
-        {/* ═══ LEFT COLUMN: Step Content ═══ */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          
-          {/* STEP 1: Choose Level of Difficulty */}
-          {bookingStep === 1 && (
-            <div className="glass-card animate-fade-in" style={{ borderRadius: '1.5rem', padding: '2.5rem' }}>
-              <p style={{ color: 'var(--secondary-foreground)', margin: '0 0 1.5rem 0', fontSize: '0.95rem' }}>
-                Please select the workshop difficulty level you wish to attend:
-              </p>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                {[
-                  {
-                    id: 'BEGINNER',
-                    title: 'Beginner Workshop',
-                    desc: 'Introductory sessions for building foundational knowledge. Clean, simple, and guided step-by-step.',
-                    units: 2,
-                    color: '#3b82f6'
-                  },
-                  {
-                    id: 'INTERMEDIATE',
-                    title: 'Intermediate Workshop',
-                    desc: 'Moderate difficulty sessions focusing on calibration, maintenance, and precision tuning.',
-                    units: 3,
-                    color: '#f59e0b'
-                  },
-                  {
-                    id: 'ADVANCED',
-                    title: 'Advanced Workshop',
-                    desc: 'Complex design and mechanical assemblies. For advanced users focusing on engineering applications.',
-                    units: 4,
-                    color: '#ef4444'
-                  }
-                ].map(level => {
-                  const isSelected = selectedDifficulty === level.id
-                  return (
-                    <button
-                      key={level.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedDifficulty(level.id)
-                        setSelectedSessionId('')
-                        setSelectedDate(null)
-                        setBookingStep(2)
-                      }}
-                      style={{
-                        textAlign: 'left',
-                        width: '100%',
-                        padding: '1.5rem',
-                        borderRadius: '1.25rem',
-                        border: isSelected ? `2px solid ${level.color}` : '1px solid var(--admin-border)',
-                        background: isSelected ? 'rgba(249, 115, 22, 0.03)' : 'transparent',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', maxWidth: '80%' }}>
-                        <span style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--primary)' }}>{level.title}</span>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--secondary-foreground)' }}>{level.desc}</span>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
-                        <span className={`badge ${
-                          level.id === 'BEGINNER' ? 'badge-blue' :
-                          level.id === 'INTERMEDIATE' ? 'badge-yellow' : 'badge-red'
-                        }`} style={{ fontSize: '0.7rem' }}>
-                          {level.id}
-                        </span>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent)' }}>{level.units} units</span>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* STEP 2: Choose Date & Time */}
-          {bookingStep === 2 && (() => {
-            const firstMonthDate = currentDate
-            const secondMonthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
-
-            const getCalendarDays = (date: Date) => {
-              const y = date.getFullYear()
-              const m = date.getMonth()
-              const firstDayIdx = (new Date(y, m, 1).getDay() + 6) % 7
-              const totDays = new Date(y, m + 1, 0).getDate()
-
-              const days: (Date | null)[] = []
-              for (let i = 0; i < firstDayIdx; i++) days.push(null)
-              for (let d = 1; d <= totDays; d++) days.push(new Date(y, m, d))
-              return days
-            }
-
-            const firstMonthDays = getCalendarDays(firstMonthDate)
-            const secondMonthDays = getCalendarDays(secondMonthDate)
-
-            return (
-              <>
-                {/* Card 1: Two Month Calendar */}
-                <div className="glass-card animate-fade-in" style={{ borderRadius: '1.5rem', padding: '2.5rem' }}>
-                  <div className="calendar-header" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)' }}>
-                      {firstMonthDate.toLocaleString('default', { month: 'long', year: 'numeric' })} – {secondMonthDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
-                    </span>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button type="button" className="calendar-nav-btn" onClick={() => changeMonth(-1)}>&lt;</button>
-                      <button type="button" className="calendar-nav-btn" onClick={() => changeMonth(1)}>&gt;</button>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2.5rem' }}>
-                    {/* First Month */}
-                    <div style={{ borderRight: '1px solid #e2e8f0', paddingRight: '2.5rem' }}>
-                      <div style={{ textAlign: 'center', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--primary)' }}>
-                        {firstMonthDate.toLocaleString('default', { month: 'long' })}
-                      </div>
-                      <div className="calendar-weekdays" style={{ fontWeight: 600, color: 'var(--secondary-foreground)' }}>
-                        <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
-                      </div>
-                      <div className="calendar-days-grid" style={{ marginTop: '0.5rem' }}>
-                        {firstMonthDays.map((day, idx) => {
-                          if (!day) return <div key={`empty-1-${idx}`} />
-                          const hasSessions = dateHasSessions(day)
-                          const isSelected = selectedDate && day.getDate() === selectedDate.getDate() && day.getMonth() === selectedDate.getMonth() && day.getFullYear() === selectedDate.getFullYear()
-                          const isPast = new Date(day.getFullYear(), day.getMonth(), day.getDate()) < new Date(new Date().setHours(0, 0, 0, 0))
-                          return (
-                            <button
-                              key={`day-1-${day.getDate()}`}
-                              type="button"
-                              disabled={isPast || !hasSessions}
-                              className={`calendar-day-cell ${isSelected ? 'active-day' : ''} ${hasSessions ? 'has-sessions' : ''} ${(isPast || !hasSessions) ? 'disabled' : ''}`}
-                              onClick={() => { setSelectedDate(day); setSelectedSessionId('') }}
-                            >
-                              {day.getDate()}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Second Month */}
-                    <div>
-                      <div style={{ textAlign: 'center', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--primary)' }}>
-                        {secondMonthDate.toLocaleString('default', { month: 'long' })}
-                      </div>
-                      <div className="calendar-weekdays" style={{ fontWeight: 600, color: 'var(--secondary-foreground)' }}>
-                        <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
-                      </div>
-                      <div className="calendar-days-grid" style={{ marginTop: '0.5rem' }}>
-                        {secondMonthDays.map((day, idx) => {
-                          if (!day) return <div key={`empty-2-${idx}`} />
-                          const hasSessions = dateHasSessions(day)
-                          const isSelected = selectedDate && day.getDate() === selectedDate.getDate() && day.getMonth() === selectedDate.getMonth() && day.getFullYear() === selectedDate.getFullYear()
-                          const isPast = new Date(day.getFullYear(), day.getMonth(), day.getDate()) < new Date(new Date().setHours(0, 0, 0, 0))
-                          return (
-                            <button
-                              key={`day-2-${day.getDate()}`}
-                              type="button"
-                              disabled={isPast || !hasSessions}
-                              className={`calendar-day-cell ${isSelected ? 'active-day' : ''} ${hasSessions ? 'has-sessions' : ''} ${(isPast || !hasSessions) ? 'disabled' : ''}`}
-                              onClick={() => { setSelectedDate(day); setSelectedSessionId('') }}
-                            >
-                              {day.getDate()}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card 2: Available Time Slots */}
-                <div className="glass-card animate-fade-in" style={{ borderRadius: '1.5rem', padding: '2.5rem' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                    <h4 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'var(--primary)' }}>
-                      Available Time Slots on {selectedDate ? selectedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }) : 'Selected Date'}
-                    </h4>
-
-                    {filteredSessions.length === 0 ? (
-                      <div style={{ padding: '2rem 1rem', background: '#f8fafc', borderRadius: '0.75rem', textAlign: 'center', color: 'var(--secondary-foreground)', fontSize: '0.9rem' }}>
-                        No slots available in the <strong>{selectedDifficulty}</strong> category on this date.
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                        
-                        {/* Morning Section */}
-                        {morningSlots.length > 0 && (
-                          <div>
-                            <div style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--secondary-foreground)', marginBottom: '0.5rem' }}>Morning</div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                              {morningSlots.map(s => (
-                                <button
-                                  key={s.id}
-                                  type="button"
-                                  onClick={() => setSelectedSessionId(s.id)}
-                                  className={`slot-time-pill ${selectedSessionId === s.id ? 'active' : ''}`}
-                                  style={{
-                                    padding: '0.5rem 1rem',
-                                    borderRadius: '0.5rem',
-                                    border: selectedSessionId === s.id ? '2px solid var(--accent)' : '1px solid var(--admin-border)',
-                                    background: selectedSessionId === s.id ? 'rgba(249, 115, 22, 0.1)' : '#fff',
-                                    cursor: 'pointer',
-                                    fontWeight: 600,
-                                    fontSize: '0.9rem'
-                                  }}
-                                >
-                                  {s.startTime}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Afternoon Section */}
-                        {afternoonSlots.length > 0 && (
-                          <div>
-                            <div style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--secondary-foreground)', marginBottom: '0.5rem' }}>Afternoon</div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                              {afternoonSlots.map(s => (
-                                <button
-                                  key={s.id}
-                                  type="button"
-                                  onClick={() => setSelectedSessionId(s.id)}
-                                  className={`slot-time-pill ${selectedSessionId === s.id ? 'active' : ''}`}
-                                  style={{
-                                    padding: '0.5rem 1rem',
-                                    borderRadius: '0.5rem',
-                                    border: selectedSessionId === s.id ? '2px solid var(--accent)' : '1px solid var(--admin-border)',
-                                    background: selectedSessionId === s.id ? 'rgba(249, 115, 22, 0.1)' : '#fff',
-                                    cursor: 'pointer',
-                                    fontWeight: 600,
-                                    fontSize: '0.9rem'
-                                  }}
-                                >
-                                  {s.startTime}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Evening Section */}
-                        {eveningSlots.length > 0 && (
-                          <div>
-                            <div style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--secondary-foreground)', marginBottom: '0.5rem' }}>Evening</div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                              {eveningSlots.map(s => (
-                                <button
-                                  key={s.id}
-                                  type="button"
-                                  onClick={() => setSelectedSessionId(s.id)}
-                                  className={`slot-time-pill ${selectedSessionId === s.id ? 'active' : ''}`}
-                                  style={{
-                                    padding: '0.5rem 1rem',
-                                    borderRadius: '0.5rem',
-                                    border: selectedSessionId === s.id ? '2px solid var(--accent)' : '1px solid var(--admin-border)',
-                                    background: selectedSessionId === s.id ? 'rgba(249, 115, 22, 0.1)' : '#fff',
-                                    cursor: 'pointer',
-                                    fontWeight: 600,
-                                    fontSize: '0.9rem'
-                                  }}
-                                >
-                                  {s.startTime}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )
-          })()}
-
-          {/* STEP 3: Your Details / Review */}
-          {bookingStep === 3 && (
-            <div className="glass-card animate-fade-in" style={{ borderRadius: '1.5rem', padding: '2.5rem' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="input-group">
-                    <label style={{ fontWeight: 600 }}>First Name</label>
-                    <input type="text" readOnly disabled value={firstName} className="input-field" style={{ borderRadius: '0.75rem', background: '#f1f5f9' }} />
-                  </div>
-                  <div className="input-group">
-                    <label style={{ fontWeight: 600 }}>Last Name</label>
-                    <input type="text" readOnly disabled value={lastName} className="input-field" style={{ borderRadius: '0.75rem', background: '#f1f5f9' }} />
-                  </div>
-                </div>
-                
-                <div className="input-group">
-                  <label style={{ fontWeight: 600 }}>Email Address</label>
-                  <input type="email" readOnly disabled value={voucher?.customerEmail || ''} className="input-field" style={{ borderRadius: '0.75rem', background: '#f1f5f9' }} />
-                </div>
-
-                <div className="input-group">
-                  <label style={{ fontWeight: 600 }}>Notes or comments (optional)</label>
-                  <textarea 
-                    value={notes} 
-                    onChange={(e) => setNotes(e.target.value)} 
-                    placeholder="Enter notes..." 
-                    className="input-field" 
-                    rows={4} 
-                    style={{ borderRadius: '0.75rem', resize: 'vertical', fontFamily: 'inherit' }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
-                    <input type="checkbox" checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)} />
-                    <span>I agree to the Terms & Conditions</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* --- RIGHT COLUMN: Booking Summary Card --- */}
-        <div className="glass-card" style={{ borderRadius: '1.5rem', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', height: 'fit-content', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)' }}>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', margin: 0, borderBottom: '1px solid var(--admin-border)', paddingBottom: '0.75rem' }}>
-            Booking Summary
-          </h3>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.9rem' }}>
-            {/* Service details */}
-            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-              <div style={{ color: '#f97316', display: 'flex', marginTop: '2px' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-                </svg>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <strong style={{ color: 'var(--primary)' }}>Makerlab Experience Hub</strong>
-                <span style={{ color: 'var(--secondary-foreground)', fontSize: '0.8rem', lineHeight: 1.4 }}>
-                  2nd Floor, Building A, Ayala Malls Manila Bay
-                </span>
-              </div>
-            </div>
-
-            {/* Selected category / level */}
-            {selectedDifficulty && (
-              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', borderTop: '1px solid #f1f5f9', paddingTop: '0.75rem' }}>
-                <div style={{ color: '#f97316', display: 'flex', marginTop: '2px' }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
-                  </svg>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <strong style={{ color: 'var(--primary)' }}>{selectedDifficulty} Workshop</strong>
-                    <span style={{ fontWeight: 600 }}>{selectedDifficulty === 'BEGINNER' ? '2 units' : selectedDifficulty === 'INTERMEDIATE' ? '3 units' : '4 units'}</span>
-                  </div>
-                  <span style={{ color: 'var(--secondary-foreground)', fontSize: '0.8rem' }}>Workshop category</span>
-                </div>
-              </div>
-            )}
-
-            {/* Selected session time details */}
-            {selSession && (
-              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', borderTop: '1px solid #f1f5f9', paddingTop: '0.75rem' }}>
-                <div style={{ color: '#f97316', display: 'flex', marginTop: '2px' }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                  </svg>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <strong style={{ color: 'var(--primary)' }}>
-                    {new Date(selSession.sessionDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                  </strong>
-                  <span style={{ color: 'var(--secondary-foreground)' }}>
-                    {selSession.startTime} - {selSession.endTime}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Voucher details */}
-            {voucher && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', borderTop: '1px solid #f1f5f9', paddingTop: '0.75rem', fontSize: '0.85rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--secondary-foreground)' }}>Voucher Code:</span>
-                  <span style={{ fontWeight: 600, color: 'var(--accent)' }}>{voucher.voucherCode}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--secondary-foreground)' }}>Remaining Credits:</span>
-                  <span style={{ fontWeight: 600 }}>{voucher.remainingUnits} units</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Action buttons based on current booking step */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
-            {bookingStep === 1 && (
-              <button 
-                type="button" 
-                disabled={!selectedDifficulty}
-                onClick={() => setBookingStep(2)}
-                className="pricing-btn pricing-btn-solid"
-                style={{
-                  width: '100%',
-                  padding: '0.85rem',
-                  borderRadius: '0.75rem',
-                  background: selectedDifficulty ? 'var(--accent)' : '#cbd5e1',
-                  color: selectedDifficulty ? 'white' : '#64748b',
-                  border: 'none',
-                  cursor: selectedDifficulty ? 'pointer' : 'not-allowed',
-                  fontWeight: 700,
-                  transition: 'all 0.2s'
-                }}
-              >
-                Next Step
-              </button>
-            )}
-
-            {bookingStep === 2 && (
-              <button 
-                type="button" 
-                disabled={!selectedSessionId}
-                onClick={() => setBookingStep(3)}
-                className="pricing-btn pricing-btn-solid"
-                style={{
-                  width: '100%',
-                  padding: '0.85rem',
-                  borderRadius: '0.75rem',
-                  background: selectedSessionId ? 'var(--accent)' : '#cbd5e1',
-                  color: selectedSessionId ? 'white' : '#64748b',
-                  border: 'none',
-                  cursor: selectedSessionId ? 'pointer' : 'not-allowed',
-                  fontWeight: 700,
-                  transition: 'all 0.2s'
-                }}
-              >
-                Next Step
-              </button>
-            )}
-
-            {bookingStep === 3 && (
-              <button 
-                type="button" 
-                disabled={loading || !selectedSessionId || !agreeTerms}
-                onClick={handleBook}
-                className="pricing-btn pricing-btn-solid"
-                style={{
-                  width: '100%',
-                  padding: '0.85rem',
-                  borderRadius: '0.75rem',
-                  background: (selectedSessionId && agreeTerms) ? 'var(--accent)' : '#cbd5e1',
-                  color: (selectedSessionId && agreeTerms) ? 'white' : '#64748b',
-                  border: 'none',
-                  cursor: (selectedSessionId && agreeTerms) ? 'pointer' : 'not-allowed',
-                  fontWeight: 700,
-                  transition: 'all 0.2s'
-                }}
-              >
-                {loading ? 'Booking Appointment...' : 'Book Appointment'}
-              </button>
-            )}
-
-            <button 
-              type="button" 
-              onClick={() => { setStep(1); setVoucher(null); setSessions([]); setSelectedSessionId(''); setSelectedDate(null); setBookingStep(1); setSelectedDifficulty(null); setNotes(''); }} 
-              className="pricing-btn pricing-btn-outline"
-              style={{ width: '100%', padding: '0.85rem', borderRadius: '0.75rem', fontWeight: 600 }}
-            >
-              Cancel & Exit
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }

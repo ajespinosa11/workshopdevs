@@ -203,8 +203,8 @@ export default function CheckInClient() {
             <div className="grid grid-cols-2 gap-2 text-sm">
               <span className="text-secondary-foreground">Customer:</span>
               <span className="font-medium">{voucher.customerName}</span>
-              <span className="text-secondary-foreground">Remaining Credits:</span>
-              <span className="font-bold text-primary">{voucher.remainingUnits} units</span>
+              <span className="text-secondary-foreground">Remaining Tickets:</span>
+              <span className="font-bold text-primary">{voucher.remainingUnits} ticket{voucher.remainingUnits !== 1 ? 's' : ''}</span>
               <span className="text-secondary-foreground">Voucher Status:</span>
               <span><span className="badge badge-green">{voucher.status}</span></span>
             </div>
@@ -216,6 +216,14 @@ export default function CheckInClient() {
               <span className="font-medium">{booking.bookingReference}</span>
               <span className="text-secondary-foreground">Session Category:</span>
               <span>{booking.session.category}</span>
+              {booking.kidName && (
+                <>
+                  <span className="text-secondary-foreground">Kid's Name:</span>
+                  <span className="font-bold" style={{ color: '#15803d' }}>👦 {booking.kidName}</span>
+                  <span className="text-secondary-foreground">Guardian:</span>
+                  <span className="font-medium">{booking.companionName || booking.customerName}</span>
+                </>
+              )}
               <span className="text-secondary-foreground">Module:</span>
               <span className="font-medium text-accent">{booking.session.module?.name}</span>
               <span className="text-secondary-foreground">Cost:</span>

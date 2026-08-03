@@ -1,45 +1,9 @@
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
-import { prisma } from '@/lib/prisma'
+import Gallery from '@/components/Gallery'
 
 export default async function Home() {
-  const plans = await prisma.plan.findMany({ where: { isActive: true } })
-
-  const planAesthetics: Record<string, { dotClass: string; features: string[]; buttonClass: string }> = {
-    'Beginner Workshop': {
-      dotClass: 'glow-dot-blue',
-      features: [
-        '2 academic units',
-        'Access to FDM 3D printers',
-        'Standard filament support',
-        'Online session scheduling',
-        'Community workspace access'
-      ],
-      buttonClass: 'pricing-btn-outline'
-    },
-    'Intermediate Workshop': {
-      dotClass: 'glow-dot-orange',
-      features: [
-        '6 academic units',
-        'FDM & SLA 3D printers',
-        'Premium filament selection',
-        'Priority seat booking',
-        '1-on-1 expert guidance'
-      ],
-      buttonClass: 'pricing-btn-solid'
-    },
-    'Advanced Workshop': {
-      dotClass: 'glow-dot-purple',
-      features: [
-        '12 academic units',
-        'All printer types access',
-        'Unlimited high-end filament',
-        'Dedicated project storage',
-        '24/7 priority support access'
-      ],
-      buttonClass: 'pricing-btn-outline'
-    }
-  }
-
   return (
     <div className="animate-fade-in" style={{ margin: 0, padding: 0 }}>
 
@@ -75,8 +39,8 @@ export default async function Home() {
 
           {/* CTA Buttons */}
           <div className="hero-cta-group">
-            <Link href="/request-plan" className="hero-btn-primary">
-              Get Started
+            <Link href="/print-2-profit" className="hero-btn-primary" style={{ background: '#f97316', borderColor: '#f97316' }}>
+              Buy "Print 2 Profit" Workshop
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12" />
                 <polyline points="12 5 19 12 12 19" />
@@ -169,68 +133,10 @@ export default async function Home() {
       </section>
 
       {/* ═══════════════════════════════════════
-          PRICING SECTION
+          GALLERY SECTION
       ═══════════════════════════════════════ */}
       <div className="container">
-        <div className="pricing-section">
-          <div className="pricing-header-container">
-            <div className="pricing-header-left">
-              <div className="trial-badge">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
-                  <path d="m9 12 2 2 4-4"/>
-                </svg>
-                Flexible Workshop Access
-              </div>
-              <h2 className="pricing-title">Choose your plan</h2>
-              <p className="pricing-subtitle">
-                Get the right units for your 3D printing modules. Access state-of-the-art FDM/SLA printers, premium materials, and expert guidance.
-              </p>
-            </div>
-
-            <div className="pricing-toggle">
-              <button className="toggle-btn active">Credit Packages</button>
-              <button className="toggle-btn">Monthly Sub</button>
-            </div>
-          </div>
-
-          <div className="pricing-grid">
-            {plans.map(plan => {
-              const aesthetic = planAesthetics[plan.name] || {
-                dotClass: 'glow-dot-blue',
-                features: [`${plan.creditUnits} academic units`, 'Workshop access'],
-                buttonClass: 'pricing-btn-outline'
-              }
-
-              return (
-                <div key={plan.id} className="pricing-card">
-                  <div className="pricing-card-header">
-                    <span className={`glow-dot ${aesthetic.dotClass}`}></span>
-                    <h3 className="pricing-card-title">{plan.name}</h3>
-                  </div>
-
-                  <div className="pricing-card-price-container">
-                    <span className="pricing-card-price">₱{plan.price.toLocaleString()}</span>
-                    <span className="pricing-card-period">/pkg</span>
-                  </div>
-
-                  <ul className="pricing-features-list">
-                    {aesthetic.features.map((feature, idx) => (
-                      <li key={idx} className="pricing-feature-item">
-                        <span className="feature-plus-icon">+</span>
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Link href={`/request-plan?plan=${plan.id}`} className={`pricing-btn ${aesthetic.buttonClass}`}>
-                    Request Plan
-                  </Link>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        <Gallery />
       </div>
 
     </div>

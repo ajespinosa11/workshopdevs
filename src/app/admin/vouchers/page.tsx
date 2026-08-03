@@ -10,7 +10,7 @@ export default async function AdminVouchersPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-3xl font-bold mb-1" style={{ fontSize: '2rem', fontWeight: 800 }}>Manage Vouchers</h1>
-        <p style={{ color: 'var(--admin-text-secondary)', fontSize: '0.95rem' }}>View, track, and monitor all generated subscriber vouchers and credit statuses.</p>
+        <p style={{ color: 'var(--admin-text-secondary)', fontSize: '0.95rem' }}>View, track, and monitor all generated subscriber vouchers and ticket statuses.</p>
       </div>
       
       <div className="admin-card-table">
@@ -33,8 +33,8 @@ export default async function AdminVouchersPage() {
                 <th>Voucher Code</th>
                 <th>Customer Name</th>
                 <th>Plan Package</th>
-                <th>Total Units</th>
-                <th>Remaining Balance</th>
+                <th>Total Tickets</th>
+                <th>Remaining Tickets</th>
                 <th>Status</th>
                 <th>Generated Date</th>
               </tr>
@@ -48,8 +48,8 @@ export default async function AdminVouchersPage() {
                     <div style={{ fontSize: '0.8rem', color: 'var(--admin-text-secondary)' }}>{v.customerEmail}</div>
                   </td>
                   <td>{v.plan.name}</td>
-                  <td>{v.totalUnits} units</td>
-                  <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{v.remainingUnits} units</td>
+                  <td>{v.totalUnits} ticket{v.totalUnits !== 1 ? 's' : ''}</td>
+                  <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{v.remainingUnits} ticket{v.remainingUnits !== 1 ? 's' : ''}</td>
                   <td>
                     <span className={`badge ${
                       v.status === 'ACTIVE' ? 'badge-green' : 

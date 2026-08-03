@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { topUpVoucher } from '../vouchers/actions'
 
 interface Customer {
   name: string
@@ -19,6 +21,48 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
   const [selectedEmail, setSelectedEmail] = useState<string | null>(
     customers.length > 0 ? customers[0].email : null
   )
+
+  const router = useRouter()
+  // Top Up Modal State
+  const [showTopUpModal, setShowTopUpModal] = useState(false)
+  const [topUpVoucherId, setTopUpVoucherId] = useState('')
+  const [topUpCode, setTopUpCode] = useState('')
+  const [topUpUnits, setTopUpUnits] = useState(1)
+  const [topUpAmount, setTopUpAmount] = useState(300)
+  const [topUpNotes, setTopUpNotes] = useState('')
+  const [topUpLoading, setTopUpLoading] = useState(false)
+  const [topUpError, setTopUpError] = useState('')
+
+  function openTopUpModal(vid: string, code: string) {
+    setTopUpVoucherId(vid)
+    setTopUpCode(code)
+    setTopUpUnits(1)
+    setTopUpAmount(300)
+    setTopUpNotes('')
+    setTopUpError('')
+    setShowTopUpModal(true)
+  }
+
+  async function handleTopUpSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setTopUpLoading(true)
+    setTopUpError('')
+
+    const formData = new FormData()
+    formData.append('voucherId', topUpVoucherId)
+    formData.append('units', topUpUnits.toString())
+    formData.append('amountPaid', topUpAmount.toString())
+    formData.append('notes', topUpNotes)
+
+    const res = await topUpVoucher(formData)
+    if (res.error) {
+      setTopUpError(res.error)
+    } else {
+      setShowTopUpModal(false)
+      router.refresh()
+    }
+    setTopUpLoading(false)
+  }
 
   // Filter customers by name or email
   const filteredCustomers = customers.filter(
@@ -166,12 +210,32 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
                       <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--admin-text-primary)' }}>{v.planName}</div>
                       <div style={{ marginTop: '0.5rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--admin-text-secondary)', marginBottom: '4px' }}>
-                          <span>Credit Meter:</span>
-                          <strong>{v.remainingUnits} / {v.totalUnits} units remaining</strong>
+                          <span>Ticket Meter:</span>
+                          <strong>{v.remainingUnits} / {v.totalUnits} ticket{v.totalUnits !== 1 ? 's' : ''} remaining</strong>
                         </div>
                         <div style={{ width: '100%', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
                           <div style={{ width: `${(v.remainingUnits / v.totalUnits) * 100}%`, height: '100%', background: 'var(--accent)', borderRadius: '3px' }}></div>
                         </div>
+                      </div>
+                      <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'flex-end' }}>
+                        <button
+                          onClick={() => openTopUpModal(v.id, v.voucherCode)}
+                          style={{
+                            padding: '0.35rem 0.75rem',
+                            fontSize: '0.75rem',
+                            borderRadius: '0.5rem',
+                            background: '#fff',
+                            color: 'var(--accent)',
+                            border: '1.5px solid var(--accent)',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(249,115,22,0.06)' }}
+                          onMouseOut={(e) => { e.currentTarget.style.background = '#fff' }}
+                        >
+                          💸 Top Up
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -291,6 +355,75 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
           background-color: #f8fafc !important;
         }
       `}</style>
+      {/* Top Up Voucher Modal */}
+      {showTopUpModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1.5rem' }}>
+          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '450px', borderRadius: '1.5rem', background: '#ffffff', color: 'var(--foreground)', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>Top Up Voucher</h3>
+                <p style={{ fontSize: '0.82rem', color: 'var(--admin-text-secondary)', margin: '4px 0 0 0' }}>
+                  Voucher: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--accent)' }}>{topUpCode}</span>
+                </p>
+              </div>
+              <button onClick={() => setShowTopUpModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: 'var(--admin-text-secondary)', cursor: 'pointer' }}>&times;</button>
+            </div>
+
+            <form onSubmit={handleTopUpSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {topUpError && <div style={{ padding: '0.6rem 0.85rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.5rem', fontSize: '0.85rem', borderLeft: '3px solid #ef4444' }}>{topUpError}</div>}
+
+              <div className="input-group">
+                <label style={{ fontWeight: 600 }}>Units to Add</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={topUpUnits}
+                  onChange={(e) => {
+                    const units = parseInt(e.target.value, 10) || 1
+                    setTopUpUnits(units)
+                    setTopUpAmount(units * 300)
+                  }}
+                  className="input-field"
+                  required
+                  style={{ borderRadius: '0.5rem' }}
+                />
+              </div>
+
+              <div className="input-group">
+                <label style={{ fontWeight: 600 }}>Amount Paid (Fixed Price)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={topUpAmount}
+                  onChange={(e) => setTopUpAmount(parseFloat(e.target.value) || 0)}
+                  className="input-field"
+                  required
+                  style={{ borderRadius: '0.5rem' }}
+                />
+              </div>
+
+              <div className="input-group">
+                <label style={{ fontWeight: 600 }}>Notes / Transaction Description</label>
+                <textarea
+                  value={topUpNotes}
+                  onChange={(e) => setTopUpNotes(e.target.value)}
+                  className="input-field"
+                  placeholder="e.g. Paid cash for 1 extra unit top up"
+                  style={{ borderRadius: '0.5rem', minHeight: '60px', padding: '0.5rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                <button type="button" onClick={() => setShowTopUpModal(false)} className="admin-btn-outline" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem' }}>Cancel</button>
+                <button type="submit" disabled={topUpLoading} className="pricing-btn pricing-btn-solid" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem', background: 'var(--accent)', border: 'none', color: 'white', fontWeight: 600 }}>
+                  {topUpLoading ? 'Processing...' : 'Confirm Top Up'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

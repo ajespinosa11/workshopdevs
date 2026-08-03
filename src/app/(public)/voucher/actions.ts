@@ -10,7 +10,19 @@ export async function checkVoucherStatusAction(formData: FormData) {
 
   const voucher = await prisma.voucher.findUnique({
     where: { voucherCode },
-    include: { plan: true }
+    include: {
+      plan: true,
+      bookings: {
+        orderBy: { createdAt: 'desc' },
+        include: {
+          session: {
+            include: {
+              module: true
+            }
+          }
+        }
+      }
+    }
   })
 
   if (!voucher || voucher.customerEmail.toLowerCase().trim() !== email.toLowerCase().trim()) {

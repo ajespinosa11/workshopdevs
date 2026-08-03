@@ -17,13 +17,20 @@ export default async function AdminSessionsPage() {
           customerName: true,
           customerEmail: true,
           customerPhone: true,
-          status: true
+          status: true,
+          kidName: true,
+          companionName: true
         }
       }
     }
   })
 
   const modules = await prisma.module.findMany({
+    where: {
+      name: {
+        in: ['Print 2 Profit', 'Make-ur-robot workshop', 'Free Workshop']
+      }
+    },
     orderBy: { name: 'asc' }
   })
 
@@ -38,6 +45,7 @@ export default async function AdminSessionsPage() {
     capacity: s.capacity,
     availableSlots: s.availableSlots,
     status: s.status,
+    notes: s.notes,
     bookingsCount: s.bookings.filter(b => b.status === 'RESERVED' || b.status === 'BALANCE_DUE').length,
     bookings: s.bookings,
     module: {

@@ -19,6 +19,9 @@ model StaffUser {
 
   createdTransactions CreditTransaction[]
   checkedInAttendances Attendance[]
+  approvedRegistrations WorkshopRegistration[]
+  rescheduleLogs        RescheduleLog[]
+  auditLogs             AuditTrail[]
 }
 
 model Module {
@@ -105,6 +108,7 @@ model WorkshopSession {
 
   bookings         Booking[]
   attendances      Attendance[]
+  registrations    WorkshopRegistration[]
 }
 
 model Booking {
@@ -127,6 +131,9 @@ model Booking {
   checkedInAt             DateTime?
   cancelledAt             DateTime?
   notes                   String?
+  companionName           String?
+  kidName                 String?
+  rescheduled             Boolean  @default(false)
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 
@@ -170,4 +177,93 @@ model SystemSetting {
   id            String   @id @default(uuid())
   settingKey    String   @unique
   settingValue  String
+}
+
+model DiscountCode {
+  id          String    @id @default(uuid())
+  code        String    @unique
+  eventName   String
+  isUsed      Boolean   @default(false)
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model WorkshopRegistration {
+  id                      String             @id @default(uuid())
+  bookingReference        String             @unique
+  salesChannel            String             @default("SHOPIFY") // SHOPIFY, STOREHUB, MANUAL_REGISTRATION, COMPLIMENTARY, OTHER
+  sku                     String             @default("BW001")
+  
+  customerName            String
+  customerEmail           String
+  customerPhone           String
+  participantsCount       Int                @default(1)
+  branchLocation          String?
+  notes                   String?
+
+  sessionId               String?
+  session                 WorkshopSession?   @relation(fields: [sessionId], references: [id])
+  
+  status                  String             @default("AWAITING_PAYMENT") 
+  // Statuses: AWAITING_PAYMENT, PAYMENT_PENDING, PAID_FOR_ADMIN_VERIFICATION, PENDING_SCHEDULE_CONFIRMATION, RESERVED, CONFIRMED, WAITING_LIST, RESCHEDULING_REQUESTED, RESCHEDULED, ATTENDED, NO_SHOW, CANCELLED, REFUNDED, PARTIALLY_REFUNDED, DUPLICATE_ORDER
+  
+  shopifyOrder            ShopifyOrder?
+  storehubTransactionId   String?            @unique
+  
+  approvedByStaffId       String?
+  approvedByStaff         StaffUser?         @relation(fields: [approvedByStaffId], references: [id])
+  reservedAt              DateTime?
+  reservedUntil           DateTime?          // Soft-lock expiration (15 mins from checkout start)
+  
+  capacityOverridden      Boolean            @default(false)
+  overrideReason          String?
+  rescheduleHistory       RescheduleLog[]
+
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+
+  auditLogs               AuditTrail[]
+}
+
+model ShopifyOrder {
+  id                    String               @id @default(uuid())
+  shopifyOrderId        String               @unique
+  shopifyOrderNumber     String
+  registrationId        String               @unique
+  registration          WorkshopRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  
+  financialStatus       String
+  fulfillmentStatus     String?
+  totalAmount           Float
+  currency              String               @default("PHP")
+  sku                   String
+  quantity              Int
+  rawPayload            String
+  
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+}
+
+model RescheduleLog {
+  id                      String               @id @default(uuid())
+  registrationId          String
+  registration            WorkshopRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  originalSessionId       String
+  newSessionId            String
+  reason                  String
+  processedByStaffId      String
+  processedByStaff        StaffUser            @relation(fields: [processedByStaffId], references: [id])
+  createdAt               DateTime             @default(now())
+}
+
+model AuditTrail {
+  id                      String                @id @default(uuid())
+  registrationId          String?
+  registration            WorkshopRegistration? @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  action                  String
+  details                 String?
+  performedByStaffId      String?
+  performedByStaff        StaffUser?            @relation(fields: [performedByStaffId], references: [id])
+  createdAt               DateTime              @default(now())
 }

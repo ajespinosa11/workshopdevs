@@ -2,9 +2,11 @@
 
 import { prisma } from '@/lib/prisma'
 import { autoCancelExpiredBookings } from '@/lib/booking-utils'
+import { releaseExpiredSoftLocks } from './lock-actions'
 
 export async function validateVoucherAndGetSessions(formData: FormData) {
   await autoCancelExpiredBookings()
+  await releaseExpiredSoftLocks()
 
   const voucherCode = formData.get('voucherCode') as string
   const email = formData.get('email') as string
@@ -35,26 +37,27 @@ export async function validateVoucherAndGetSessions(formData: FormData) {
     }
   })
 
-  const bookedModuleIds = customerBookings.map(b => b.session.moduleId)
-
   // Calculate total units already committed by upcoming active bookings
   const reservedBookings = customerBookings.filter(b => b.status === 'RESERVED' || b.status === 'BALANCE_DUE')
   const totalReservedUnits = reservedBookings.reduce((sum, b) => sum + b.unitsToDeduct, 0)
   const effectiveRemainingUnits = Math.max(0, voucher.remainingUnits - totalReservedUnits)
 
   if (effectiveRemainingUnits <= 0) {
-    return { error: 'You have already reserved bookings up to your voucher unit limit. Please cancel an existing booking first.' }
+      return { error: 'You have already reserved bookings up to your voucher ticket limit. Please cancel an existing booking first.' }
   }
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  // Load upcoming sessions including their module details
+  // Load upcoming sessions including their module details, filtered by the voucher's plan name
   const sessions = await prisma.workshopSession.findMany({
     where: {
       sessionDate: { gte: today },
       status: 'OPEN',
-      availableSlots: { gt: 0 }
+      availableSlots: { gt: 0 },
+      module: {
+        name: voucher.plan.name
+      }
     },
     include: {
       module: true
@@ -64,18 +67,11 @@ export async function validateVoucherAndGetSessions(formData: FormData) {
 
   const now = new Date()
   const activeSessions = sessions.filter(session => {
-    // Check if customer already booked/accomplished this module
-    if (bookedModuleIds.includes(session.moduleId)) {
-      return false
-    }
-
     const startParts = session.startTime.split(':')
     const startHours = parseInt(startParts[0], 10)
     const startMinutes = parseInt(startParts[1], 10)
-    
     const sessionStart = new Date(session.sessionDate)
     sessionStart.setHours(startHours, startMinutes, 0, 0)
-    
     return sessionStart > now
   })
 
@@ -96,6 +92,7 @@ export async function validateVoucherAndGetSessions(formData: FormData) {
     capacity: s.capacity,
     availableSlots: s.availableSlots,
     status: s.status,
+    notes: s.notes,
     module: {
       id: s.module.id,
       name: s.module.name,
@@ -123,12 +120,11 @@ export async function createBooking(formData: FormData) {
   if (!voucherId || !sessionId) return { error: 'Missing information.' }
 
   try {
-    const voucher = await prisma.voucher.findUnique({ where: { id: voucherId } })
+    const voucher = await prisma.voucher.findUnique({ where: { id: voucherId }, include: { plan: true } })
     const session = await prisma.workshopSession.findUnique({ 
       where: { id: sessionId },
       include: { module: true }
     })
-    const settings = await prisma.systemSetting.findUnique({ where: { settingKey: 'fixed_hourly_rate' } })
     
     if (!voucher || !session) return { error: 'Invalid voucher or session.' }
     if (session.availableSlots <= 0) return { error: 'Session is full.' }
@@ -146,22 +142,6 @@ export async function createBooking(formData: FormData) {
 
     if (existingBooking) {
       return { error: 'You have already booked this session.' }
-    }
-
-    const sameModuleBooking = await prisma.booking.findFirst({
-      where: {
-        customerEmail: { equals: voucher.customerEmail, mode: 'insensitive' },
-        session: {
-          moduleId: session.moduleId
-        },
-        status: {
-          in: ['RESERVED', 'BALANCE_DUE', 'CHECKED_IN', 'COMPLETED_CONSUMED', 'WALKIN_CONFIRMED']
-        }
-      }
-    })
-
-    if (sameModuleBooking) {
-      return { error: 'You have already completed or reserved this module.' }
     }
 
     // Enforce that session start time is in the future
@@ -190,72 +170,114 @@ export async function createBooking(formData: FormData) {
     const effectiveRemainingUnits = Math.max(0, voucher.remainingUnits - totalReservedUnits)
 
     if (effectiveRemainingUnits <= 0) {
-      return { error: 'You have already reserved bookings up to your voucher unit limit. Please cancel an existing booking first.' }
+        return { error: 'You have already reserved bookings up to your voucher ticket limit. Please cancel an existing booking first.' }
     }
 
-    const ratePerUnit = settings ? parseFloat(settings.settingValue) : 300
-    const moduleUnits = session.module.units
-    let status = 'RESERVED'
-    let balanceDueUnits = 0
-    let balanceDueAmount = 0
-    let balanceDuePaid = true
-
-    if (effectiveRemainingUnits < moduleUnits) {
-      status = 'BALANCE_DUE'
-      balanceDueUnits = moduleUnits - effectiveRemainingUnits
-      balanceDueAmount = balanceDueUnits * ratePerUnit
-      balanceDuePaid = false
-    }
-
-    const bookingReference = await generateBookingReference()
+    const kidNamesStr = formData.get('kidNames') as string
+    const isKidsSession = session.category === 'KIDS'
+    let kidNames: string[] = []
     
-    // Generate QR code with receptionist check-in link
-    let bookingQrCodeData = ''
-    try {
-      const QRCode = await import('qrcode')
-      const hostUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-      const qrValue = `${hostUrl}/receptionist?voucherCode=${voucher.voucherCode}&bookingReference=${bookingReference}`
-      bookingQrCodeData = await QRCode.default.toDataURL(qrValue)
-    } catch (err) {
-      console.error('Failed to generate booking QR code:', err)
+    if (isKidsSession && kidNamesStr) {
+      try {
+        kidNames = JSON.parse(kidNamesStr)
+      } catch (e) {
+        console.error('Failed to parse kidNames:', e)
+      }
     }
 
-    const booking = await prisma.$transaction(async (tx) => {
-      const b = await tx.booking.create({
-        data: {
-          bookingReference,
-          bookingQrCodeData,
-          voucherId: voucher.id,
-          sessionId: session.id,
-          customerName: voucher.customerName,
-          customerEmail: voucher.customerEmail,
-          customerPhone: voucher.customerPhone,
-          status,
-          sessionDurationHours: session.durationHours,
-          unitsToDeduct: Math.min(effectiveRemainingUnits, moduleUnits),
-          balanceDueUnits,
-          balanceDueAmount,
-          balanceDuePaid,
-          notes,
-        }
+    const paxCount = kidNames.length > 0 ? kidNames.length : 1
+    if (session.availableSlots < paxCount) {
+      return { error: `Not enough slots available. Only ${session.availableSlots} slot(s) left.` }
+    }
+
+    const ratePerUnit = voucher.plan ? voucher.plan.price : 3000
+    const moduleUnits = session.module.units
+    const totalRequiredUnits = paxCount * moduleUnits
+
+    let overallStatus = 'RESERVED'
+    let totalBalanceDueUnits = 0
+    let totalBalanceDueAmount = 0
+    let overallBalanceDuePaid = true
+
+    if (effectiveRemainingUnits < totalRequiredUnits) {
+      overallStatus = 'BALANCE_DUE'
+      totalBalanceDueUnits = totalRequiredUnits - effectiveRemainingUnits
+      totalBalanceDueAmount = totalBalanceDueUnits * ratePerUnit
+      overallBalanceDuePaid = false
+    }
+
+    const bookingsToCreate: any[] = []
+    let remainingUnitsToDeduct = effectiveRemainingUnits
+
+    const QRCode = await import('qrcode')
+    const hostUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const count = await prisma.booking.count()
+
+    for (let i = 0; i < paxCount; i++) {
+      const paddedCount = String(count + 1 + i).padStart(6, '0')
+      const bookingReference = `MLWS-BK-${paddedCount}`
+      
+      let bookingQrCodeData = ''
+      try {
+        const qrValue = `${hostUrl}/receptionist?voucherCode=${voucher.voucherCode}&bookingReference=${bookingReference}`
+        bookingQrCodeData = await QRCode.default.toDataURL(qrValue)
+      } catch (err) {
+        console.error('Failed to generate booking QR code:', err)
+      }
+
+      const kidName = kidNames[i] || null
+      const unitsForThisBooking = Math.min(remainingUnitsToDeduct, moduleUnits)
+      remainingUnitsToDeduct -= unitsForThisBooking
+
+      const balanceUnitsForThisBooking = moduleUnits - unitsForThisBooking
+      const balanceAmountForThisBooking = balanceUnitsForThisBooking * ratePerUnit
+      const statusForThisBooking = balanceUnitsForThisBooking > 0 ? 'BALANCE_DUE' : 'RESERVED'
+      const paidForThisBooking = balanceUnitsForThisBooking > 0 ? false : true
+
+      bookingsToCreate.push({
+        bookingReference,
+        bookingQrCodeData,
+        voucherId: voucher.id,
+        sessionId: session.id,
+        customerName: voucher.customerName,
+        customerEmail: voucher.customerEmail,
+        customerPhone: voucher.customerPhone,
+        status: statusForThisBooking,
+        sessionDurationHours: session.durationHours,
+        unitsToDeduct: unitsForThisBooking,
+        balanceDueUnits: balanceUnitsForThisBooking,
+        balanceDueAmount: balanceAmountForThisBooking,
+        balanceDuePaid: paidForThisBooking,
+        notes: notes || null,
+        companionName: isKidsSession ? voucher.customerName : null,
+        kidName: kidName
       })
+    }
+
+    const createdBookings = await prisma.$transaction(async (tx) => {
+      const results = []
+      for (const bData of bookingsToCreate) {
+        const created = await tx.booking.create({ data: bData })
+        results.push(created)
+      }
 
       await tx.workshopSession.update({
         where: { id: session.id },
-        data: { availableSlots: { decrement: 1 } }
+        data: { availableSlots: { decrement: paxCount } }
       })
 
-      return b
+      return results
     })
 
-    console.log(`[EMAIL SENT] Booking Confirmation ${bookingReference} to ${voucher.customerEmail}. Status: ${status}`)
+    const primaryBooking = createdBookings[0]
+    console.log(`[EMAIL SENT] Booking Confirmation ${primaryBooking.bookingReference} (Pax: ${paxCount}) to ${voucher.customerEmail}. Status: ${overallStatus}`)
 
     return { 
       success: true, 
-      bookingReference, 
-      status, 
-      balanceDueAmount,
-      bookingQrCodeData,
+      bookingReference: primaryBooking.bookingReference, 
+      status: overallStatus, 
+      balanceDueAmount: totalBalanceDueAmount,
+      bookingQrCodeData: primaryBooking.bookingQrCodeData,
       customerName: voucher.customerName,
       customerEmail: voucher.customerEmail,
       sessionDate: session.sessionDate.toISOString(),
@@ -263,9 +285,17 @@ export async function createBooking(formData: FormData) {
       endTime: session.endTime,
       category: session.category,
       durationHours: session.durationHours,
-      unitsToDeduct: Math.min(effectiveRemainingUnits, moduleUnits),
+      unitsToDeduct: totalRequiredUnits - totalBalanceDueUnits,
       voucherCode: voucher.voucherCode,
-      moduleName: session.module.name
+      moduleName: session.module.name,
+      paxCount,
+      bookings: createdBookings.map(b => ({
+        bookingReference: b.bookingReference,
+        bookingQrCodeData: b.bookingQrCodeData,
+        kidName: b.kidName,
+        status: b.status,
+        balanceDueAmount: b.balanceDueAmount
+      }))
     }
   } catch (error) {
     console.error('Booking error:', error)

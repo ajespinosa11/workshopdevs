@@ -46,7 +46,18 @@ export default function AdminSidebar() {
       )
     },
     {
-      name: 'Sessions',
+      name: 'Registrations',
+      href: '/admin/registrations',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <path d="M16 10a4 4 0 0 1-8 0"/>
+        </svg>
+      )
+    },
+    {
+      name: 'Events',
       href: '/admin/sessions',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -65,6 +76,16 @@ export default function AdminSidebar() {
           <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
           <polyline points="17 21 17 13 7 13 7 21" />
           <polyline points="7 3 7 8 15 8" />
+        </svg>
+      )
+    },
+    {
+      name: 'Discounts',
+      href: '/admin/discounts',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+          <line x1="7" y1="7" x2="7.01" y2="7" />
         </svg>
       )
     },

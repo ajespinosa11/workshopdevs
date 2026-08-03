@@ -2,7 +2,17 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createModule, createSession } from './actions'
+import Link from 'next/link'
+import { createModule, createSession, updateSession, deleteSession, updateModule } from './actions'
+
+export const CANCELLATION_REASONS = [
+  'Instructor Unavailability',
+  'Technical / Machine Maintenance',
+  'Severe Weather Conditions',
+  'Power Outage / Facility Issues',
+  'Low Participant Turnout',
+  'Other / Unforeseen Circumstances',
+] as const
 
 interface SessionData {
   id: string
@@ -16,6 +26,7 @@ interface SessionData {
   status: string
   bookingsCount: number
   bookings: any[]
+  notes?: string | null
   module?: {
     id: string
     name: string
@@ -34,12 +45,79 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
   const [capacity, setCapacity] = useState(20)
   const [actionError, setActionError] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
+  const [notes, setNotes] = useState('')
+
+  // Edit session modal state
+  const [editSession, setEditSession] = useState<SessionData | null>(null)
+  const [editModuleId, setEditModuleId] = useState('')
+  const [editStartTime, setEditStartTime] = useState('09:00')
+  const [editEndTime, setEditEndTime] = useState('11:00')
+  const [editCapacity, setEditCapacity] = useState(20)
+  const [editNotes, setEditNotes] = useState('')
+  const [editError, setEditError] = useState('')
+  const [editLoading, setEditLoading] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+
+  // Copy Session states
+  const [copyDate, setCopyDate] = useState('')
+  const [copyLoading, setCopyLoading] = useState(false)
+  const [copyError, setCopyError] = useState('')
+  const [copySuccess, setCopySuccess] = useState('')
+
+  // Cancellation reason modal state
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelReason, setCancelReason] = useState<string>(CANCELLATION_REASONS[0])
+  const [cancelNotes, setCancelNotes] = useState('')
+  const [cancelError, setCancelError] = useState('')
+  const [cancelSuccess, setCancelSuccess] = useState('')
 
   // Inline module states
   const [moduleName, setModuleName] = useState('')
   const [moduleDesc, setModuleDesc] = useState('')
   const [moduleCategory, setModuleCategory] = useState('BEGINNER')
   const [moduleUnits, setModuleUnits] = useState(2)
+
+  // Edit module states
+  const [showEditModuleModal, setShowEditModuleModal] = useState(false)
+  const [editModuleIdState, setEditModuleIdState] = useState('')
+  const [editModuleName, setEditModuleName] = useState('')
+  const [editModuleDesc, setEditModuleDesc] = useState('')
+  const [editModuleCategory, setEditModuleCategory] = useState('BEGINNER')
+  const [editModuleUnits, setEditModuleUnits] = useState(2)
+
+  function openEditModuleModal(mid: string) {
+    const mod = modules.find(m => m.id === mid)
+    if (!mod) return
+    setEditModuleIdState(mod.id)
+    setEditModuleName(mod.name)
+    setEditModuleDesc(mod.description || '')
+    setEditModuleCategory(mod.category)
+    setEditModuleUnits(mod.units)
+    setShowEditModuleModal(true)
+    setActionError('')
+  }
+
+  async function handleEditModuleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setActionLoading(true)
+    setActionError('')
+
+    const formData = new FormData()
+    formData.append('moduleId', editModuleIdState)
+    formData.append('name', editModuleName)
+    formData.append('description', editModuleDesc)
+    formData.append('category', editModuleCategory)
+    formData.append('units', editModuleUnits.toString())
+
+    const res = await updateModule(formData)
+    if (res.error) {
+      setActionError(res.error)
+    } else {
+      setShowEditModuleModal(false)
+      router.refresh()
+    }
+    setActionLoading(false)
+  }
 
   async function handleScheduleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -53,12 +131,14 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     formData.append('startTime', startTime)
     formData.append('endTime', endTime)
     formData.append('capacity', capacity.toString())
+    formData.append('notes', notes)
 
     const res = await createSession(formData)
     if (res.error) {
       setActionError(res.error)
     } else {
       setShowCreateModal(false)
+      setNotes('')
       router.refresh()
     }
     setActionLoading(false)
@@ -89,6 +169,93 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
       router.refresh()
     }
     setActionLoading(false)
+  }
+
+  function openEditModal(s: SessionData) {
+    setEditSession(s)
+    setEditModuleId(s.module?.id || (modules.length > 0 ? modules[0].id : ''))
+    setEditStartTime(s.startTime)
+    setEditEndTime(s.endTime)
+    setEditCapacity(s.capacity)
+    setEditNotes(s.notes || '')
+    setEditError('')
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editSession) return
+    setEditLoading(true)
+    setEditError('')
+
+    const formData = new FormData()
+    formData.append('sessionId', editSession.id)
+    formData.append('moduleId', editModuleId)
+    formData.append('startTime', editStartTime)
+    formData.append('endTime', editEndTime)
+    formData.append('capacity', editCapacity.toString())
+    formData.append('notes', editNotes)
+
+    const res = await updateSession(formData)
+    if (res.error) {
+      setEditError(res.error)
+    } else {
+      setEditSession(null)
+      router.refresh()
+    }
+    setEditLoading(false)
+  }
+
+  function handleDeleteSession() {
+    if (!editSession) return
+    // Open the cancellation reason modal instead of a basic confirm()
+    setCancelReason(CANCELLATION_REASONS[0])
+    setCancelNotes('')
+    setCancelError('')
+    setCancelSuccess('')
+    setShowCancelModal(true)
+  }
+
+  async function handleConfirmCancel() {
+    if (!editSession) return
+    setDeleteLoading(true)
+    setCancelError('')
+
+    const res = await deleteSession(editSession.id, cancelReason, cancelNotes || undefined)
+    if (res.error) {
+      setCancelError(res.error)
+    } else {
+      const count = (res as any).cancelledCount ?? 0
+      setCancelSuccess(`Session cancelled. ${count} booking${count !== 1 ? 's' : ''} cancelled and email notifications sent.`)
+      setTimeout(() => {
+        setShowCancelModal(false)
+        setEditSession(null)
+        router.refresh()
+      }, 2000)
+    }
+    setDeleteLoading(false)
+  }
+
+  async function handleCopySession(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editSession || !copyDate) return
+    setCopyLoading(true)
+    setCopyError('')
+    setCopySuccess('')
+
+    const { copySessionToDate } = await import('./actions')
+    const res = await copySessionToDate(editSession.id, copyDate)
+    if (res.error) {
+      setCopyError(res.error)
+    } else {
+      setCopySuccess('Session successfully copied to target date!')
+      setTimeout(() => {
+        setCopySuccess('')
+        setCopyDate('')
+        setEditSession(null)
+        router.refresh()
+      }, 1500)
+    }
+    setCopyLoading(false)
   }
 
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -274,25 +441,26 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                   className="slot-item-btn"
                   style={{ cursor: 'default', flexDirection: 'column', alignItems: 'stretch', gap: '0.75rem' }}
                 >
-                  {/* Top row: Time + Category badge */}
+                  {/* Top row: Time */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div className="slot-item-time" style={{ fontSize: '1.05rem' }}>{s.startTime} – {s.endTime}</div>
-                    <span className={`badge ${
-                      s.category === 'BEGINNER' ? 'badge-blue' :
-                      s.category === 'INTERMEDIATE' ? 'badge-yellow' : 'badge-red'
-                    }`}>
-                      {s.category}
-                    </span>
+                    <div className="slot-item-time" style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--primary)' }}>⏰ {s.startTime} – {s.endTime}</div>
                   </div>
 
                   {/* Module Details */}
                   <div style={{ margin: '2px 0 6px 0', borderLeft: '3px solid var(--accent)', paddingLeft: '8px' }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--admin-text-primary)' }}>
-                      {s.module?.name}
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--admin-text-primary)' }}>
+                      {s.module?.name || 'Print 2 Profit Event'}
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--admin-text-secondary)' }}>
-                      Academic Cost: {s.module?.units} units
-                    </div>
+                    {s.module?.description && (
+                      <div style={{ fontSize: '0.78rem', color: 'var(--admin-text-secondary)', marginTop: '4px', fontStyle: 'italic', lineHeight: 1.4 }}>
+                        {s.module.description}
+                      </div>
+                    )}
+                    {s.notes && (
+                      <div style={{ fontSize: '0.8rem', color: 'var(--admin-text-primary)', marginTop: '6px', fontWeight: 500, lineHeight: 1.4 }}>
+                        📝 {s.notes}
+                      </div>
+                    )}
                   </div>
 
                   {/* Stats row */}
@@ -334,7 +502,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                     </div>
                   </div>
 
-                  {/* Bottom Actions Row: Status Badge & View Bookings Button */}
+                  {/* Bottom Actions Row: Status Badge, Edit & View Bookings */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed #e2e8f0' }}>
                     <span className={`badge ${
                       s.status === 'OPEN' ? 'badge-green' :
@@ -342,25 +510,45 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                     }`} style={{ fontSize: '0.7rem' }}>
                       {s.status}
                     </span>
-                    <button
-                      onClick={() => setSelectedSession(s)}
-                      style={{
-                        padding: '0.35rem 0.75rem',
-                        fontSize: '0.75rem',
-                        borderRadius: '0.5rem',
-                        background: 'var(--accent)',
-                        color: 'white',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontWeight: 600,
-                        transition: 'opacity 0.2s',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
-                      onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
-                    >
-                      View Bookings ({s.bookingsCount})
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => openEditModal(s)}
+                        style={{
+                          padding: '0.35rem 0.75rem',
+                          fontSize: '0.75rem',
+                          borderRadius: '0.5rem',
+                          background: '#fff',
+                          color: 'var(--accent)',
+                          border: '1.5px solid var(--accent)',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(249,115,22,0.06)' }}
+                        onMouseOut={(e) => { e.currentTarget.style.background = '#fff' }}
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => setSelectedSession(s)}
+                        style={{
+                          padding: '0.35rem 0.75rem',
+                          fontSize: '0.75rem',
+                          borderRadius: '0.5rem',
+                          background: 'var(--accent)',
+                          color: 'white',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          transition: 'opacity 0.2s',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+                        onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+                      >
+                        View Bookings ({s.bookingsCount})
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -381,7 +569,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                   Session Bookings
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--admin-text-secondary)', margin: '4px 0 0 0' }}>
-                  {new Date(selectedSession.sessionDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} · {selectedSession.startTime}–{selectedSession.endTime} ({selectedSession.category})
+                  {new Date(selectedSession.sessionDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} · {selectedSession.startTime}–{selectedSession.endTime} ({selectedSession.module?.name || 'Workshop Event'})
                 </p>
               </div>
               <button 
@@ -402,7 +590,18 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                       style={{ padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}
                     >
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{booking.customerName}</span>
+                        {booking.kidName ? (
+                          <>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <span style={{ fontSize: '1rem' }}>👦</span>
+                              <span style={{ fontWeight: 700, color: '#15803d' }}>{booking.kidName}</span>
+                              <span className="badge badge-green" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>KIDS</span>
+                            </div>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--admin-text-secondary)' }}>Guardian: {booking.companionName || booking.customerName}</span>
+                          </>
+                        ) : (
+                          <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{booking.customerName}</span>
+                        )}
                         <span style={{ fontSize: '0.8rem', color: 'var(--admin-text-secondary)' }}>{booking.customerEmail}</span>
                         <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent)', marginTop: '4px' }}>Ref: {booking.bookingReference}</span>
                       </div>
@@ -442,6 +641,146 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
         </div>
       )}
 
+      {/* Edit Session Modal */}
+      {editSession && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1.5rem' }}>
+          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '520px', borderRadius: '1.5rem', background: '#ffffff', color: 'var(--foreground)', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>Edit Workshop Event</h3>
+                <p style={{ fontSize: '0.82rem', color: 'var(--admin-text-secondary)', margin: '4px 0 0 0' }}>
+                  {new Date(editSession.sessionDate).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                </p>
+              </div>
+              <button onClick={() => setEditSession(null)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: 'var(--admin-text-secondary)', cursor: 'pointer' }}>&times;</button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {editError && <div style={{ padding: '0.6rem 0.85rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.5rem', fontSize: '0.85rem', borderLeft: '3px solid #ef4444' }}>{editError}</div>}
+
+              <div className="input-group">
+                <label style={{ fontWeight: 600 }}>Select Event Workshop</label>
+                <select
+                  name="moduleId"
+                  value={editModuleId}
+                  onChange={(e) => setEditModuleId(e.target.value)}
+                  className="input-field"
+                  required
+                  style={{ borderRadius: '0.5rem', padding: '0.5rem' }}
+                >
+                  {modules.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="input-group">
+                  <label style={{ fontWeight: 600 }}>Start Time</label>
+                  <input type="time" value={editStartTime} onChange={(e) => setEditStartTime(e.target.value)} className="input-field" required style={{ borderRadius: '0.5rem' }} />
+                </div>
+                <div className="input-group">
+                  <label style={{ fontWeight: 600 }}>End Time</label>
+                  <input type="time" value={editEndTime} onChange={(e) => setEditEndTime(e.target.value)} className="input-field" required style={{ borderRadius: '0.5rem' }} />
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label style={{ fontWeight: 600 }}>Session Capacity</label>
+                <input
+                  type="number"
+                  min={editSession.capacity - editSession.availableSlots || 1}
+                  value={editCapacity}
+                  onChange={(e) => setEditCapacity(parseInt(e.target.value, 10))}
+                  className="input-field"
+                  required
+                  style={{ borderRadius: '0.5rem' }}
+                />
+                {editSession.bookingsCount > 0 && (
+                  <div style={{ fontSize: '0.78rem', color: '#b45309', marginTop: '4px' }}>
+                    ⚠️ {editSession.bookingsCount} booking(s) already exist — capacity cannot go below {editSession.capacity - editSession.availableSlots}.
+                  </div>
+                )}
+              </div>
+
+              <div className="input-group">
+                <label style={{ fontWeight: 600 }}>Event Description / Notes</label>
+                <textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  className="input-field"
+                  placeholder="Optional description/notes for this specific event slot..."
+                  style={{ borderRadius: '0.5rem', minHeight: '60px', padding: '0.5rem' }}
+                />
+              </div>
+
+              {/* Copy this Event to Another Date UI */}
+              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem', marginTop: '0.5rem' }}>
+                <label style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--primary)', display: 'block', marginBottom: '0.4rem' }}>
+                  Copy this Event to Another Date
+                </label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    type="date"
+                    value={copyDate}
+                    onChange={(e) => setCopyDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="input-field"
+                    style={{ borderRadius: '0.5rem', flex: 1, padding: '0.4rem' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCopySession}
+                    disabled={copyLoading || !copyDate}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      borderRadius: '0.5rem',
+                      background: 'var(--accent)',
+                      color: 'white',
+                      border: 'none',
+                      fontWeight: 600,
+                      cursor: (copyLoading || !copyDate) ? 'not-allowed' : 'pointer',
+                      fontSize: '0.82rem'
+                    }}
+                  >
+                    {copyLoading ? 'Copying...' : 'Copy Event'}
+                  </button>
+                </div>
+                {copyError && <div style={{ color: '#b91c1c', fontSize: '0.78rem', marginTop: '4px' }}>{copyError}</div>}
+                {copySuccess && <div style={{ color: '#166534', fontSize: '0.78rem', marginTop: '4px' }}>{copySuccess}</div>}
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={handleDeleteSession}
+                  disabled={deleteLoading}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '0.5rem',
+                    background: '#fecaca',
+                    color: '#dc2626',
+                    border: '1px solid #fca5a5',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = '#fca5a5' }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = '#fecaca' }}
+                >
+                  {deleteLoading ? 'Deleting...' : '🗑️ Delete'}
+                </button>
+                <button type="button" onClick={() => setEditSession(null)} className="admin-btn-outline" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem' }}>Cancel</button>
+                <button type="submit" disabled={editLoading} className="pricing-btn pricing-btn-solid" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem', background: 'var(--accent)', border: 'none', color: 'white', fontWeight: 600 }}>
+                  {editLoading ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Schedule Session Modal */}
       {showCreateModal && selectedDate && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1.5rem' }}>
@@ -461,34 +800,21 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
               </div>
 
               <div className="input-group">
-                <label style={{ fontWeight: 600 }}>Select Module</label>
-                {modules.length === 0 ? (
-                  <div style={{ fontSize: '0.85rem', color: '#b91c1c', margin: '4px 0' }}>
-                    No modules exist. Please create one first.
-                  </div>
-                ) : (
-                  <select 
-                    value={selectedModuleId} 
-                    onChange={(e) => setSelectedModuleId(e.target.value)}
-                    className="input-field"
-                    style={{ borderRadius: '0.5rem', width: '100%', padding: '0.5rem' }}
-                  >
-                    {modules.map(m => (
-                      <option key={m.id} value={m.id}>
-                        {m.name} ({m.category} - {m.units} units)
-                      </option>
-                    ))}
-                  </select>
-                )}
-                <div style={{ marginTop: '6px', fontSize: '0.8rem' }}>
-                  <button 
-                    type="button" 
-                    onClick={() => { setShowModuleModal(true); setActionError(''); }} 
-                    style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0, textDecoration: 'underline', fontWeight: 600 }}
-                  >
-                    + Create New Module
-                  </button>
-                </div>
+                <label style={{ fontWeight: 600 }}>Select Event Workshop</label>
+                <select
+                  name="moduleId"
+                  value={selectedModuleId}
+                  onChange={(e) => setSelectedModuleId(e.target.value)}
+                  className="input-field"
+                  required
+                  style={{ borderRadius: '0.5rem', padding: '0.5rem' }}
+                >
+                  {modules.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -505,6 +831,17 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
               <div className="input-group">
                 <label style={{ fontWeight: 600 }}>Session Capacity</label>
                 <input type="number" min="1" value={capacity} onChange={(e) => setCapacity(parseInt(e.target.value, 10))} className="input-field" required style={{ borderRadius: '0.5rem' }} />
+              </div>
+
+              <div className="input-group">
+                <label style={{ fontWeight: 600 }}>Event Description / Notes</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="input-field"
+                  placeholder="Optional description/notes for this specific event slot..."
+                  style={{ borderRadius: '0.5rem', minHeight: '60px', padding: '0.5rem' }}
+                />
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
@@ -554,6 +891,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                     <option value="BEGINNER">BEGINNER</option>
                     <option value="INTERMEDIATE">INTERMEDIATE</option>
                     <option value="ADVANCED">ADVANCED</option>
+                    <option value="KIDS">KIDS</option>
                   </select>
                 </div>
                 <div className="input-group">
@@ -569,6 +907,153 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Module Modal */}
+      {showEditModuleModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1010, padding: '1.5rem' }}>
+          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '450px', borderRadius: '1.5rem', background: '#ffffff', color: 'var(--foreground)', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>
+                Edit Academic Module
+              </h3>
+              <button onClick={() => setShowEditModuleModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: 'var(--admin-text-secondary)', cursor: 'pointer' }}>&times;</button>
+            </div>
+
+            <form onSubmit={handleEditModuleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {actionError && <div style={{ padding: '0.5rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.375rem', fontSize: '0.85rem' }}>{actionError}</div>}
+
+              <div className="input-group">
+                <label style={{ fontWeight: 600 }}>Module Title / Name</label>
+                <input type="text" value={editModuleName} onChange={(e) => setEditModuleName(e.target.value)} className="input-field" placeholder="e.g. Intro to 3D Printing" required style={{ borderRadius: '0.5rem' }} />
+              </div>
+
+              <div className="input-group">
+                <label style={{ fontWeight: 600 }}>Description</label>
+                <textarea value={editModuleDesc} onChange={(e) => setEditModuleDesc(e.target.value)} className="input-field" placeholder="Brief description of the module" style={{ borderRadius: '0.5rem', minHeight: '80px', padding: '0.5rem' }} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1rem' }}>
+                <div className="input-group">
+                  <label style={{ fontWeight: 600 }}>Category Level</label>
+                  <select 
+                    value={editModuleCategory} 
+                    onChange={(e) => setEditModuleCategory(e.target.value)}
+                    className="input-field"
+                    style={{ borderRadius: '0.5rem', padding: '0.5rem' }}
+                  >
+                    <option value="BEGINNER">BEGINNER</option>
+                    <option value="INTERMEDIATE">INTERMEDIATE</option>
+                    <option value="ADVANCED">ADVANCED</option>
+                    <option value="KIDS">KIDS</option>
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label style={{ fontWeight: 600 }}>Units Cost</label>
+                  <input type="number" min="1" value={editModuleUnits} onChange={(e) => setEditModuleUnits(parseInt(e.target.value, 10))} className="input-field" required style={{ borderRadius: '0.5rem' }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                <button type="button" onClick={() => setShowEditModuleModal(false)} className="admin-btn-outline" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem' }}>Cancel</button>
+                <button type="submit" disabled={actionLoading} className="pricing-btn pricing-btn-solid" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem', background: 'var(--accent)', border: 'none', color: 'white', fontWeight: 600 }}>
+                  {actionLoading ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Cancellation Reason Modal ── */}
+      {showCancelModal && editSession && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: '#fff', borderRadius: '1.5rem', padding: '2.5rem', maxWidth: '520px', width: '100%', boxShadow: '0 25px 50px rgba(0,0,0,0.25)' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--primary)' }}>Cancel Workshop Session</h3>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--secondary-foreground)' }}>
+                  All booked customers will be notified by email.
+                </p>
+              </div>
+            </div>
+
+            {/* Session being cancelled */}
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.75rem', padding: '0.85rem', marginBottom: '1.5rem', fontSize: '0.88rem', color: '#7f1d1d' }}>
+              <strong>{editSession.module?.name}</strong> —{' '}
+              {new Date(editSession.sessionDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}{' '}
+              · {editSession.startTime} - {editSession.endTime}
+              <div style={{ marginTop: '4px', color: '#dc2626', fontWeight: 600 }}>
+                {editSession.bookings?.filter(b => ['RESERVED', 'BALANCE_DUE', 'CHECKED_IN', 'WALKIN_CONFIRMED'].includes(b.status)).length ?? 0} customer{' '}
+                booking{(editSession.bookings?.length ?? 0) !== 1 ? 's' : ''} will be cancelled.
+              </div>
+            </div>
+
+            {/* Cancellation Reason */}
+            <div className="input-group" style={{ marginBottom: '1rem' }}>
+              <label style={{ fontWeight: 700, fontSize: '0.9rem' }}>Reason for Cancellation *</label>
+              <select
+                value={cancelReason}
+                onChange={e => setCancelReason(e.target.value)}
+                className="input-field"
+                style={{ borderRadius: '0.65rem', marginTop: '0.35rem' }}
+              >
+                {CANCELLATION_REASONS.map(r => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Custom notes */}
+            <div className="input-group" style={{ marginBottom: '1.25rem' }}>
+              <label style={{ fontWeight: 700, fontSize: '0.9rem' }}>Additional Notes for Customers (optional)</label>
+              <textarea
+                value={cancelNotes}
+                onChange={e => setCancelNotes(e.target.value)}
+                rows={3}
+                className="input-field"
+                placeholder="e.g. We sincerely apologize for the inconvenience. You may reschedule using the same voucher."
+                style={{ borderRadius: '0.65rem', resize: 'vertical', fontFamily: 'inherit', marginTop: '0.35rem' }}
+              />
+            </div>
+
+            {cancelError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '0.65rem', marginBottom: '1rem', color: '#dc2626', fontSize: '0.88rem' }}>
+                {cancelError}
+              </div>
+            )}
+            {cancelSuccess && (
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.5rem', padding: '0.65rem', marginBottom: '1rem', color: '#166534', fontSize: '0.88rem' }}>
+                ✓ {cancelSuccess}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={() => setShowCancelModal(false)}
+                disabled={deleteLoading}
+                style={{ flex: 1, padding: '0.75rem', borderRadius: '0.65rem', border: '1.5px solid var(--admin-border)', background: '#fff', fontWeight: 600, cursor: 'pointer', color: 'var(--primary)' }}
+              >
+                Keep Session
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCancel}
+                disabled={deleteLoading || !!cancelSuccess}
+                style={{ flex: 1, padding: '0.75rem', borderRadius: '0.65rem', border: 'none', background: deleteLoading || cancelSuccess ? '#cbd5e1' : '#dc2626', color: '#fff', fontWeight: 700, cursor: (deleteLoading || !!cancelSuccess) ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}
+              >
+                {deleteLoading ? 'Cancelling...' : '⚠ Confirm & Notify Customers'}
+              </button>
+            </div>
           </div>
         </div>
       )}

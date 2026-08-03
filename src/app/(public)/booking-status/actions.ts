@@ -11,7 +11,11 @@ export async function checkBookingStatusAction(formData: FormData) {
   const booking = await prisma.booking.findUnique({
     where: { bookingReference },
     include: { 
-      session: true,
+      session: {
+        include: {
+          module: true
+        }
+      },
       voucher: true
     }
   })

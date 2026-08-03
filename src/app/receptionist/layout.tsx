@@ -17,7 +17,7 @@ export default async function ReceptionistLayout({ children }: { children: React
             <div className="nav-links">
               <Link href="/receptionist" className="nav-link">Check-in</Link>
               <Link href="/receptionist/walk-in" className="nav-link">Walk-ins</Link>
-              <Link href="/receptionist/today" className="nav-link">Today's Roster</Link>
+              <Link href="/receptionist/today" className="nav-link">Calendar Roster</Link>
               <LogoutButton />
             </div>
           </div>

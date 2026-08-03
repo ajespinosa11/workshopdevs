@@ -19,17 +19,22 @@ export default async function AdminDashboard() {
       sessionDate: {
         gte: todayStart,
         lte: todayEnd
-      }
+      },
+      status: { not: 'CANCELLED' }
     } 
   })
 
   const todayBookings = await prisma.booking.count({
     where: {
+      status: {
+        notIn: ['CANCELLED_BY_CUSTOMER', 'CANCELLED_BY_ADMIN']
+      },
       session: {
         sessionDate: {
           gte: todayStart,
           lte: todayEnd
-        }
+        },
+        status: { not: 'CANCELLED' }
       }
     }
   })
@@ -40,7 +45,8 @@ export default async function AdminDashboard() {
       sessionDate: {
         gte: todayStart,
         lte: todayEnd
-      }
+      },
+      status: { not: 'CANCELLED' }
     },
     include: {
       module: true,

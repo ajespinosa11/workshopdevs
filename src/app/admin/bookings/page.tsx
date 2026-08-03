@@ -54,7 +54,14 @@ export default async function AdminBookingsPage() {
                 <tr key={b.id}>
                   <td className="font-medium" style={{ color: 'var(--accent)', fontWeight: 600 }}>{b.bookingReference}</td>
                   <td>
-                    <div style={{ fontWeight: 600 }}>{b.customerName}</div>
+                    {b.kidName ? (
+                      <>
+                        <div style={{ fontWeight: 600, color: '#15803d' }}>👦 {b.kidName}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--admin-text-secondary)' }}>Guardian: {b.companionName || b.customerName}</div>
+                      </>
+                    ) : (
+                      <div style={{ fontWeight: 600 }}>{b.customerName}</div>
+                    )}
                     <div style={{ fontSize: '0.8rem', color: 'var(--admin-text-secondary)' }}>{b.customerEmail}</div>
                   </td>
                   <td>

@@ -11,7 +11,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="admin-theme admin-layout">
+    <div className="admin-theme admin-layout ios-liquid-bg">
       {/* Left Sidebar Menu */}
       <AdminSidebar />
 
