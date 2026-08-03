@@ -582,9 +582,9 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
 
             {/* Modal Content */}
             <div style={{ flex: 1, overflowY: 'auto', maxHeight: '50vh' }}>
-              {selectedSession.bookings && selectedSession.bookings.length > 0 ? (
+              {selectedSession.bookings && selectedSession.bookings.filter((b: any) => !['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED'].includes(b.status)).length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {selectedSession.bookings.map((booking: any) => (
+                  {selectedSession.bookings.filter((b: any) => !['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED'].includes(b.status)).map((booking: any) => (
                     <div 
                       key={booking.id} 
                       style={{ padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}

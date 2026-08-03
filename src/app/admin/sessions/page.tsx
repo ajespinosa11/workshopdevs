@@ -46,7 +46,7 @@ export default async function AdminSessionsPage() {
     availableSlots: s.availableSlots,
     status: s.status,
     notes: s.notes,
-    bookingsCount: s.bookings.filter(b => b.status === 'RESERVED' || b.status === 'BALANCE_DUE').length,
+    bookingsCount: s.bookings.filter(b => !['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED'].includes(b.status)).length,
     bookings: s.bookings,
     module: {
       id: s.module.id,
