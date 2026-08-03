@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "tunnel": "npx localtunnel --port 3000 --local-host 127.0.0.1 --subdomain clever-roses-read"
+    "tunnel": "npx localtunnel --port 3000 --local-host 127.0.0.1 --subdomain clever-roses-read",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
