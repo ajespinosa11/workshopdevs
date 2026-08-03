@@ -21,6 +21,17 @@ export default async function AdminSessionsPage() {
           kidName: true,
           companionName: true
         }
+      },
+      registrations: {
+        select: {
+          id: true,
+          bookingReference: true,
+          customerName: true,
+          customerEmail: true,
+          customerPhone: true,
+          status: true,
+          participantsCount: true
+        }
       }
     }
   })
@@ -35,26 +46,49 @@ export default async function AdminSessionsPage() {
   })
 
   // Serialize for the client component
-  const serialized = sessions.map(s => ({
-    id: s.id,
-    category: s.category,
-    sessionDate: s.sessionDate.toISOString(),
-    startTime: s.startTime,
-    endTime: s.endTime,
-    durationHours: s.durationHours,
-    capacity: s.capacity,
-    availableSlots: s.availableSlots,
-    status: s.status,
-    notes: s.notes,
-    bookingsCount: s.bookings.filter(b => !['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED'].includes(b.status)).length,
-    bookings: s.bookings,
-    module: {
-      id: s.module.id,
-      name: s.module.name,
-      description: s.module.description,
-      units: s.module.units
+  const serialized = sessions.map(s => {
+    const activeBookings = s.bookings.filter(b => !['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED'].includes(b.status))
+    const activeRegistrations = s.registrations.filter(r => !['CANCELLED', 'REFUNDED'].includes(r.status))
+    
+    // Combine both models into a unified list
+    const combinedBookings = [
+      ...activeBookings.map(b => ({ ...b, participantsCount: 1 })),
+      ...activeRegistrations.map(r => ({
+        id: r.id,
+        bookingReference: r.bookingReference,
+        customerName: r.customerName,
+        customerEmail: r.customerEmail,
+        customerPhone: r.customerPhone,
+        status: r.status,
+        participantsCount: r.participantsCount,
+        kidName: null,
+        companionName: null
+      }))
+    ]
+
+    const totalParticipants = combinedBookings.reduce((sum, item) => sum + (item.participantsCount || 1), 0)
+
+    return {
+      id: s.id,
+      category: s.category,
+      sessionDate: s.sessionDate.toISOString(),
+      startTime: s.startTime,
+      endTime: s.endTime,
+      durationHours: s.durationHours,
+      capacity: s.capacity,
+      availableSlots: s.availableSlots,
+      status: s.status,
+      notes: s.notes,
+      bookingsCount: totalParticipants,
+      bookings: combinedBookings,
+      module: {
+        id: s.module.id,
+        name: s.module.name,
+        description: s.module.description,
+        units: s.module.units
+      }
     }
-  }))
+  })
 
   return (
     <div className="flex flex-col gap-6">

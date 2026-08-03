@@ -162,21 +162,15 @@ export async function POST(req: NextRequest) {
         }
       })
 
-      // Immediately deduct slots on session when payment is verified (if not already deducted during soft lock)
-      if (financialStatus === 'paid' && registration.sessionId && registration.status !== 'PENDING_CHECKOUT') {
-        const session = await prisma.workshopSession.findUnique({
-          where: { id: registration.sessionId }
+      // Clear soft lock timer upon payment verification
+      if (financialStatus === 'paid') {
+        registration = await prisma.workshopRegistration.update({
+          where: { id: registration.id },
+          data: {
+            status: targetStatus,
+            reservedUntil: null
+          }
         })
-        if (session) {
-          const newSlots = Math.max(0, session.availableSlots - quantity)
-          await prisma.workshopSession.update({
-            where: { id: session.id },
-            data: {
-              availableSlots: newSlots,
-              status: newSlots === 0 ? 'FULL' : 'OPEN'
-            }
-          })
-        }
       }
     }
 

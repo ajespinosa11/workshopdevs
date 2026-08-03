@@ -16,46 +16,73 @@ const RESCHEDULE_REASONS = [
 export async function getAvailableRescheduleSessions(formData: FormData) {
   await releaseExpiredSoftLocks()
 
-  const bookingReference = formData.get('bookingReference') as string
-  const email = formData.get('email') as string
+  const bookingReference = (formData.get('bookingReference') as string || '').trim()
+  const email = (formData.get('email') as string || '').trim().toLowerCase()
 
   if (!bookingReference || !email) return { error: 'Missing booking information.' }
+
+  let bookingObj: any = null
+  let isReg = false
 
   const booking = await prisma.booking.findUnique({
     where: { bookingReference },
     include: { session: { include: { module: true } } }
   })
 
-  if (!booking || booking.customerEmail.toLowerCase().trim() !== email.toLowerCase().trim()) {
+  if (booking && booking.customerEmail.toLowerCase().trim() === email) {
+    if (booking.status !== 'RESERVED' && booking.status !== 'BALANCE_DUE') {
+      return { error: 'Only active bookings can be rescheduled.' }
+    }
+    if (booking.rescheduled) {
+      return { error: 'This booking has already been rescheduled once and cannot be rescheduled again.' }
+    }
+    bookingObj = booking
+  } else {
+    const reg = await prisma.workshopRegistration.findUnique({
+      where: { bookingReference },
+      include: { session: { include: { module: true } } }
+    })
+    if (reg && reg.customerEmail.toLowerCase().trim() === email) {
+      const allowedStatuses = ['RESERVED', 'CONFIRMED', 'VERIFIED', 'AWAITING_PAYMENT', 'PAYMENT_PENDING', 'PENDING_SCHEDULE_CONFIRMATION']
+      if (!allowedStatuses.includes(reg.status)) {
+        return { error: 'Only active reservations can be rescheduled.' }
+      }
+      if (!reg.session) {
+        return { error: 'No scheduled session associated with this registration.' }
+      }
+      bookingObj = {
+        id: reg.id,
+        bookingReference: reg.bookingReference,
+        customerEmail: reg.customerEmail,
+        sessionId: reg.sessionId,
+        session: reg.session,
+        status: reg.status,
+        rescheduled: false,
+      }
+      isReg = true
+    }
+  }
+
+  if (!bookingObj) {
     return { error: 'Invalid booking details.' }
   }
 
-  if (booking.status !== 'RESERVED' && booking.status !== 'BALANCE_DUE') {
-    return { error: 'Only active bookings can be rescheduled.' }
-  }
-
-  if (booking.rescheduled) {
-    return { error: 'This booking has already been rescheduled once and cannot be rescheduled again.' }
-  }
-
   // Check 48-hour rule
-  const sessionDateStr = booking.session.sessionDate.toISOString().split('T')[0]
-  const sessionStart = new Date(`${sessionDateStr}T${booking.session.startTime}:00`)
+  const sessionDateStr = bookingObj.session.sessionDate.toISOString().split('T')[0]
+  const sessionStart = new Date(`${sessionDateStr}T${bookingObj.session.startTime}:00`)
   const hoursUntil = (sessionStart.getTime() - Date.now()) / (1000 * 60 * 60)
 
   if (hoursUntil < 48) {
     return { error: 'Rescheduling is only allowed at least 48 hours before the workshop start time.' }
   }
 
-  // No module-level exclusion needed since all events are "Print 2 Profit"
-
-  // Find future open sessions with same category
+  // Find future open sessions
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
   const sessions = await prisma.workshopSession.findMany({
     where: {
-      id: { not: booking.sessionId }, // Not the current session
+      id: { not: bookingObj.sessionId },
       sessionDate: { gte: today },
       status: 'OPEN',
       availableSlots: { gt: 0 },
@@ -64,7 +91,6 @@ export async function getAvailableRescheduleSessions(formData: FormData) {
     orderBy: { sessionDate: 'asc' }
   })
 
-  // Filter out sessions starting less than 48 hours from now
   const now = Date.now()
   const eligibleSessions = sessions.filter(s => {
     const sDateStr = s.sessionDate.toISOString().split('T')[0]
@@ -75,13 +101,13 @@ export async function getAvailableRescheduleSessions(formData: FormData) {
   return {
     success: true,
     booking: {
-      id: booking.id,
-      bookingReference: booking.bookingReference,
-      sessionCategory: booking.session.category,
-      moduleName: booking.session.module.name,
-      sessionDate: booking.session.sessionDate.toISOString(),
-      startTime: booking.session.startTime,
-      endTime: booking.session.endTime,
+      id: bookingObj.id,
+      bookingReference: bookingObj.bookingReference,
+      sessionCategory: bookingObj.session.category,
+      moduleName: bookingObj.session.module.name,
+      sessionDate: bookingObj.session.sessionDate.toISOString(),
+      startTime: bookingObj.session.startTime,
+      endTime: bookingObj.session.endTime,
     },
     availableSessions: eligibleSessions.map(s => ({
       id: s.id,
@@ -101,34 +127,63 @@ export async function getAvailableRescheduleSessions(formData: FormData) {
 }
 
 export async function rescheduleBookingAction(formData: FormData) {
-  const bookingReference = formData.get('bookingReference') as string
-  const email = formData.get('email') as string
+  const bookingReference = (formData.get('bookingReference') as string || '').trim()
+  const email = (formData.get('email') as string || '').trim().toLowerCase()
   const newSessionId = formData.get('newSessionId') as string
 
   if (!bookingReference || !email || !newSessionId) {
     return { error: 'All fields are required.' }
   }
 
+  let bookingObj: any = null
+  let isReg = false
+
   const booking = await prisma.booking.findUnique({
     where: { bookingReference },
     include: { session: { include: { module: true } } }
   })
 
-  if (!booking || booking.customerEmail.toLowerCase().trim() !== email.toLowerCase().trim()) {
+  if (booking && booking.customerEmail.toLowerCase().trim() === email) {
+    if (booking.status !== 'RESERVED' && booking.status !== 'BALANCE_DUE') {
+      return { error: 'Only active bookings can be rescheduled.' }
+    }
+    if (booking.rescheduled) {
+      return { error: 'This booking has already been rescheduled once and cannot be rescheduled again.' }
+    }
+    bookingObj = booking
+  } else {
+    const reg = await prisma.workshopRegistration.findUnique({
+      where: { bookingReference },
+      include: { session: { include: { module: true } } }
+    })
+    if (reg && reg.customerEmail.toLowerCase().trim() === email) {
+      const allowedStatuses = ['RESERVED', 'CONFIRMED', 'VERIFIED', 'AWAITING_PAYMENT', 'PAYMENT_PENDING', 'PENDING_SCHEDULE_CONFIRMATION']
+      if (!allowedStatuses.includes(reg.status)) {
+        return { error: 'Only active reservations can be rescheduled.' }
+      }
+      if (!reg.session) {
+        return { error: 'No scheduled session associated with this registration.' }
+      }
+      bookingObj = {
+        id: reg.id,
+        bookingReference: reg.bookingReference,
+        customerEmail: reg.customerEmail,
+        sessionId: reg.sessionId,
+        session: reg.session,
+        status: reg.status,
+        rescheduled: false,
+      }
+      isReg = true
+    }
+  }
+
+  if (!bookingObj) {
     return { error: 'Invalid booking details.' }
   }
 
-  if (booking.status !== 'RESERVED' && booking.status !== 'BALANCE_DUE') {
-    return { error: 'Only active bookings can be rescheduled.' }
-  }
-
-  if (booking.rescheduled) {
-    return { error: 'This booking has already been rescheduled once and cannot be rescheduled again.' }
-  }
-
   // Re-validate 48-hour rule
-  const sessionDateStr = booking.session.sessionDate.toISOString().split('T')[0]
-  const sessionStart = new Date(`${sessionDateStr}T${booking.session.startTime}:00`)
+  const sessionDateStr = bookingObj.session.sessionDate.toISOString().split('T')[0]
+  const sessionStart = new Date(`${sessionDateStr}T${bookingObj.session.startTime}:00`)
   const hoursUntil = (sessionStart.getTime() - Date.now()) / (1000 * 60 * 60)
 
   if (hoursUntil < 48) {
@@ -145,7 +200,6 @@ export async function rescheduleBookingAction(formData: FormData) {
   if (newSession.status !== 'OPEN') return { error: 'Selected session is not open for booking.' }
   if (newSession.availableSlots <= 0) return { error: 'Selected session is fully booked.' }
 
-  // Validate new session is also 48h away
   const newSDateStr = newSession.sessionDate.toISOString().split('T')[0]
   const newSessionStart = new Date(`${newSDateStr}T${newSession.startTime}:00`)
   const newHoursUntil = (newSessionStart.getTime() - Date.now()) / (1000 * 60 * 60)
@@ -155,27 +209,35 @@ export async function rescheduleBookingAction(formData: FormData) {
 
   // Perform the reschedule in a transaction
   await prisma.$transaction(async (tx) => {
-    // Release slot in old session
-    await tx.workshopSession.update({
-      where: { id: booking.sessionId },
-      data: { availableSlots: { increment: 1 } }
-    })
+    if (bookingObj.sessionId) {
+      await tx.workshopSession.update({
+        where: { id: bookingObj.sessionId },
+        data: { availableSlots: { increment: 1 } }
+      })
+    }
 
-    // Claim slot in new session
     await tx.workshopSession.update({
       where: { id: newSessionId },
       data: { availableSlots: { decrement: 1 } }
     })
 
-    // Update booking to new session and mark as rescheduled
-    await tx.booking.update({
-      where: { id: booking.id },
-      data: {
-        sessionId: newSessionId,
-        sessionDurationHours: newSession.durationHours,
-        rescheduled: true,
-      }
-    })
+    if (isReg) {
+      await tx.workshopRegistration.update({
+        where: { id: bookingObj.id },
+        data: {
+          sessionId: newSessionId,
+        }
+      })
+    } else {
+      await tx.booking.update({
+        where: { id: bookingObj.id },
+        data: {
+          sessionId: newSessionId,
+          sessionDurationHours: newSession.durationHours,
+          rescheduled: true,
+        }
+      })
+    }
   })
 
   return {

@@ -139,6 +139,7 @@ export async function createSession(formData: FormData) {
   const endTime = formData.get('endTime') as string
   const capacityStr = formData.get('capacity') as string
   const notes = formData.get('notes') as string | undefined
+  const description = formData.get('description') as string | undefined
 
   let finalModuleId = moduleId
   if (!finalModuleId) {
@@ -192,6 +193,14 @@ export async function createSession(formData: FormData) {
         notes
       }
     })
+
+    // Optionally update the module description if provided
+    if (description && description.trim()) {
+      await prisma.module.update({
+        where: { id: finalModuleId },
+        data: { description: description.trim() }
+      })
+    }
 
     revalidatePath('/admin/sessions')
     return { success: true, session }

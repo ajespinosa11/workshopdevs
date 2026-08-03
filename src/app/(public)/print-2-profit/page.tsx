@@ -8,18 +8,11 @@ export default async function Print2ProfitPage() {
   // Release any expired temporary locks before querying sessions
   await releaseExpiredSoftLocks()
 
-  // Fetch only sessions for the Print 2 Profit module (BW001)
+  // Fetch all upcoming sessions across all workshop modules
   const sessions = await prisma.workshopSession.findMany({
     where: {
       status: { not: 'CANCELLED' },
       sessionDate: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
-      module: {
-        OR: [
-          { name: { contains: 'Print 2 Profit', mode: 'insensitive' } },
-          { name: { contains: 'Print2Profit', mode: 'insensitive' } },
-          { name: { contains: 'BW001', mode: 'insensitive' } },
-        ]
-      }
     },
     include: { module: true },
     orderBy: { sessionDate: 'asc' }

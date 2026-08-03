@@ -702,26 +702,9 @@ export default function BookSessionForm() {
             ======================================================== */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
-          {/* LANDING VIEW: 3 Clear Action Cards */}
+          {/* LANDING VIEW: 2 Clear Action Cards */}
           {!activePanel && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }} className="animate-fade-in">
-              
-              {/* Card 1: Voucher */}
-              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '1.25rem', padding: '1.75rem', display: 'flex', gap: '1.25rem', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', transition: 'all 0.2s' }}>
-                <div style={{ fontSize: '2rem', display: 'flex', alignItems: 'center' }}>🎟️</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)' }}>Book with a Voucher</h3>
-                  <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--secondary-foreground)', lineHeight: 1.5 }}>
-                    Already purchased a 3D printing session? Use your voucher to reserve your preferred date and time.
-                  </p>
-                  <button 
-                    onClick={() => setActivePanel('voucher')}
-                    style={{ background: 'var(--accent)', color: '#fff', border: 'none', padding: '0.75rem 1.25rem', borderRadius: '0.75rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', width: 'fit-content', marginTop: '0.5rem', boxShadow: '0 4px 12px rgba(249,115,22,0.2)' }}
-                  >
-                    Enter Voucher Code
-                  </button>
-                </div>
-              </div>
 
               {/* Card 2: Free Workshops */}
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '1.25rem', padding: '1.75rem', display: 'flex', gap: '1.25rem', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', transition: 'all 0.2s' }}>
@@ -1060,14 +1043,15 @@ export default function BookSessionForm() {
                                 const sDateStr = dateObj.toISOString().split('T')[0]
                                 const sStart = new Date(`${sDateStr}T${b.session.startTime}:00`)
                                 const hoursUntil = (sStart.getTime() - Date.now()) / (1000 * 60 * 60)
-                                const canReschedule = hoursUntil >= 48 && !b.rescheduled && (b.status === 'RESERVED' || b.status === 'BALANCE_DUE')
+                                const activeStatuses = ['RESERVED', 'BALANCE_DUE', 'CONFIRMED', 'VERIFIED', 'AWAITING_PAYMENT', 'PAYMENT_PENDING']
+                                const canReschedule = hoursUntil >= 48 && !b.rescheduled && activeStatuses.includes(b.status)
 
                                 let disableReason = ''
                                 if (b.rescheduled) {
                                   disableReason = 'Already rescheduled once.'
                                 } else if (hoursUntil < 48) {
                                   disableReason = 'Allowed only 48 hours before start.'
-                                } else if (b.status !== 'RESERVED' && b.status !== 'BALANCE_DUE') {
+                                } else if (!activeStatuses.includes(b.status)) {
                                   disableReason = 'Only active bookings can be rescheduled.'
                                 }
 

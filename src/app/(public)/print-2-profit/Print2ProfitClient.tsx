@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Link from 'next/link'
 import { createSoftLockReservation } from '@/app/(public)/book-session/lock-actions'
 
 interface Session {
@@ -49,6 +50,48 @@ const MONTH_NAMES = [
 ]
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
+export function getModuleTheme(moduleName?: string | null) {
+  const name = (moduleName || '').toLowerCase().trim()
+  if (name.includes('print 2 profit') || name.includes('print2profit') || name.includes('bw001')) {
+    return {
+      primary: '#ea580c',
+      bgLight: '#fff7ed',
+      border: '#ffedd5',
+      badgeText: '#c2410c',
+      dot: '#f97316',
+      name: moduleName || 'Print 2 Profit'
+    }
+  }
+  if (name.includes('robot') || name.includes('make-ur-robot')) {
+    return {
+      primary: '#6366f1',
+      bgLight: '#eef2ff',
+      border: '#c7d2fe',
+      badgeText: '#4338ca',
+      dot: '#6366f1',
+      name: moduleName || 'Make-ur-robot workshop'
+    }
+  }
+  if (name.includes('free')) {
+    return {
+      primary: '#10b981',
+      bgLight: '#ecfdf5',
+      border: '#a7f3d0',
+      badgeText: '#047857',
+      dot: '#10b981',
+      name: moduleName || 'Free Workshop'
+    }
+  }
+  return {
+    primary: '#0284c7',
+    bgLight: '#f0f9ff',
+    border: '#bae6fd',
+    badgeText: '#0369a1',
+    dot: '#0284c7',
+    name: moduleName || 'Workshop'
+  }
+}
+
 export default function Print2ProfitClient({ sessions }: Props) {
   const today = new Date()
   const [calMonth, setCalMonth] = useState(today.getMonth())
@@ -64,18 +107,38 @@ export default function Print2ProfitClient({ sessions }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [modalError, setModalError] = useState('')
 
-  // Map session dates for quick lookup
+  // Terms & Conditions Gate
+  const [showTCModal, setShowTCModal] = useState(false)
+  const [agreedToTC, setAgreedToTC] = useState(false)
+  const [pendingSession, setPendingSession] = useState<Session | null>(null)
+
+  // Module Filtering
+  const [selectedModuleFilter, setSelectedModuleFilter] = useState<string>('ALL')
+
+  const availableModuleNames = useMemo(() => {
+    const names = new Set<string>()
+    sessions.forEach(s => {
+      if (s.module?.name) names.add(s.module.name)
+    })
+    return Array.from(names)
+  }, [sessions])
+
+  const filteredSessions = useMemo(() => {
+    if (selectedModuleFilter === 'ALL') return sessions
+    return sessions.filter(s => s.module?.name === selectedModuleFilter)
+  }, [sessions, selectedModuleFilter])
+
+  // Map session dates for quick lookup based on filtered sessions
   const sessionDatesMap = useMemo(() => {
     const map = new Map<string, Session[]>()
-    sessions.forEach((s) => {
+    filteredSessions.forEach((s) => {
       const d = new Date(s.sessionDate)
-      // Format as YYYY-MM-DD using local numbers
       const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
       if (!map.has(key)) map.set(key, [])
       map.get(key)!.push(s)
     })
     return map
-  }, [sessions])
+  }, [filteredSessions])
 
   function getSessionsForDay(d: Date): Session[] {
     const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
@@ -113,13 +176,13 @@ export default function Print2ProfitClient({ sessions }: Props) {
             color: '#f97316', padding: '4px 16px', borderRadius: '20px', fontSize: '12px', fontWeight: 700,
             letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '16px',
           }}>
-            Exclusive Masterclass
+            Makerlab Workshops &amp; Events
           </span>
           <h1 style={{ fontSize: '38px', fontWeight: 900, lineHeight: 1.15, marginBottom: '16px', letterSpacing: '-0.5px' }}>
-            Print-2-Profit 3D Printing Workshop
+            Book Your Workshop &amp; Event Session
           </h1>
           <p style={{ fontSize: '16px', color: '#cbd5e1', maxWidth: '640px', margin: '0 auto 28px', lineHeight: 1.6 }}>
-            Master the business and technical art of 3D printing. Learn workflow optimization, slicing, printer maintenance, and business monetization in an intensive hands-on session.
+            Explore available 3D printing masterclasses and hands-on workshops created by Makerlab. Select your workshop, pick a schedule, and reserve your seat.
           </p>
 
           <div style={{
@@ -128,7 +191,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
             boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
           }}>
             {[
-              ['₱3,500', 'Per Participant'],
+              ['₱3,500', 'Standard Investment'],
               ['3–4 Hours', 'Workshop Duration'],
               ['Hands-On', 'Interactive Masterclass'],
             ].map(([val, lbl]) => (
@@ -141,9 +204,55 @@ export default function Print2ProfitClient({ sessions }: Props) {
         </div>
       </div>
 
+      {/* Workshop Module Filter Bar */}
+      <div style={{ maxWidth: '1100px', margin: '24px auto 0', padding: '0 20px' }}>
+        <div style={{
+          background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0',
+          padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
+        }}>
+          <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Filter Workshop:
+          </span>
+          <button
+            onClick={() => { setSelectedModuleFilter('ALL'); setSelectedDate(null) }}
+            style={{
+              padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 700,
+              border: selectedModuleFilter === 'ALL' ? 'none' : '1px solid #cbd5e1',
+              background: selectedModuleFilter === 'ALL' ? '#0f2540' : '#f8fafc',
+              color: selectedModuleFilter === 'ALL' ? '#ffffff' : '#475569',
+              cursor: 'pointer', transition: 'all 0.2s ease'
+            }}
+          >
+            All Workshops ({sessions.length})
+          </button>
+          {availableModuleNames.map(modName => {
+            const count = sessions.filter(s => s.module?.name === modName).length
+            const isSel = selectedModuleFilter === modName
+            const theme = getModuleTheme(modName)
+            return (
+              <button
+                key={modName}
+                onClick={() => { setSelectedModuleFilter(modName); setSelectedDate(null) }}
+                style={{
+                  padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 700,
+                  border: isSel ? 'none' : `1px solid ${theme.border}`,
+                  background: isSel ? theme.primary : theme.bgLight,
+                  color: isSel ? '#ffffff' : theme.badgeText,
+                  cursor: 'pointer', transition: 'all 0.2s ease',
+                  boxShadow: isSel ? `0 4px 12px ${theme.primary}33` : 'none'
+                }}
+              >
+                {modName} ({count})
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       {/* Main Grid Content */}
       <div style={{
-        maxWidth: '1100px', margin: '32px auto 0', padding: '0 20px',
+        maxWidth: '1100px', margin: '20px auto 0', padding: '0 20px',
         display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 380px', gap: '28px',
       }} className="p2p-grid">
 
@@ -259,22 +368,23 @@ export default function Print2ProfitClient({ sessions }: Props) {
                 const isSelected = selectedDate ? isSameDay(thisDate, selectedDate) : false
                 const isFull = hasSession && sessionsOnDay.every(s => s.availableSlots === 0)
 
+                const dayThemes = Array.from(new Set(sessionsOnDay.map(s => s.module?.name))).map(name => getModuleTheme(name))
+                const primaryTheme = dayThemes[0] || getModuleTheme('ALL')
+
                 let cellBg = '#f8fafc'
                 let cellBorder = '1px solid #f1f5f9'
                 let cellColor = isPast ? '#cbd5e1' : '#334155'
                 let cellCursor = 'default'
-                let dotColor = ''
 
                 if (isSelected) {
-                  cellBg = '#ea580c'
+                  cellBg = '#0f2540'
                   cellColor = '#ffffff'
-                  cellBorder = '1px solid #ea580c'
+                  cellBorder = '1px solid #0f2540'
                 } else if (hasSession && !isPast) {
-                  cellBg = isFull ? '#fef2f2' : '#f0fdf4'
-                  cellBorder = isFull ? '1px solid #fecaca' : '1px solid #bbf7d0'
-                  cellColor = isFull ? '#ef4444' : '#16a34a'
+                  cellBg = isFull ? '#fef2f2' : primaryTheme.bgLight
+                  cellBorder = isFull ? '1px solid #fecaca' : `1px solid ${primaryTheme.border}`
+                  cellColor = isFull ? '#ef4444' : primaryTheme.badgeText
                   cellCursor = isFull ? 'not-allowed' : 'pointer'
-                  dotColor = isFull ? '#ef4444' : '#22c55e'
                 } else if (isToday) {
                   cellBorder = '1px solid #fdba74'
                 }
@@ -289,15 +399,23 @@ export default function Print2ProfitClient({ sessions }: Props) {
                     }}
                     style={{
                       textAlign: 'center', borderRadius: '12px', padding: '10px 4px',
-                      fontSize: '14px', fontWeight: hasSession || isSelected ? 700 : 500,
+                      fontSize: '14px', fontWeight: hasSession || isSelected ? 800 : 500,
                       background: cellBg, border: cellBorder, color: cellColor,
                       cursor: cellCursor, position: 'relative', transition: 'all 0.15s',
                       userSelect: 'none',
                     }}
                   >
                     {dayNum}
-                    {dotColor && !isSelected && (
-                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: dotColor, margin: '2px auto 0' }} />
+                    {hasSession && !isPast && !isSelected && (
+                      <div style={{ display: 'flex', gap: '3px', justifyContent: 'center', marginTop: '3px' }}>
+                        {isFull ? (
+                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444' }} />
+                        ) : (
+                          dayThemes.map(t => (
+                            <div key={t.name} style={{ width: '6px', height: '6px', borderRadius: '50%', background: t.dot }} />
+                          ))
+                        )}
+                      </div>
                     )}
                   </div>
                 )
@@ -305,17 +423,24 @@ export default function Print2ProfitClient({ sessions }: Props) {
             </div>
 
             {/* Calendar Legend */}
-            <div style={{ display: 'flex', gap: '20px', marginTop: '24px', justifyContent: 'center', flexWrap: 'wrap', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
-              {[
-                { bg: '#f0fdf4', border: '#bbf7d0', label: 'Available Schedule' },
-                { bg: '#fef2f2', border: '#fecaca', label: 'Fully Booked' },
-                { bg: '#ea580c', border: '#ea580c', label: 'Selected Date' },
-              ].map(({ bg, border, label }) => (
-                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
-                  <div style={{ width: '12px', height: '12px', borderRadius: '4px', background: bg, border: `1px solid ${border}` }} />
-                  {label}
-                </div>
-              ))}
+            <div style={{ display: 'flex', gap: '16px', marginTop: '24px', justifyContent: 'center', flexWrap: 'wrap', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
+              {availableModuleNames.map(name => {
+                const theme = getModuleTheme(name)
+                return (
+                  <div key={name} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#475569', fontWeight: 700 }}>
+                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: theme.dot }} />
+                    {name}
+                  </div>
+                )
+              })}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
+                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }} />
+                Fully Booked
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
+                <div style={{ width: '12px', height: '12px', borderRadius: '4px', background: '#0f2540' }} />
+                Selected Date
+              </div>
             </div>
           </div>
         </div>
@@ -351,25 +476,27 @@ export default function Print2ProfitClient({ sessions }: Props) {
             }}>
               <div style={{ fontSize: '36px', marginBottom: '12px' }}>🚫</div>
               <h4 style={{ color: '#0f172a', fontWeight: 700 }}>No Sessions Scheduled</h4>
-              <p style={{ fontSize: '13px', color: '#64748b', marginTop: '6px' }}>Please choose a green highlighted date on the calendar.</p>
+              <p style={{ fontSize: '13px', color: '#64748b', marginTop: '6px' }}>Please choose a highlighted date on the calendar.</p>
             </div>
           ) : selectedSessions.map((session) => {
             const isFull = session.availableSlots === 0
             const isLow = !isFull && (session.availableSlots / (session.capacity || 1)) <= 0.25
+            const theme = getModuleTheme(session.module?.name)
 
             return (
               <div key={session.id} style={{
-                background: '#ffffff', borderRadius: '24px', border: '1px solid #e2e8f0',
+                background: '#ffffff', borderRadius: '24px', border: `1px solid ${theme.border}`,
                 boxShadow: '0 4px 20px rgba(0,0,0,0.03)', overflow: 'hidden',
+                borderTop: `4px solid ${theme.primary}`
               }}>
                 {/* Session Header */}
                 <div style={{
-                  background: '#f8fafc', borderBottom: '1px solid #e2e8f0',
+                  background: theme.bgLight, borderBottom: `1px solid ${theme.border}`,
                   padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 }}>
                   <div>
-                    <div style={{ fontSize: '11px', fontWeight: 800, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Selected Date
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: theme.primary, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {theme.name}
                     </div>
                     <div style={{ color: '#0f172a', fontWeight: 800, fontSize: '16px', marginTop: '2px' }}>
                       {formatDate(session.sessionDate)}
@@ -390,82 +517,103 @@ export default function Print2ProfitClient({ sessions }: Props) {
                   
                   {/* Workshop Title & Description */}
                   <div style={{ borderBottom: '1px dashed #e2e8f0', paddingBottom: '14px' }}>
-                    <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>
-                      {session.module?.name || 'Print 2 Profit'}
+                    <div style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>
+                      {session.module?.name || 'Workshop Session'}
                     </div>
-                    <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.6, fontStyle: 'italic' }}>
-                      {session.module?.description || 'Print 2 Profit is a practical workshop designed for aspiring entrepreneurs and creatives who want to turn their print ideas into marketable products. Participants will explore the key steps involved in bringing a concept to life, from design and production to pricing and branding.'}
+                    <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.6 }}>
+                      {session.module?.description || 'Hands-on practical workshop session at Makerlab.'}
                     </p>
                   </div>
 
-                  {[
-                    ['🕐', 'Time Slot', `${session.startTime} – ${session.endTime}`],
-                    ['👥', 'Slots Available', `${session.availableSlots} of ${session.capacity} remaining`],
-                    ['💳', 'Investment', '₱3,500 per participant'],
-                    ['📍', 'Location', 'Makerlab Experience Hub, Ayala Malls Manila Bay'],
-                  ].map(([icon, label, value]) => (
-                    <div key={label} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                      <span style={{ fontSize: '16px', flexShrink: 0, marginTop: '1px' }}>{icon}</span>
-                      <div>
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
-                        <div style={{ color: '#0f172a', fontSize: '14px', fontWeight: 600, marginTop: '1px' }}>{value}</div>
-                      </div>
-                    </div>
-                  ))}
+                  {(() => {
+                    const isFree = (session.module?.name || '').toLowerCase().includes('free')
 
-                  {/* Slot progress bar */}
-                  <div>
-                    <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%', borderRadius: '999px',
-                        width: `${Math.max(5, (session.availableSlots / (session.capacity || 1)) * 100)}%`,
-                        background: isFull ? '#ef4444' : isLow ? '#f97316' : '#22c55e',
-                        transition: 'width 0.4s ease',
-                      }} />
-                    </div>
-                  </div>
+                    return (
+                      <>
+                        {[
+                          ['🕐', 'Time Slot', `${session.startTime} – ${session.endTime}`],
+                          ['👥', 'Slots Available', `${session.availableSlots} of ${session.capacity} remaining`],
+                          ['💳', 'Investment', isFree ? 'FREE (₱0)' : '₱3,500 per participant'],
+                          ['📍', 'Location', 'Makerlab Experience Hub, Ayala Malls Manila Bay'],
+                        ].map(([icon, label, value]) => (
+                          <div key={label} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                            <span style={{ fontSize: '16px', flexShrink: 0, marginTop: '1px' }}>{icon}</span>
+                            <div>
+                              <div style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
+                              <div style={{ color: '#0f172a', fontSize: '14px', fontWeight: 600, marginTop: '1px' }}>{value}</div>
+                            </div>
+                          </div>
+                        ))}
 
-                  {/* BUY NOW Button */}
-                  {!isFull ? (
-                    <button
-                      onClick={() => {
-                        setModalSession(session)
-                        setModalError('')
-                        setCustomerName('')
-                        setCustomerEmail('')
-                        setCustomerPhone('')
-                        setShowModal(true)
-                      }}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                        width: '100%', padding: '16px 24px', marginTop: '8px',
-                        background: '#ea580c', color: '#ffffff', border: 'none', cursor: 'pointer',
-                        borderRadius: '16px', fontWeight: 800, fontSize: '16px',
-                        boxShadow: '0 8px 24px rgba(234, 88, 12, 0.25)',
-                        transition: 'all 0.2s ease',
-                      }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#c2410c' }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#ea580c' }}
-                    >
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
-                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-                      </svg>
-                      Buy Now — ₱3,500
-                    </button>
-                  ) : (
-                    <div style={{
-                      padding: '14px', borderRadius: '14px', textAlign: 'center',
-                      background: '#fef2f2', border: '1px solid #fecaca',
-                      color: '#ef4444', fontWeight: 700, fontSize: '14px',
-                    }}>
-                      Session Fully Booked
-                    </div>
-                  )}
+                        {/* Slot progress bar */}
+                        <div>
+                          <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
+                            <div style={{
+                              height: '100%', borderRadius: '999px',
+                              width: `${Math.max(5, (session.availableSlots / (session.capacity || 1)) * 100)}%`,
+                              background: isFull ? '#ef4444' : isLow ? theme.primary : '#22c55e',
+                              transition: 'width 0.4s ease',
+                            }} />
+                          </div>
+                        </div>
 
-                  <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', lineHeight: 1.5 }}>
-                    Your booking reference and checkout reservation are created upon clicking Buy Now.
-                  </p>
+                        {/* Action Button */}
+                        {!isFull ? (
+                          isFree ? (
+                            <Link
+                              href="/book-session?tab=free"
+                              style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                                width: '100%', padding: '16px 24px', marginTop: '8px',
+                                background: theme.primary, color: '#ffffff', border: 'none', cursor: 'pointer',
+                                borderRadius: '16px', fontWeight: 800, fontSize: '16px', textDecoration: 'none',
+                                boxShadow: `0 8px 24px ${theme.primary}40`,
+                                transition: 'all 0.2s ease',
+                              }}
+                            >
+                              Register for Free Workshop →
+                            </Link>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setPendingSession(session)
+                                setAgreedToTC(false)
+                                setShowTCModal(true)
+                              }}
+                              style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                                width: '100%', padding: '16px 24px', marginTop: '8px',
+                                background: theme.primary, color: '#ffffff', border: 'none', cursor: 'pointer',
+                                borderRadius: '16px', fontWeight: 800, fontSize: '16px',
+                                boxShadow: `0 8px 24px ${theme.primary}40`,
+                                transition: 'all 0.2s ease',
+                              }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.filter = 'brightness(0.9)' }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.filter = 'none' }}
+                            >
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
+                                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                              </svg>
+                              Book {theme.name} — ₱3,500
+                            </button>
+                          )
+                        ) : (
+                          <div style={{
+                            padding: '14px', borderRadius: '14px', textAlign: 'center',
+                            background: '#fef2f2', border: '1px solid #fecaca',
+                            color: '#ef4444', fontWeight: 700, fontSize: '14px',
+                          }}>
+                            Session Fully Booked
+                          </div>
+                        )}
+
+                        <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', lineHeight: 1.5 }}>
+                          {isFree ? 'Free registration. Click to choose your free date and reserve your seat.' : 'Your booking reference and checkout reservation are created upon clicking Book.'}
+                        </p>
+                      </>
+                    )
+                  })()}
                 </div>
               </div>
             )
@@ -654,6 +802,83 @@ export default function Print2ProfitClient({ sessions }: Props) {
                 {submitting ? 'Reserving slot...' : 'Confirm & Pay — ₱3,500'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Terms & Conditions Modal ── */}
+      {showTCModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '1.5rem' }}>
+        <div style={{ background: '#fff', borderRadius: '24px', width: '100%', maxWidth: '720px', display: 'flex', flexDirection: 'column', gap: '1.25rem', boxShadow: '0 30px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+
+            {/* Header */}
+            <div style={{ padding: '1.75rem 2rem 0 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Terms &amp; Conditions</h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>Please read and agree before proceeding.</p>
+              </div>
+              <button onClick={() => setShowTCModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#94a3b8', lineHeight: 1 }}>✕</button>
+            </div>
+
+            {/* Scrollable T&C Content */}
+            <div style={{ margin: '0 2rem', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1rem 1.25rem', maxHeight: '320px', overflowY: 'auto', background: '#f8fafc', fontSize: '0.82rem', color: '#475569', lineHeight: 1.6 }}>
+              <h4 style={{ margin: '0 0 0.6rem 0', fontWeight: 800, color: '#0f172a', fontSize: '0.88rem' }}>{pendingSession?.module?.name || 'Makerlab Workshop'} — Terms &amp; Conditions</h4>
+              <ol style={{ paddingLeft: '1.25rem', margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <li><strong>Payment:</strong> Full payment of ₱3,500 is required upon checkout to confirm your reservation. Unpaid reservations expire within 15 minutes.</li>
+                <li><strong>Non-Refundable:</strong> All payments are non-refundable. In case of personal conflict, rescheduling is allowed subject to slot availability.</li>
+                <li><strong>Rescheduling:</strong> Rescheduling requests must be made at least <strong>48 hours</strong> before your scheduled session. Late requests may result in forfeiture.</li>
+                <li><strong>No-Show Policy:</strong> Failure to attend without prior notice will be treated as a completed session with no refund or rescheduling credit.</li>
+                <li><strong>Session Capacity:</strong> Workshop sessions are limited. Confirmed seats are assigned on a first-come, first-served basis upon payment completion.</li>
+                <li><strong>Participant Responsibilities:</strong> Participants must arrive on time and comply with all workshop safety guidelines and code of conduct.</li>
+                <li><strong>Workshop Changes:</strong> Makerlab reserves the right to reschedule or cancel sessions due to unforeseen circumstances. Affected registrants will be notified and offered an alternative date.</li>
+                <li><strong>Data Privacy:</strong> Your personal information is collected solely for booking and communication purposes and will not be shared with third parties.</li>
+              </ol>
+            </div>
+
+            {/* Agree Checkbox */}
+            <div style={{ margin: '0 2rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: '#0f172a' }}>
+                <input
+                  type="checkbox"
+                  checked={agreedToTC}
+                  onChange={e => setAgreedToTC(e.target.checked)}
+                  style={{ accentColor: '#ea580c', cursor: 'pointer', width: '16px', height: '16px' }}
+                />
+                I have read and agree to the Terms &amp; Conditions
+              </label>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ padding: '0 2rem 1.75rem 2rem', display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={() => setShowTCModal(false)}
+                style={{ flex: 1, padding: '0.75rem', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', color: '#475569' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (!agreedToTC || !pendingSession) return
+                  setShowTCModal(false)
+                  setModalSession(pendingSession)
+                  setModalError('')
+                  setCustomerName('')
+                  setCustomerEmail('')
+                  setCustomerPhone('')
+                  setShowModal(true)
+                }}
+                disabled={!agreedToTC}
+                style={{
+                  flex: 2, padding: '0.75rem', borderRadius: '12px', border: 'none', fontWeight: 700,
+                  fontSize: '0.9rem', cursor: agreedToTC ? 'pointer' : 'not-allowed',
+                  background: agreedToTC ? '#ea580c' : '#e2e8f0',
+                  color: agreedToTC ? '#fff' : '#94a3b8',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                Proceed to Checkout →
+              </button>
+            </div>
           </div>
         </div>
       )}

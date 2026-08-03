@@ -196,15 +196,18 @@ export async function adminReserveSlot(
       const validStaff = staffId ? await tx.staffUser.findUnique({ where: { id: staffId } }) : null
       const actualStaffId = validStaff ? validStaff.id : null
 
-      // Deduct slots
-      const newAvailable = Math.max(0, session.availableSlots - reg.participantsCount)
-      await tx.workshopSession.update({
-        where: { id: session.id },
-        data: {
-          availableSlots: newAvailable,
-          status: newAvailable === 0 ? 'FULL' : 'OPEN'
-        }
-      })
+      // Deduct slots ONLY if registration wasn't already holding a slot (e.g. from PENDING_CHECKOUT or PAID_FOR_ADMIN_VERIFICATION)
+      const isAlreadyHoldingSlot = ['PENDING_CHECKOUT', 'PAID_FOR_ADMIN_VERIFICATION', 'RESERVED', 'CONFIRMED'].includes(reg.status)
+      if (!isAlreadyHoldingSlot) {
+        const newAvailable = Math.max(0, session.availableSlots - reg.participantsCount)
+        await tx.workshopSession.update({
+          where: { id: session.id },
+          data: {
+            availableSlots: newAvailable,
+            status: newAvailable === 0 ? 'FULL' : 'OPEN'
+          }
+        })
+      }
 
       // Update registration status
       const updatedReg = await tx.workshopRegistration.update({

@@ -46,6 +46,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
   const [actionError, setActionError] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
   const [notes, setNotes] = useState('')
+  const [newSessionDesc, setNewSessionDesc] = useState('')
 
   // Edit session modal state
   const [editSession, setEditSession] = useState<SessionData | null>(null)
@@ -77,46 +78,50 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
   const [moduleCategory, setModuleCategory] = useState('BEGINNER')
   const [moduleUnits, setModuleUnits] = useState(2)
 
-  // Edit module states
-  const [showEditModuleModal, setShowEditModuleModal] = useState(false)
-  const [editModuleIdState, setEditModuleIdState] = useState('')
-  const [editModuleName, setEditModuleName] = useState('')
-  const [editModuleDesc, setEditModuleDesc] = useState('')
-  const [editModuleCategory, setEditModuleCategory] = useState('BEGINNER')
-  const [editModuleUnits, setEditModuleUnits] = useState(2)
+  // Inline Card Editing states
+  const [editingDescModuleId, setEditingDescModuleId] = useState<string | null>(null)
+  const [inlineDescText, setInlineDescText] = useState('')
+  const [editingNoteSessionId, setEditingNoteSessionId] = useState<string | null>(null)
+  const [inlineNoteText, setInlineNoteText] = useState('')
+  const [inlineLoading, setInlineLoading] = useState(false)
 
-  function openEditModuleModal(mid: string) {
-    const mod = modules.find(m => m.id === mid)
-    if (!mod) return
-    setEditModuleIdState(mod.id)
-    setEditModuleName(mod.name)
-    setEditModuleDesc(mod.description || '')
-    setEditModuleCategory(mod.category)
-    setEditModuleUnits(mod.units)
-    setShowEditModuleModal(true)
-    setActionError('')
-  }
 
-  async function handleEditModuleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setActionLoading(true)
-    setActionError('')
 
+
+  async function saveInlineDescription(mod: { id: string; name: string; units: number }) {
+    setInlineLoading(true)
+    const existing = modules.find(m => m.id === mod.id)
     const formData = new FormData()
-    formData.append('moduleId', editModuleIdState)
-    formData.append('name', editModuleName)
-    formData.append('description', editModuleDesc)
-    formData.append('category', editModuleCategory)
-    formData.append('units', editModuleUnits.toString())
+    formData.append('moduleId', mod.id)
+    formData.append('name', mod.name)
+    formData.append('description', inlineDescText)
+    formData.append('category', existing?.category || 'BEGINNER')
+    formData.append('units', (existing?.units ?? mod.units ?? 2).toString())
 
     const res = await updateModule(formData)
-    if (res.error) {
-      setActionError(res.error)
-    } else {
-      setShowEditModuleModal(false)
+    if (!res.error) {
+      setEditingDescModuleId(null)
       router.refresh()
     }
-    setActionLoading(false)
+    setInlineLoading(false)
+  }
+
+  async function saveInlineNote(s: SessionData) {
+    setInlineLoading(true)
+    const formData = new FormData()
+    formData.append('sessionId', s.id)
+    formData.append('moduleId', s.module?.id || '')
+    formData.append('startTime', s.startTime)
+    formData.append('endTime', s.endTime)
+    formData.append('capacity', s.capacity.toString())
+    formData.append('notes', inlineNoteText)
+
+    const res = await updateSession(formData)
+    if (!res.error) {
+      setEditingNoteSessionId(null)
+      router.refresh()
+    }
+    setInlineLoading(false)
   }
 
   async function handleScheduleSubmit(e: React.FormEvent) {
@@ -132,6 +137,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     formData.append('endTime', endTime)
     formData.append('capacity', capacity.toString())
     formData.append('notes', notes)
+    formData.append('description', newSessionDesc)
 
     const res = await createSession(formData)
     if (res.error) {
@@ -139,6 +145,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     } else {
       setShowCreateModal(false)
       setNotes('')
+      setNewSessionDesc('')
       router.refresh()
     }
     setActionLoading(false)
@@ -448,17 +455,111 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
 
                   {/* Module Details */}
                   <div style={{ margin: '2px 0 6px 0', borderLeft: '3px solid var(--accent)', paddingLeft: '8px' }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--admin-text-primary)' }}>
-                      {s.module?.name || 'Print 2 Profit Event'}
-                    </div>
-                    {s.module?.description && (
-                      <div style={{ fontSize: '0.78rem', color: 'var(--admin-text-secondary)', marginTop: '4px', fontStyle: 'italic', lineHeight: 1.4 }}>
-                        {s.module.description}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--admin-text-primary)' }}>
+                        {s.module?.name || 'Print 2 Profit Event'}
                       </div>
+                      {s.module?.id && editingDescModuleId !== s.module.id && (
+                        <button
+                          onClick={() => {
+                            setEditingDescModuleId(s.module!.id)
+                            setInlineDescText(s.module?.description || '')
+                          }}
+                          style={{
+                            background: 'none', border: 'none', color: 'var(--accent)',
+                            fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: '2px 6px'
+                          }}
+                        >
+                          ✏️ Edit Description
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Inline Description Editor or Display */}
+                    {s.module?.id && editingDescModuleId === s.module.id ? (
+                      <div style={{ marginTop: '6px', background: '#ffffff', border: '1px solid #fdba74', borderRadius: '8px', padding: '8px' }}>
+                        <textarea
+                          rows={3}
+                          value={inlineDescText}
+                          onChange={(e) => setInlineDescText(e.target.value)}
+                          placeholder="Edit workshop description..."
+                          style={{ width: '100%', fontSize: '0.8rem', padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0', resize: 'vertical' }}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', marginTop: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setEditingDescModuleId(null)}
+                            style={{ padding: '2px 8px', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            disabled={inlineLoading}
+                            onClick={() => saveInlineDescription({ id: s.module!.id, name: s.module?.name || '', units: s.module?.units || 2 })}
+                            style={{ padding: '2px 10px', fontSize: '0.75rem', borderRadius: '4px', border: 'none', background: 'var(--accent)', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            {inlineLoading ? 'Saving...' : 'Save'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      s.module?.description && (
+                        <div style={{ fontSize: '0.78rem', color: 'var(--admin-text-secondary)', marginTop: '4px', fontStyle: 'italic', lineHeight: 1.4 }}>
+                          {s.module.description}
+                        </div>
+                      )
                     )}
-                    {s.notes && (
-                      <div style={{ fontSize: '0.8rem', color: 'var(--admin-text-primary)', marginTop: '6px', fontWeight: 500, lineHeight: 1.4 }}>
-                        📝 {s.notes}
+
+                    {/* Inline Note Editor or Display */}
+                    {editingNoteSessionId === s.id ? (
+                      <div style={{ marginTop: '8px', background: '#ffffff', border: '1px solid #6366f1', borderRadius: '8px', padding: '8px' }}>
+                        <textarea
+                          rows={2}
+                          value={inlineNoteText}
+                          onChange={(e) => setInlineNoteText(e.target.value)}
+                          placeholder="Add/edit event note for this date..."
+                          style={{ width: '100%', fontSize: '0.8rem', padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0', resize: 'vertical' }}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', marginTop: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setEditingNoteSessionId(null)}
+                            style={{ padding: '2px 8px', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            disabled={inlineLoading}
+                            onClick={() => saveInlineNote(s)}
+                            style={{ padding: '2px 10px', fontSize: '0.75rem', borderRadius: '4px', border: 'none', background: '#6366f1', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            {inlineLoading ? 'Saving...' : 'Save Note'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                        {s.notes ? (
+                          <div style={{ fontSize: '0.8rem', color: 'var(--admin-text-primary)', fontWeight: 500, lineHeight: 1.4 }}>
+                            📝 {s.notes}
+                          </div>
+                        ) : (
+                          <div />
+                        )}
+                        <button
+                          onClick={() => {
+                            setEditingNoteSessionId(s.id)
+                            setInlineNoteText(s.notes || '')
+                          }}
+                          style={{
+                            background: 'none', border: 'none', color: '#64748b',
+                            fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', padding: '2px 4px'
+                          }}
+                        >
+                          {s.notes ? '✏️ Edit Note' : '+ Add Note'}
+                        </button>
                       </div>
                     )}
                   </div>
@@ -602,16 +703,23 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                         ) : (
                           <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{booking.customerName}</span>
                         )}
-                        <span style={{ fontSize: '0.8rem', color: 'var(--admin-text-secondary)' }}>{booking.customerEmail}</span>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent)', marginTop: '4px' }}>Ref: {booking.bookingReference}</span>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--admin-text-secondary)' }}>{booking.customerEmail} {booking.customerPhone ? `· ${booking.customerPhone}` : ''}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '4px' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent)' }}>Ref: {booking.bookingReference}</span>
+                          {booking.participantsCount > 1 && (
+                            <span style={{ fontSize: '0.75rem', background: '#e2e8f0', color: '#334155', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 600 }}>
+                              {booking.participantsCount} pax
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div>
                         <span className={`badge ${
-                          booking.status === 'RESERVED' ? 'badge-blue' :
-                          booking.status === 'BALANCE_DUE' ? 'badge-yellow' :
-                          booking.status === 'CANCELLED_BY_CUSTOMER' ? 'badge-red' : 'badge-green'
+                          booking.status === 'RESERVED' || booking.status === 'CONFIRMED' ? 'badge-green' :
+                          booking.status === 'PAID_FOR_ADMIN_VERIFICATION' ? 'badge-yellow' :
+                          booking.status === 'PENDING_CHECKOUT' ? 'badge-blue' : 'badge-gray'
                         }`}>
-                          {booking.status.replace('_', ' ')}
+                          {booking.status.replace(/_/g, ' ')}
                         </span>
                       </div>
                     </div>
@@ -705,16 +813,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                 )}
               </div>
 
-              <div className="input-group">
-                <label style={{ fontWeight: 600 }}>Event Description / Notes</label>
-                <textarea
-                  value={editNotes}
-                  onChange={(e) => setEditNotes(e.target.value)}
-                  className="input-field"
-                  placeholder="Optional description/notes for this specific event slot..."
-                  style={{ borderRadius: '0.5rem', minHeight: '60px', padding: '0.5rem' }}
-                />
-              </div>
+
 
               {/* Copy this Event to Another Date UI */}
               <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem', marginTop: '0.5rem' }}>
@@ -834,15 +933,27 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
               </div>
 
               <div className="input-group">
-                <label style={{ fontWeight: 600 }}>Event Description / Notes</label>
+                <label style={{ fontWeight: 600 }}>Event Description <span style={{ fontWeight: 400, color: 'var(--admin-text-secondary)', fontSize: '0.8rem' }}>(optional)</span></label>
+                <textarea
+                  value={newSessionDesc}
+                  onChange={(e) => setNewSessionDesc(e.target.value)}
+                  className="input-field"
+                  placeholder="Describe what attendees will learn or experience..."
+                  style={{ borderRadius: '0.5rem', minHeight: '80px', padding: '0.5rem', resize: 'vertical' }}
+                />
+              </div>
+
+              <div className="input-group">
+                <label style={{ fontWeight: 600 }}>Event Note <span style={{ fontWeight: 400, color: 'var(--admin-text-secondary)', fontSize: '0.8rem' }}>(optional)</span></label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   className="input-field"
-                  placeholder="Optional description/notes for this specific event slot..."
-                  style={{ borderRadius: '0.5rem', minHeight: '60px', padding: '0.5rem' }}
+                  placeholder="e.g. Bring your laptop, limited seats, parking info..."
+                  style={{ borderRadius: '0.5rem', minHeight: '60px', padding: '0.5rem', resize: 'vertical' }}
                 />
               </div>
+
 
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                 <button type="button" onClick={() => setShowCreateModal(false)} className="admin-btn-outline" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem' }}>Cancel</button>
@@ -876,28 +987,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
 
               <div className="input-group">
                 <label style={{ fontWeight: 600 }}>Description</label>
-                <textarea value={moduleDesc} onChange={(e) => setModuleDesc(e.target.value)} className="input-field" placeholder="Brief description of the module" style={{ borderRadius: '0.5rem', minHeight: '80px', padding: '0.5rem' }} />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1rem' }}>
-                <div className="input-group">
-                  <label style={{ fontWeight: 600 }}>Category Level</label>
-                  <select 
-                    value={moduleCategory} 
-                    onChange={(e) => setModuleCategory(e.target.value)}
-                    className="input-field"
-                    style={{ borderRadius: '0.5rem', padding: '0.5rem' }}
-                  >
-                    <option value="BEGINNER">BEGINNER</option>
-                    <option value="INTERMEDIATE">INTERMEDIATE</option>
-                    <option value="ADVANCED">ADVANCED</option>
-                    <option value="KIDS">KIDS</option>
-                  </select>
-                </div>
-                <div className="input-group">
-                  <label style={{ fontWeight: 600 }}>Units Cost</label>
-                  <input type="number" min="1" value={moduleUnits} onChange={(e) => setModuleUnits(parseInt(e.target.value, 10))} className="input-field" required style={{ borderRadius: '0.5rem' }} />
-                </div>
+                <textarea value={moduleDesc} onChange={(e) => setModuleDesc(e.target.value)} className="input-field" placeholder="Brief description of the module" style={{ borderRadius: '0.5rem', minHeight: '100px', padding: '0.5rem' }} />
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
@@ -911,61 +1001,8 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
         </div>
       )}
 
-      {/* Edit Module Modal */}
-      {showEditModuleModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1010, padding: '1.5rem' }}>
-          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '450px', borderRadius: '1.5rem', background: '#ffffff', color: 'var(--foreground)', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>
-                Edit Academic Module
-              </h3>
-              <button onClick={() => setShowEditModuleModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: 'var(--admin-text-secondary)', cursor: 'pointer' }}>&times;</button>
-            </div>
 
-            <form onSubmit={handleEditModuleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {actionError && <div style={{ padding: '0.5rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.375rem', fontSize: '0.85rem' }}>{actionError}</div>}
 
-              <div className="input-group">
-                <label style={{ fontWeight: 600 }}>Module Title / Name</label>
-                <input type="text" value={editModuleName} onChange={(e) => setEditModuleName(e.target.value)} className="input-field" placeholder="e.g. Intro to 3D Printing" required style={{ borderRadius: '0.5rem' }} />
-              </div>
-
-              <div className="input-group">
-                <label style={{ fontWeight: 600 }}>Description</label>
-                <textarea value={editModuleDesc} onChange={(e) => setEditModuleDesc(e.target.value)} className="input-field" placeholder="Brief description of the module" style={{ borderRadius: '0.5rem', minHeight: '80px', padding: '0.5rem' }} />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1rem' }}>
-                <div className="input-group">
-                  <label style={{ fontWeight: 600 }}>Category Level</label>
-                  <select 
-                    value={editModuleCategory} 
-                    onChange={(e) => setEditModuleCategory(e.target.value)}
-                    className="input-field"
-                    style={{ borderRadius: '0.5rem', padding: '0.5rem' }}
-                  >
-                    <option value="BEGINNER">BEGINNER</option>
-                    <option value="INTERMEDIATE">INTERMEDIATE</option>
-                    <option value="ADVANCED">ADVANCED</option>
-                    <option value="KIDS">KIDS</option>
-                  </select>
-                </div>
-                <div className="input-group">
-                  <label style={{ fontWeight: 600 }}>Units Cost</label>
-                  <input type="number" min="1" value={editModuleUnits} onChange={(e) => setEditModuleUnits(parseInt(e.target.value, 10))} className="input-field" required style={{ borderRadius: '0.5rem' }} />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <button type="button" onClick={() => setShowEditModuleModal(false)} className="admin-btn-outline" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem' }}>Cancel</button>
-                <button type="submit" disabled={actionLoading} className="pricing-btn pricing-btn-solid" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem', background: 'var(--accent)', border: 'none', color: 'white', fontWeight: 600 }}>
-                  {actionLoading ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* ── Cancellation Reason Modal ── */}
       {showCancelModal && editSession && (
@@ -1057,6 +1094,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
           </div>
         </div>
       )}
+
     </div>
   )
 }

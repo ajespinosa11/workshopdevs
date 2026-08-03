@@ -21,8 +21,7 @@ export default function Navigation() {
   }, [pathname, searchParams])
 
   const links = [
-    { href: '/print-2-profit',           label: 'Buy Print 2 Profit', key: 'p2p' },
-    { href: '/book-session?tab=voucher', label: 'Book a Session',     key: 'voucher' },
+    { href: '/print-2-profit',           label: 'Workshops & Events', key: 'p2p' },
     { href: '/book-session?tab=free',    label: 'Free Workshops',      key: 'free'    },
     { href: '/book-session?tab=manage',  label: 'My Bookings',         key: 'manage'  },
   ]
