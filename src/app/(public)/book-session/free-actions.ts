@@ -198,8 +198,6 @@ export async function createFreeBooking(formData: FormData) {
       })
     })
 
-    revalidatePath('/admin/sessions')
-
     // Send confirmation email (fire-and-forget — don't block the response on email errors)
     try {
       await sendFreeBookingConfirmationEmail({

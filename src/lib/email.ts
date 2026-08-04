@@ -54,152 +54,105 @@ export async function sendVoucherEmail({ to, customerName, voucherCode, planName
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Your Workshop Voucher Code</title>
+      <title>Paid Workshop Voucher Confirmed</title>
       <style>
-        body {
-          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          background-color: #f4f6f8;
-          color: #1a202c;
-          margin: 0;
-          padding: 0;
-          -webkit-font-smoothing: antialiased;
-        }
-        .container {
-          max-width: 600px;
-          margin: 40px auto;
-          background: #ffffff;
-          border-radius: 12px;
-          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-          overflow: hidden;
-        }
-        .header {
-          background-color: #0f2540;
-          color: #ffffff;
-          padding: 30px;
-          text-align: center;
-        }
-        .header h1 {
-          margin: 0;
-          font-size: 24px;
-          font-weight: 700;
-          letter-spacing: 0.5px;
-        }
-        .header p {
-          margin: 5px 0 0 0;
-          opacity: 0.9;
-          font-size: 14px;
-        }
-        .content {
-          padding: 40px 30px;
-          line-height: 1.6;
-        }
-        .greeting {
-          font-size: 18px;
-          font-weight: 600;
-          margin-bottom: 20px;
-        }
-        .details-box {
-          background-color: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          padding: 20px;
-          margin: 25px 0;
-        }
-        .voucher-highlight {
-          text-align: center;
-          margin: 15px 0;
-        }
-        .voucher-code {
-          display: inline-block;
-          font-family: 'Courier New', Courier, monospace;
-          font-size: 28px;
-          font-weight: 700;
-          color: #f97316;
-          background: #fff5eb;
-          border: 2px dashed #f97316;
-          padding: 10px 25px;
-          border-radius: 6px;
-          letter-spacing: 1px;
-        }
-        .info-row {
-          display: flex;
-          justify-content: space-between;
-          border-bottom: 1px solid #edf2f7;
-          padding: 8px 0;
-        }
-        .info-row:last-child {
-          border-bottom: none;
-        }
-        .info-label {
-          font-weight: 600;
-          color: #4a5568;
-        }
-        .info-value {
-          color: #1a202c;
-        }
-        .cta-container {
-          text-align: center;
-          margin-top: 30px;
-        }
-        .cta-button {
-          display: inline-block;
-          background-color: #f97316;
-          color: #ffffff !important;
-          font-weight: 700;
-          text-decoration: none;
-          padding: 12px 30px;
-          border-radius: 8px;
-          box-shadow: 0 4px 6px rgba(249, 115, 22, 0.2);
-          transition: background-color 0.2s;
-        }
-        .cta-button:hover {
-          background-color: #ea580c;
-        }
-        .footer {
-          background-color: #f8fafc;
-          border-top: 1px solid #edf2f7;
-          padding: 20px 30px;
-          text-align: center;
-          font-size: 12px;
-          color: #718096;
-        }
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f6f8; color: #1a202c; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #0f2540 0%, #1a3a5c 100%); color: #ffffff; padding: 36px 30px; text-align: center; }
+        .header-badge { display: inline-block; background: rgba(255,255,255,0.15); border-radius: 20px; padding: 4px 14px; font-size: 12px; font-weight: 700; letter-spacing: 1px; margin-bottom: 12px; }
+        .header h1 { margin: 0 0 6px; font-size: 26px; font-weight: 800; }
+        .header p { margin: 0; opacity: 0.85; font-size: 14px; }
+        .green-banner { background: linear-gradient(90deg, #16a34a, #22c55e); color: #fff; text-align: center; padding: 12px; font-size: 14px; font-weight: 700; letter-spacing: 0.5px; }
+        .content { padding: 36px 30px; line-height: 1.65; }
+        .greeting { font-size: 20px; font-weight: 700; color: #0f2540; margin-bottom: 12px; }
+        .intro-text { font-size: 15px; color: #4a5568; margin-bottom: 28px; }
+        .info-card { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 22px; margin-bottom: 24px; }
+        .info-card-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; color: #718096; margin-bottom: 14px; }
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #edf2f7; font-size: 14px; }
+        .info-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .info-label { color: #718096; }
+        .info-value { color: #1a202c; font-weight: 600; text-align: right; max-width: 60%; }
+        .ref-box { background: linear-gradient(135deg, #fff7ed, #ffedd5); border: 2px dashed #f97316; border-radius: 12px; padding: 18px 24px; text-align: center; margin-bottom: 24px; }
+        .ref-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #ea580c; margin-bottom: 6px; }
+        .ref-code { font-size: 22px; font-weight: 900; color: #c2410c; letter-spacing: 2px; font-family: monospace; }
+        .reminder-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px 20px; margin-bottom: 24px; }
+        .reminder-box p { margin: 0 0 6px; font-size: 14px; color: #15803d; }
+        .reminder-box p:last-child { margin-bottom: 0; }
+        .cta-button { display: inline-block; background: #0f2540; color: #ffffff !important; text-decoration: none; padding: 14px 32px; font-weight: 700; border-radius: 8px; font-size: 15px; margin-top: 8px; }
+        .footer { background: #f7fafc; padding: 20px 30px; border-top: 1px solid #edf2f7; font-size: 12px; color: #a0aec0; text-align: center; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <h1>Makerlab 3D Workshop</h1>
-          <p>Your Payment & Voucher Details</p>
+          <div class="header-badge">PAYMENT CONFIRMED</div>
+          <h1>You're All Set!</h1>
+          <p>Your Paid Workshop Voucher has been activated at Makerlab Experience Hub</p>
         </div>
+        <div class="green-banner">PAID WORKSHOP — VOUCHER ACTIVATED</div>
         <div class="content">
-          <div class="greeting">Hello ${customerName},</div>
-          <p>Thank you for your purchase! We are excited to welcome you to our workshop. Your payment has been successfully processed, and your workshop voucher is now active.</p>
-          
-          <div class="details-box">
-            <div class="info-row">
-              <span class="info-label">Plan Purchased:</span>
-              <span class="info-value"><strong>${planName}</strong></span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Total Units:</span>
-              <span class="info-value">${creditHours} units</span>
-            </div>
-            
-            <div class="voucher-highlight">
-              <p style="margin-bottom: 5px; font-weight: 600; color: #4a5568;">Your Unique Voucher Code:</p>
-              <div class="voucher-code">${voucherCode}</div>
-            </div>
+          <p class="greeting">Hello, ${customerName}!</p>
+          <p class="intro-text">
+            We are excited to welcome you to <strong>Makerlab Experience Hub</strong>! Your payment for the paid workshop has been successfully processed, and your workshop voucher is now active.
+          </p>
+
+          <div class="ref-box">
+            <div class="ref-label">Voucher Code</div>
+            <div class="ref-code">${voucherCode}</div>
           </div>
-          
-          <p>To schedule your workshop seat, please click the button below to book a session. Make sure to enter your voucher code during checkout.</p>
-          
-          <div class="cta-container">
+
+          <div class="info-card">
+            <div class="info-card-title">Voucher Details</div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 4px;">
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #edf2f7;">Plan Purchased:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top; border-bottom: 1px solid #edf2f7;">${planName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #edf2f7;">Total Units:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top; border-bottom: 1px solid #edf2f7;">${creditHours} units</td>
+              </tr>
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #edf2f7;">Status:</td>
+                <td style="padding: 9px 0; color: #16a34a; font-weight: 700; text-align: right; vertical-align: top; border-bottom: 1px solid #edf2f7;">Payment Confirmed</td>
+              </tr>
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top;">Venue:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top;">Makerlab Experience Hub, 2nd Floor, Ayala Malls Manila Bay</td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="info-card">
+            <div class="info-card-title">Registrant Details</div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 4px;">
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #edf2f7;">Name:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top; border-bottom: 1px solid #edf2f7;">${customerName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top;">Email:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top;">${to}</td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="reminder-box">
+            <p><strong>To schedule your workshop session:</strong> Visit our website, select a slot, and enter your voucher code during checkout.</p>
+            <p><strong>Check-in Policy:</strong> Voucher units are deducted only when you physically check in for your session.</p>
+          </div>
+
+          <p style="font-size: 15px; color: #4a5568;">
+            If you have any questions, please feel free to contact us. We look forward to seeing you at the workshop!
+          </p>
+
+          <div style="text-align: center; margin-top: 28px;">
             <a href="${hostUrl}/book-session" class="cta-button">Book a Session Now</a>
           </div>
         </div>
         <div class="footer">
-          <p>Please note: Voucher units are deducted only when you physically check-in for your session.</p>
-          <p>&copy; ${new Date().getFullYear()} Makerlab Workshop. All rights reserved.</p>
+          <p>This is an automated confirmation email. Please do not reply directly to this message.</p>
+          <p>&copy; ${new Date().getFullYear()} Makerlab Experience Hub. All rights reserved.</p>
         </div>
       </div>
     </body>
@@ -207,9 +160,9 @@ export async function sendVoucherEmail({ to, customerName, voucherCode, planName
   `
 
   const mailOptions = {
-    from: process.env.SMTP_FROM || '"Makerlab 3D Workshop" <no-reply@makerlab3d.com>',
+    from: process.env.SMTP_FROM || '"Makerlab Experience Hub" <noreply@makerlab.ph>',
     to,
-    subject: `Your Makerlab Workshop Voucher: ${voucherCode}`,
+    subject: `Paid Workshop Voucher Confirmed — ${voucherCode}`,
     html: htmlContent,
   }
 
@@ -442,9 +395,9 @@ export async function sendSessionCancellationEmail({
   `
 
   const mailOptions = {
-    from: process.env.SMTP_FROM || '"Makerlab 3D Workshop" <no-reply@makerlab3d.com>',
+    from: process.env.SMTP_FROM || '"Makerlab Experience Hub" <noreply@makerlab.ph>',
     to,
-    subject: `⚠️ Booking Cancellation Notice: ${bookingReference}`,
+    subject: `Booking Cancellation Notice: ${bookingReference}`,
     html: htmlContent,
   }
 
@@ -564,71 +517,75 @@ export async function sendFreeBookingConfirmationEmail({
     <body>
       <div class="container">
         <div class="header">
-          <div class="header-badge">🎉 RESERVATION CONFIRMED</div>
+          <div class="header-badge">RESERVATION CONFIRMED</div>
           <h1>You're All Set!</h1>
           <p>Your Free Workshop slot has been reserved at Makerlab Experience Hub</p>
         </div>
-        <div class="green-banner">✅ FREE WORKSHOP — COMPLIMENTARY SESSION</div>
+        <div class="green-banner">FREE WORKSHOP — COMPLIMENTARY SESSION</div>
         <div class="content">
-          <p class="greeting">Hello, ${customerName}! 👋</p>
+          <p class="greeting">Hello, ${customerName}!</p>
           <p class="intro-text">
             We're excited to welcome you to <strong>Makerlab Experience Hub</strong>! Your free workshop reservation has been confirmed. Please keep this email as your booking reference and present it at reception on the day of your session.
           </p>
 
           <div class="ref-box">
-            <div class="ref-label">📋 Booking Reference</div>
+            <div class="ref-label">Booking Reference</div>
             <div class="ref-code">${bookingReference}</div>
           </div>
 
           <div class="info-card">
-            <div class="info-card-title">📅 Session Details</div>
-            <div class="info-row">
-              <span class="info-label">Workshop</span>
-              <span class="info-value">${moduleName}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Date</span>
-              <span class="info-value">${formattedDate}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Time</span>
-              <span class="info-value">${startTime} – ${endTime}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Participants</span>
-              <span class="info-value">${paxCount} ${paxCount === 1 ? 'person' : 'people'}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Venue</span>
-              <span class="info-value">Makerlab Experience Hub, 2nd Floor, Ayala Malls Manila Bay</span>
-            </div>
+            <div class="info-card-title">Session Details</div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 4px;">
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #edf2f7;">Workshop:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top; border-bottom: 1px solid #edf2f7;">${moduleName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #edf2f7;">Date:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top; border-bottom: 1px solid #edf2f7;">${formattedDate}</td>
+              </tr>
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #edf2f7;">Time:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top; border-bottom: 1px solid #edf2f7;">${startTime} - ${endTime}</td>
+              </tr>
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #edf2f7;">Participants:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top; border-bottom: 1px solid #edf2f7;">${paxCount} ${paxCount === 1 ? 'person' : 'people'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top;">Venue:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top;">Makerlab Experience Hub, 2nd Floor, Ayala Malls Manila Bay</td>
+              </tr>
+            </table>
           </div>
 
           <div class="info-card">
-            <div class="info-card-title">👤 Registrant Details</div>
-            <div class="info-row">
-              <span class="info-label">Name</span>
-              <span class="info-value">${customerName}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Email</span>
-              <span class="info-value">${customerEmail}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Phone</span>
-              <span class="info-value">${customerPhone}</span>
-            </div>
+            <div class="info-card-title">Registrant Details</div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 4px;">
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #edf2f7;">Name:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top; border-bottom: 1px solid #edf2f7;">${customerName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #edf2f7;">Email:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top; border-bottom: 1px solid #edf2f7;">${customerEmail}</td>
+              </tr>
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top;">Phone:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top;">${customerPhone}</td>
+              </tr>
+            </table>
           </div>
 
           <div class="qr-section">
             <img src="${qrCodeUrl}" width="150" height="150" alt="Check-in QR Code" />
-            <div class="qr-label">📱 Show this QR code at reception for check-in</div>
+            <div class="qr-label">Show this QR code at reception for check-in</div>
           </div>
 
           <div class="reminder-box">
-            <p>📌 <strong>Please arrive 10 minutes early</strong> to complete registration at the front desk.</p>
-            <p>📋 <strong>Bring this email</strong> (printed or on your phone) along with a valid ID.</p>
-            <p>🆓 <strong>This session is completely FREE</strong> — no payment required!</p>
+            <p><strong>Please arrive 10 minutes early</strong> to complete registration at the front desk.</p>
+            <p><strong>Bring this email</strong> (printed or on your phone) along with a valid ID.</p>
+            <p><strong>This session is completely FREE</strong> — no payment required!</p>
           </div>
 
           <p style="font-size: 15px; color: #4a5568;">
@@ -649,9 +606,9 @@ export async function sendFreeBookingConfirmationEmail({
   `
 
   const mailOptions = {
-    from: process.env.SMTP_FROM || '"Makerlab Experience Hub" <no-reply@makerlab3d.com>',
+    from: process.env.SMTP_FROM || '"Makerlab Experience Hub" <noreply@makerlab.ph>',
     to,
-    subject: `🎉 Free Workshop Confirmed — ${bookingReference} | ${formattedDate}`,
+    subject: `Free Workshop Confirmed — ${bookingReference} | ${formattedDate}`,
     html: htmlContent,
   }
 
@@ -660,6 +617,225 @@ export async function sendFreeBookingConfirmationEmail({
   if (!useSmtp) {
     previewUrl = nodemailer.getTestMessageUrl(info) || ''
     console.log(`[Ethereal Email Sent] Free Booking Confirmation Preview URL: ${previewUrl}`)
+  }
+
+  return { success: true, messageId: info.messageId, previewUrl }
+}
+
+interface PaidBookingConfirmationEmailParams {
+  to: string
+  customerName: string
+  customerEmail: string
+  customerPhone: string
+  bookingReference: string
+  moduleName: string
+  sessionDate: string
+  startTime: string
+  endTime: string
+  paxCount: number
+  qrCodeUrl?: string
+  amountPaid?: string
+}
+
+export async function sendPaidBookingConfirmationEmail({
+  to,
+  customerName,
+  customerEmail,
+  customerPhone,
+  bookingReference,
+  moduleName,
+  sessionDate,
+  startTime,
+  endTime,
+  paxCount,
+  qrCodeUrl,
+  amountPaid,
+}: PaidBookingConfirmationEmailParams) {
+  let transporter: nodemailer.Transporter
+
+  const useSmtp = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS
+  let previewUrl = ''
+
+  if (useSmtp) {
+    const host = process.env.SMTP_HOST?.replace(/^['"]|['"]$/g, '').trim()
+    const portStr = process.env.SMTP_PORT?.toString().replace(/^['"]|['"]$/g, '').trim()
+    const secureStr = process.env.SMTP_SECURE?.toString().replace(/^['"]|['"]$/g, '').trim()
+    const user = process.env.SMTP_USER?.replace(/^['"]|['"]$/g, '').trim()
+    const pass = process.env.SMTP_PASS?.replace(/^['"]|['"]$/g, '').replace(/\s+/g, '')
+
+    transporter = nodemailer.createTransport({
+      host,
+      port: parseInt(portStr || '587', 10),
+      secure: secureStr === 'true',
+      auth: { user, pass },
+    })
+  } else {
+    console.log('Generating Ethereal SMTP test account for paid booking email...')
+    const testAccount = await nodemailer.createTestAccount()
+    transporter = nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false,
+      auth: { user: testAccount.user, pass: testAccount.pass },
+    })
+  }
+
+  const hostUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const formattedDate = new Date(sessionDate).toLocaleDateString('en-PH', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  })
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Paid Workshop Reservation Confirmed</title>
+      <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f6f8; color: #1a202c; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #0f2540 0%, #1a3a5c 100%); color: #ffffff; padding: 36px 30px; text-align: center; }
+        .header-badge { display: inline-block; background: rgba(255,255,255,0.15); border-radius: 20px; padding: 4px 14px; font-size: 12px; font-weight: 700; letter-spacing: 1px; margin-bottom: 12px; }
+        .header h1 { margin: 0 0 6px; font-size: 26px; font-weight: 800; }
+        .header p { margin: 0; opacity: 0.85; font-size: 14px; }
+        .green-banner { background: linear-gradient(90deg, #16a34a, #22c55e); color: #fff; text-align: center; padding: 12px; font-size: 14px; font-weight: 700; letter-spacing: 0.5px; }
+        .content { padding: 36px 30px; line-height: 1.65; }
+        .greeting { font-size: 20px; font-weight: 700; color: #0f2540; margin-bottom: 12px; }
+        .intro-text { font-size: 15px; color: #4a5568; margin-bottom: 28px; }
+        .info-card { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 22px; margin-bottom: 24px; }
+        .info-card-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; color: #718096; margin-bottom: 14px; }
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #edf2f7; font-size: 14px; }
+        .info-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .info-label { color: #718096; }
+        .info-value { color: #1a202c; font-weight: 600; text-align: right; max-width: 60%; }
+        .ref-box { background: linear-gradient(135deg, #fff7ed, #ffedd5); border: 2px dashed #f97316; border-radius: 12px; padding: 18px 24px; text-align: center; margin-bottom: 24px; }
+        .ref-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #ea580c; margin-bottom: 6px; }
+        .ref-code { font-size: 22px; font-weight: 900; color: #c2410c; letter-spacing: 2px; font-family: monospace; }
+        .qr-section { text-align: center; margin: 20px 0 28px; }
+        .qr-section img { border: 4px solid #e2e8f0; border-radius: 12px; padding: 8px; background: #fff; }
+        .qr-label { font-size: 12px; color: #718096; margin-top: 8px; }
+        .reminder-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px 20px; margin-bottom: 24px; }
+        .reminder-box p { margin: 0 0 6px; font-size: 14px; color: #15803d; }
+        .reminder-box p:last-child { margin-bottom: 0; }
+        .cta-button { display: inline-block; background: #0f2540; color: #ffffff !important; text-decoration: none; padding: 14px 32px; font-weight: 700; border-radius: 8px; font-size: 15px; margin-top: 8px; }
+        .footer { background: #f7fafc; padding: 20px 30px; border-top: 1px solid #edf2f7; font-size: 12px; color: #a0aec0; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="header-badge">PAYMENT CONFIRMED</div>
+          <h1>You're All Set!</h1>
+          <p>Your Paid Workshop reservation has been confirmed at Makerlab Experience Hub</p>
+        </div>
+        <div class="green-banner">PAID WORKSHOP — SESSION CONFIRMED</div>
+        <div class="content">
+          <p class="greeting">Hello, ${customerName}!</p>
+          <p class="intro-text">
+            We are excited to welcome you to <strong>Makerlab Experience Hub</strong>! Your payment for the workshop has been successfully confirmed. Please keep this email as your booking reference and present it at reception on the day of your session.
+          </p>
+
+          <div class="ref-box">
+            <div class="ref-label">Booking Reference</div>
+            <div class="ref-code">${bookingReference}</div>
+          </div>
+
+          <div class="info-card">
+            <div class="info-card-title">Session Details</div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 4px;">
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #edf2f7;">Workshop:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top; border-bottom: 1px solid #edf2f7;">${moduleName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #edf2f7;">Date:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top; border-bottom: 1px solid #edf2f7;">${formattedDate}</td>
+              </tr>
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #edf2f7;">Time:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top; border-bottom: 1px solid #edf2f7;">${startTime} - ${endTime}</td>
+              </tr>
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #edf2f7;">Participants:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top; border-bottom: 1px solid #edf2f7;">${paxCount} ${paxCount === 1 ? 'person' : 'people'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #edf2f7;">Payment Status:</td>
+                <td style="padding: 9px 0; color: #16a34a; font-weight: 700; text-align: right; vertical-align: top; border-bottom: 1px solid #edf2f7;">Payment Confirmed</td>
+              </tr>
+              ${amountPaid ? `
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #edf2f7;">Amount Paid:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top; border-bottom: 1px solid #edf2f7;">${amountPaid}</td>
+              </tr>` : ''}
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top;">Venue:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top;">Makerlab Experience Hub, 2nd Floor, Ayala Malls Manila Bay</td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="info-card">
+            <div class="info-card-title">Registrant Details</div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 4px;">
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #edf2f7;">Name:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top; border-bottom: 1px solid #edf2f7;">${customerName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #edf2f7;">Email:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top; border-bottom: 1px solid #edf2f7;">${customerEmail}</td>
+              </tr>
+              <tr>
+                <td style="padding: 9px 0; color: #718096; width: 140px; font-weight: 600; vertical-align: top;">Phone:</td>
+                <td style="padding: 9px 0; color: #1a202c; font-weight: 700; text-align: right; vertical-align: top;">${customerPhone}</td>
+              </tr>
+            </table>
+          </div>
+
+          ${qrCodeUrl ? `
+          <div class="qr-section">
+            <img src="${qrCodeUrl}" width="150" height="150" alt="Check-in QR Code" />
+            <div class="qr-label">Show this QR code at reception for check-in</div>
+          </div>
+          ` : ''}
+
+          <div class="reminder-box">
+            <p><strong>Please arrive 10 minutes early</strong> before your scheduled workshop to ensure a smooth check-in experience.</p>
+            <p><strong>Present this confirmation email</strong> (printed or on your phone) together with your valid ID for verification.</p>
+            <p><strong>Payment Status:</strong> Payment verified in full.</p>
+          </div>
+
+          <p style="font-size: 15px; color: #4a5568;">
+            If you need to make changes to your reservation or have any questions, please don't hesitate to reach out to us. We look forward to seeing you!
+          </p>
+
+          <div style="text-align: center; margin-top: 28px;">
+            <a href="${hostUrl}/book-session" class="cta-button">Manage My Booking</a>
+          </div>
+        </div>
+        <div class="footer">
+          <p>This is an automated confirmation email. Please do not reply directly to this message.</p>
+          <p>&copy; ${new Date().getFullYear()} Makerlab Experience Hub. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  const mailOptions = {
+    from: process.env.SMTP_FROM || '"Makerlab Experience Hub" <noreply@makerlab.ph>',
+    to,
+    subject: `Paid Workshop Confirmed — ${bookingReference} | ${formattedDate}`,
+    html: htmlContent,
+  }
+
+  const info = await transporter.sendMail(mailOptions)
+
+  if (!useSmtp) {
+    previewUrl = nodemailer.getTestMessageUrl(info) || ''
+    console.log(`[Ethereal Email Sent] Paid Booking Confirmation Preview URL: ${previewUrl}`)
   }
 
   return { success: true, messageId: info.messageId, previewUrl }
@@ -762,7 +938,7 @@ export async function sendBookingConfirmationEmail({
           <div class="header-tagline">3D Printing Workshop</div>
         </div>
         <div class="content">
-          <div class="greeting">🎉 Payment Confirmed, ${firstName}!</div>
+          <div class="greeting">Payment Confirmed, ${firstName}!</div>
           <p class="intro">
             Thank you for registering for the <strong>Print 2 Profit Workshop</strong>.
             Your payment has been successfully received. Below is your personal <strong>Booking Reference Code</strong> — 
@@ -850,7 +1026,7 @@ export async function sendBookingConfirmationEmail({
   const info = await transporter.sendMail({
     from: fromAddress,
     to,
-    subject: `🎉 Your Booking Reference: ${bookingReference} — Print 2 Profit Workshop`,
+    subject: `Your Booking Reference: ${bookingReference} — Print 2 Profit Workshop`,
     html: htmlContent,
     text: `Hi ${firstName},\n\nThank you for registering for Print 2 Profit!\n\nYour Booking Reference Code is: ${bookingReference}\n\nUse this code to reserve your session slot at: ${bookingUrl}\n\nSee you at the workshop!\nMakerLab Team`,
   })

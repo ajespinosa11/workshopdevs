@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { createSoftLockReservation } from '@/app/(public)/book-session/lock-actions'
+import { createSoftLockReservation, checkReservationStatus, cancelSoftLockReservation } from '@/app/(public)/book-session/lock-actions'
 
 interface Session {
   id: string
@@ -19,6 +19,8 @@ interface Props {
   sessions: Session[]
 }
 
+type ModalMode = 'FORM' | 'TIMER' | 'SUCCESS' | 'EXPIRED'
+
 function formatDate(date: Date) {
   return new Date(date).toLocaleDateString('en-PH', {
     weekday: 'long',
@@ -26,6 +28,22 @@ function formatDate(date: Date) {
     month: 'long',
     day: 'numeric',
   })
+}
+
+function formatSeconds(totalSecs: number) {
+  const m = Math.floor(totalSecs / 60)
+  const s = totalSecs % 60
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+}
+
+function renderFormattedText(text: string | null | undefined) {
+  if (!text) return null
+  // Strip dangerous tags — content is HTML from the admin's WYSIWYG editor
+  const safe = text
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/on\w+="[^"]*"/gi, '')
+    .replace(/javascript:/gi, '')
+  return <span dangerouslySetInnerHTML={{ __html: safe }} />
 }
 
 function isSameDay(a: Date, b: Date) {
@@ -100,6 +118,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
 
   // Modal Checkout States
   const [showModal, setShowModal] = useState(false)
+  const [modalMode, setModalMode] = useState<ModalMode>('FORM')
   const [modalSession, setModalSession] = useState<Session | null>(null)
   const [customerName, setCustomerName] = useState('')
   const [customerEmail, setCustomerEmail] = useState('')
@@ -107,10 +126,51 @@ export default function Print2ProfitClient({ sessions }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [modalError, setModalError] = useState('')
 
+  // Reservation Timer & Polling States
+  const [activeBookingRef, setActiveBookingRef] = useState<string | null>(null)
+  const [reservedUntilTime, setReservedUntilTime] = useState<number | null>(null)
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(900)
+  const [checkoutUrl, setCheckoutUrl] = useState<string>('')
+  const [paymentStatus, setPaymentStatus] = useState<string>('PENDING_CHECKOUT')
+
+  // Timer countdown & polling effect
+  useEffect(() => {
+    if (!showModal || modalMode !== 'TIMER' || !reservedUntilTime || !activeBookingRef) return
+
+    const timerInterval = setInterval(() => {
+      const now = Date.now()
+      const diff = Math.max(0, Math.floor((reservedUntilTime - now) / 1000))
+      setRemainingSeconds(diff)
+
+      if (diff <= 0) {
+        setModalMode('EXPIRED')
+        clearInterval(timerInterval)
+      }
+    }, 1000)
+
+    const pollInterval = setInterval(async () => {
+      const res = await checkReservationStatus(activeBookingRef)
+      if (res && !res.error) {
+        if (res.status === 'PAID_FOR_ADMIN_VERIFICATION' || res.status === 'CONFIRMED' || res.status === 'PAID') {
+          setPaymentStatus(res.status)
+          setModalMode('SUCCESS')
+        } else if (res.isExpired || res.status === 'CANCELLED') {
+          setModalMode('EXPIRED')
+        }
+      }
+    }, 4000)
+
+    return () => {
+      clearInterval(timerInterval)
+      clearInterval(pollInterval)
+    }
+  }, [showModal, modalMode, reservedUntilTime, activeBookingRef])
+
   // Terms & Conditions Gate
   const [showTCModal, setShowTCModal] = useState(false)
   const [agreedToTC, setAgreedToTC] = useState(false)
   const [pendingSession, setPendingSession] = useState<Session | null>(null)
+
 
   // Module Filtering
   const [selectedModuleFilter, setSelectedModuleFilter] = useState<string>('ALL')
@@ -181,25 +241,13 @@ export default function Print2ProfitClient({ sessions }: Props) {
           <h1 className="p2p-hero-h1" style={{ fontSize: '38px', fontWeight: 900, lineHeight: 1.15, marginBottom: '16px', letterSpacing: '-0.5px' }}>
             Book Your Workshop &amp; Event Session
           </h1>
-          <p className="p2p-hero-sub" style={{ fontSize: '16px', color: '#cbd5e1', maxWidth: '640px', margin: '0 auto 28px', lineHeight: 1.6 }}>
-            Explore available 3D printing masterclasses and hands-on workshops created by Makerlab. Select your workshop, pick a schedule, and reserve your seat.
-          </p>
-
-          <div className="p2p-hero-stats" style={{
-            display: 'inline-flex', gap: '32px', background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(20px)',
-            padding: '16px 32px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.9)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-          }}>
-            {[
-              ['₱3,500', 'Standard Investment'],
-              ['3–4 Hours', 'Workshop Duration'],
-              ['Hands-On', 'Interactive Masterclass'],
-            ].map(([val, lbl]) => (
-              <div key={lbl} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '22px', fontWeight: 800, color: '#1e3a8a' }}>{val}</div>
-                <div style={{ fontSize: '12px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>{lbl}</div>
-              </div>
-            ))}
+          <div style={{ maxWidth: '680px', margin: '0 auto', textAlign: 'center', fontSize: '16px', lineHeight: '1.65' }}>
+            <p style={{ margin: '0 0 12px 0', color: '#cbd5e1' }}>
+              Explore a variety of hands-on workshops and learning experiences at the Makerlab Experience Hub—from 3D printing and robotics to creative maker activities and family bonding experiences.
+            </p>
+            <p style={{ margin: 0, fontWeight: 600, color: '#ffffff' }}>
+              Choose your workshop, select a schedule, and reserve your spot for an exciting experience where you can learn, build, create, and have fun together.
+            </p>
           </div>
         </div>
       </div>
@@ -366,10 +414,19 @@ export default function Print2ProfitClient({ sessions }: Props) {
                 const isPast = new Date(calYear, calMonth, dayNum, 23, 59, 59) < new Date(today.getFullYear(), today.getMonth(), today.getDate())
                 const isToday = isSameDay(thisDate, today)
                 const isSelected = selectedDate ? isSameDay(thisDate, selectedDate) : false
-                const isFull = hasSession && sessionsOnDay.every(s => s.availableSlots === 0)
 
-                const dayThemes = Array.from(new Set(sessionsOnDay.map(s => s.module?.name))).map(name => getModuleTheme(name))
-                const primaryTheme = dayThemes[0] || getModuleTheme('ALL')
+                // Availability classification
+                const totalSlots = sessionsOnDay.reduce((sum, s) => sum + s.availableSlots, 0)
+                const isFull = hasSession && totalSlots === 0
+                const isNearFull = hasSession && totalSlots > 0 && totalSlots < 5
+                const isAvailable = hasSession && totalSlots >= 5
+
+                // Color definitions
+                const GREEN  = { bg: '#f0fdf4', border: '#86efac', text: '#15803d', dot: '#22c55e' }
+                const ORANGE = { bg: '#fff7ed', border: '#fdba74', text: '#c2410c', dot: '#f97316' }
+                const RED    = { bg: '#fef2f2', border: '#fecaca', text: '#ef4444', dot: '#ef4444' }
+
+                let theme = isAvailable ? GREEN : isNearFull ? ORANGE : RED
 
                 let cellBg = '#f8fafc'
                 let cellBorder = '1px solid #f1f5f9'
@@ -381,9 +438,9 @@ export default function Print2ProfitClient({ sessions }: Props) {
                   cellColor = '#ffffff'
                   cellBorder = '1px solid #0f2540'
                 } else if (hasSession && !isPast) {
-                  cellBg = isFull ? '#fef2f2' : primaryTheme.bgLight
-                  cellBorder = isFull ? '1px solid #fecaca' : `1px solid ${primaryTheme.border}`
-                  cellColor = isFull ? '#ef4444' : primaryTheme.badgeText
+                  cellBg = theme.bg
+                  cellBorder = `1px solid ${theme.border}`
+                  cellColor = theme.text
                   cellCursor = isFull ? 'not-allowed' : 'pointer'
                 } else if (isToday) {
                   cellBorder = '1px solid #fdba74'
@@ -408,13 +465,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
                     {dayNum}
                     {hasSession && !isPast && !isSelected && (
                       <div style={{ display: 'flex', gap: '3px', justifyContent: 'center', marginTop: '3px' }}>
-                        {isFull ? (
-                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444' }} />
-                        ) : (
-                          dayThemes.map(t => (
-                            <div key={t.name} style={{ width: '6px', height: '6px', borderRadius: '50%', background: t.dot }} />
-                          ))
-                        )}
+                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: theme.dot }} />
                       </div>
                     )}
                   </div>
@@ -424,16 +475,15 @@ export default function Print2ProfitClient({ sessions }: Props) {
 
             {/* Calendar Legend */}
             <div style={{ display: 'flex', gap: '16px', marginTop: '24px', justifyContent: 'center', flexWrap: 'wrap', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
-              {availableModuleNames.map(name => {
-                const theme = getModuleTheme(name)
-                return (
-                  <div key={name} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#475569', fontWeight: 700 }}>
-                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: theme.dot }} />
-                    {name}
-                  </div>
-                )
-              })}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#15803d', fontWeight: 700 }}>
+                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e' }} />
+                Available
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#c2410c', fontWeight: 700 }}>
+                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f97316' }} />
+                Limited Slots (&lt;5)
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#ef4444', fontWeight: 700 }}>
                 <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }} />
                 Fully Booked
               </div>
@@ -520,9 +570,9 @@ export default function Print2ProfitClient({ sessions }: Props) {
                     <div style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>
                       {session.module?.name || 'Workshop Session'}
                     </div>
-                    <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.6 }}>
-                      {session.module?.description || 'Hands-on practical workshop session at Makerlab.'}
-                    </p>
+                    <div style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.6 }}>
+                      {session.module?.description ? renderFormattedText(session.module.description) : 'Hands-on practical workshop session at Makerlab.'}
+                    </div>
                   </div>
 
                   {(() => {
@@ -649,162 +699,374 @@ export default function Print2ProfitClient({ sessions }: Props) {
       {showModal && modalSession && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)',
+          background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(8px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 9999, padding: '20px',
         }}>
           <div style={{
             background: '#ffffff', borderRadius: '24px',
-            width: '100%', maxWidth: '480px', padding: '32px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            width: '100%', maxWidth: '500px', padding: '32px',
+            boxShadow: '0 20px 30px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
             position: 'relative'
           }}>
             <button
-              onClick={() => setShowModal(false)}
+              onClick={async () => {
+                if (modalMode === 'TIMER' && activeBookingRef) {
+                  await cancelSoftLockReservation(activeBookingRef)
+                }
+                setShowModal(false)
+                setModalMode('FORM')
+              }}
               style={{
                 position: 'absolute', top: '20px', right: '20px',
-                background: 'transparent', border: 'none', fontSize: '20px',
-                cursor: 'pointer', color: '#64748b'
+                background: '#f1f5f9', border: 'none', width: '32px', height: '32px',
+                borderRadius: '50%', fontSize: '16px', cursor: 'pointer', color: '#64748b',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, zIndex: 10
               }}
             >
               ✕
             </button>
 
-            <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
-              Reserve Your Slot
-            </h3>
-            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '24px', lineHeight: 1.5 }}>
-              Enter your details to reserve your slot for <strong>15 minutes</strong>. You will be redirected to Shopify to complete your payment.
-            </p>
+            {/* ── MODE 1: FORM INPUT ── */}
+            {modalMode === 'FORM' && (
+              <>
+                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+                  Reserve Your Slot
+                </h3>
+                <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '24px', lineHeight: 1.5 }}>
+                  Enter your details to reserve your slot for <strong>15 minutes</strong>. Clicking below will open Shopify Checkout in a new tab.
+                </p>
 
-            {modalError && (
-              <div style={{
-                background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626',
-                padding: '12px 16px', borderRadius: '12px', fontSize: '13px',
-                fontWeight: 600, marginBottom: '20px'
-              }}>
-                ⚠️ {modalError}
+                {modalError && (
+                  <div style={{
+                    background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626',
+                    padding: '12px 16px', borderRadius: '12px', fontSize: '13px',
+                    fontWeight: 600, marginBottom: '20px'
+                  }}>
+                    ⚠️ {modalError}
+                  </div>
+                )}
+
+                <form onSubmit={async (e) => {
+                  e.preventDefault()
+                  if (submitting) return
+                  if (!customerName || !customerEmail || !customerPhone) {
+                    setModalError('Please fill in all required fields.')
+                    return
+                  }
+
+                  setSubmitting(true)
+                  setModalError('')
+
+                  try {
+                    const res = await createSoftLockReservation({
+                      sessionId: modalSession.id,
+                      participantsCount: 1,
+                      customerName,
+                      customerEmail,
+                      customerPhone,
+                      salesChannel: 'SHOPIFY'
+                    })
+
+                    if (res.error) {
+                      setModalError(res.error)
+                      setSubmitting(false)
+                    } else if (res.bookingReference && res.reservedUntil) {
+                      const shopifyVariantId = process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID || '45713497981119'
+                      const shopifyDomain = process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN || 'www.makerlab.ph'
+                      const url = `https://${shopifyDomain}/cart/${shopifyVariantId}:1?attributes[booking_reference]=${res.bookingReference}&note=${res.bookingReference}`
+                      
+                      setCheckoutUrl(url)
+                      setActiveBookingRef(res.bookingReference)
+                      setReservedUntilTime(new Date(res.reservedUntil).getTime())
+                      setRemainingSeconds(res.expiresInSeconds || 900)
+                      setPaymentStatus('PENDING_CHECKOUT')
+                      setModalMode('TIMER')
+                      setSubmitting(false)
+
+                      // Open Shopify Checkout in New Tab automatically
+                      window.open(url, '_blank')
+                    } else {
+                      setModalError('Failed to create reservation. Please try again.')
+                      setSubmitting(false)
+                    }
+                  } catch (err: any) {
+                    console.error(err)
+                    setModalError(err.message || 'An unexpected error occurred.')
+                    setSubmitting(false)
+                  }
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Full Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        placeholder="John Doe"
+                        disabled={submitting}
+                        style={{
+                          width: '100%', padding: '12px 16px', borderRadius: '12px',
+                          border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none',
+                          transition: 'border-color 0.2s', fontFamily: 'inherit'
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={customerEmail}
+                        onChange={(e) => setCustomerEmail(e.target.value)}
+                        placeholder="john@example.com"
+                        disabled={submitting}
+                        style={{
+                          width: '100%', padding: '12px 16px', borderRadius: '12px',
+                          border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none',
+                          transition: 'border-color 0.2s', fontFamily: 'inherit'
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Phone Number *
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        placeholder="09171234567"
+                        disabled={submitting}
+                        style={{
+                          width: '100%', padding: '12px 16px', borderRadius: '12px',
+                          border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none',
+                          transition: 'border-color 0.2s', fontFamily: 'inherit'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                      width: '100%', padding: '16px 24px',
+                      background: submitting ? '#94a3b8' : '#ea580c', color: '#ffffff',
+                      border: 'none', borderRadius: '16px', fontWeight: 800, fontSize: '16px',
+                      cursor: submitting ? 'not-allowed' : 'pointer',
+                      boxShadow: submitting ? 'none' : '0 8px 24px rgba(234, 88, 12, 0.25)',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    {submitting ? 'Reserving slot...' : 'Confirm & Pay — ₱3,500'}
+                  </button>
+                </form>
+              </>
+            )}
+
+            {/* ── MODE 2: 15-MINUTE LIVE TIMER & STATUS CARD ── */}
+            {modalMode === 'TIMER' && (
+              <div style={{ textAlign: 'center' }}>
+                <span style={{
+                  display: 'inline-block', background: '#fff7ed', border: '1px solid #ffedd5',
+                  color: '#ea580c', padding: '4px 14px', borderRadius: '20px',
+                  fontSize: '12px', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase',
+                  marginBottom: '12px'
+                }}>
+                  🔒 Slot Reserved Temporary
+                </span>
+
+                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>
+                  Checkout Opened in New Tab
+                </h3>
+                <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '20px', lineHeight: 1.5 }}>
+                  Please complete your payment in the Shopify checkout tab. Your slot is locked for 15 minutes.
+                </p>
+
+                {/* Big Live Clock Display */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #0f2540 0%, #1e3a8a 100%)',
+                  color: '#ffffff', borderRadius: '20px', padding: '24px 16px', margin: '0 0 20px 0',
+                  boxShadow: '0 10px 25px rgba(15, 37, 64, 0.2)'
+                }}>
+                  <div style={{ fontSize: '11px', color: '#cbd5e1', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+                    Time Remaining to Complete Payment
+                  </div>
+                  <div style={{ fontSize: '48px', fontWeight: 900, fontFamily: 'monospace', letterSpacing: '2px', color: remainingSeconds < 180 ? '#f87171' : '#38bdf8' }}>
+                    {formatSeconds(remainingSeconds)}
+                  </div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginTop: '10px', background: 'rgba(255,255,255,0.1)', padding: '4px 14px', borderRadius: '20px', fontSize: '12px', color: '#e2e8f0' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', animation: 'pulse 1.5s infinite' }} />
+                    Waiting for payment confirmation...
+                  </div>
+                </div>
+
+                {/* Reservation Details Summary */}
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '16px', textAlign: 'left', fontSize: '13px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', borderBottom: '1px dashed #cbd5e1', paddingBottom: '8px' }}>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>Booking Ref:</span>
+                    <strong style={{ color: '#0f172a', fontFamily: 'monospace', fontSize: '14px' }}>{activeBookingRef}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ color: '#64748b' }}>Workshop:</span>
+                    <strong style={{ color: '#0f172a' }}>{modalSession.module?.name || 'Print 2 Profit'}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ color: '#64748b' }}>Date &amp; Time:</span>
+                    <strong style={{ color: '#0f172a' }}>{formatDate(modalSession.sessionDate)} ({modalSession.startTime})</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Customer:</span>
+                    <strong style={{ color: '#0f172a' }}>{customerName}</strong>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <button
+                    onClick={() => {
+                      if (checkoutUrl) window.open(checkoutUrl, '_blank')
+                    }}
+                    style={{
+                      width: '100%', padding: '14px 20px', borderRadius: '14px',
+                      background: '#ea580c', color: '#ffffff', border: 'none',
+                      fontWeight: 800, fontSize: '15px', cursor: 'pointer',
+                      boxShadow: '0 4px 14px rgba(234, 88, 12, 0.3)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                    }}
+                  >
+                    🚀 Open Shopify Checkout Tab Again ↗
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (activeBookingRef) {
+                        await cancelSoftLockReservation(activeBookingRef)
+                      }
+                      setShowModal(false)
+                      setModalMode('FORM')
+                    }}
+                    style={{
+                      width: '100%', padding: '10px', background: 'transparent',
+                      color: '#64748b', border: 'none', fontSize: '13px',
+                      fontWeight: 600, cursor: 'pointer'
+                    }}
+                  >
+                    Cancel Reservation
+                  </button>
+                </div>
               </div>
             )}
 
-            <form onSubmit={async (e) => {
-              e.preventDefault()
-              if (submitting) return
-              if (!customerName || !customerEmail || !customerPhone) {
-                setModalError('Please fill in all required fields.')
-                return
-              }
 
-              setSubmitting(true)
-              setModalError('')
 
-              try {
-                const res = await createSoftLockReservation({
-                  sessionId: modalSession.id,
-                  participantsCount: 1,
-                  customerName,
-                  customerEmail,
-                  customerPhone,
-                  salesChannel: 'SHOPIFY'
-                })
-
-                if (res.error) {
-                  setModalError(res.error)
-                  setSubmitting(false)
-                } else if (res.bookingReference) {
-                  const shopifyVariantId = process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID || '45713497981119'
-                  const shopifyDomain = process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN || 'www.makerlab.ph'
-                  const checkoutUrl = `https://${shopifyDomain}/cart/${shopifyVariantId}:1?attributes[booking_reference]=${res.bookingReference}&note=${res.bookingReference}`
-                  
-                  window.location.href = checkoutUrl
-                } else {
-                  setModalError('Failed to create reservation. Please try again.')
-                  setSubmitting(false)
-                }
-              } catch (err: any) {
-                console.error(err)
-                setModalError(err.message || 'An unexpected error occurred.')
-                setSubmitting(false)
-              }
-            }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="John Doe"
-                    disabled={submitting}
-                    style={{
-                      width: '100%', padding: '12px 16px', borderRadius: '12px',
-                      border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none',
-                      transition: 'border-color 0.2s', fontFamily: 'inherit'
-                    }}
-                  />
+            {/* ── MODE 3: SUCCESS CONFIRMATION VIEW ── */}
+            {modalMode === 'SUCCESS' && (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  width: '64px', height: '64px', borderRadius: '50%',
+                  background: '#f0fdf4', border: '2px solid #86efac', color: '#16a34a',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '32px', margin: '0 auto 16px'
+                }}>
+                  🎉
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Email Address *
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    placeholder="john@example.com"
-                    disabled={submitting}
-                    style={{
-                      width: '100%', padding: '12px 16px', borderRadius: '12px',
-                      border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none',
-                      transition: 'border-color 0.2s', fontFamily: 'inherit'
-                    }}
-                  />
+                <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+                  Payment Confirmed!
+                </h3>
+                <p style={{ fontSize: '14px', color: '#475569', marginBottom: '20px', lineHeight: 1.5 }}>
+                  Thank you, <strong>{customerName}</strong>! Your workshop slot has been officially reserved.
+                </p>
+
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '16px', padding: '16px', textAlign: 'left', fontSize: '13px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', borderBottom: '1px dashed #bbf7d0', paddingBottom: '8px' }}>
+                    <span style={{ color: '#166534', fontWeight: 600 }}>Booking Reference:</span>
+                    <strong style={{ color: '#14532d', fontFamily: 'monospace', fontSize: '14px' }}>{activeBookingRef}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ color: '#166534' }}>Workshop:</span>
+                    <strong style={{ color: '#14532d' }}>{modalSession.module?.name || 'Print 2 Profit'}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ color: '#166534' }}>Date &amp; Time:</span>
+                    <strong style={{ color: '#14532d' }}>{formatDate(modalSession.sessionDate)} ({modalSession.startTime})</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#166534' }}>Location:</span>
+                    <strong style={{ color: '#14532d' }}>Makerlab Experience Hub</strong>
+                  </div>
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Phone Number *
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="09171234567"
-                    disabled={submitting}
-                    style={{
-                      width: '100%', padding: '12px 16px', borderRadius: '12px',
-                      border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none',
-                      transition: 'border-color 0.2s', fontFamily: 'inherit'
-                    }}
-                  />
-                </div>
+                <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '24px' }}>
+                  📧 A confirmation receipt has been sent to <strong>{customerEmail}</strong>.
+                </p>
+
+                <button
+                  onClick={() => {
+                    setShowModal(false)
+                    setModalMode('FORM')
+                  }}
+                  style={{
+                    width: '100%', padding: '14px 24px', borderRadius: '16px',
+                    background: '#16a34a', color: '#ffffff', border: 'none',
+                    fontWeight: 800, fontSize: '16px', cursor: 'pointer',
+                    boxShadow: '0 8px 24px rgba(22, 163, 74, 0.25)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Done / Back to Workshops
+                </button>
               </div>
+            )}
 
-              <button
-                type="submit"
-                disabled={submitting}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  width: '100%', padding: '16px 24px',
-                  background: submitting ? '#94a3b8' : '#ea580c', color: '#ffffff',
-                  border: 'none', borderRadius: '16px', fontWeight: 800, fontSize: '16px',
-                  cursor: submitting ? 'not-allowed' : 'pointer',
-                  boxShadow: submitting ? 'none' : '0 8px 24px rgba(234, 88, 12, 0.25)',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {submitting ? 'Reserving slot...' : 'Confirm & Pay — ₱3,500'}
-              </button>
-            </form>
+            {/* ── MODE 4: EXPIRED VIEW ── */}
+            {modalMode === 'EXPIRED' && (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  width: '64px', height: '64px', borderRadius: '50%',
+                  background: '#fef2f2', border: '2px solid #fecaca', color: '#ef4444',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '32px', margin: '0 auto 16px'
+                }}>
+                  ⚠️
+                </div>
+
+                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+                  Reservation Expired
+                </h3>
+                <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '24px', lineHeight: 1.5 }}>
+                  Your 15-minute slot lock has expired and the reserved slot has been released back to availability.
+                </p>
+
+                <button
+                  onClick={() => {
+                    setModalMode('FORM')
+                  }}
+                  style={{
+                    width: '100%', padding: '14px 24px', borderRadius: '16px',
+                    background: '#ea580c', color: '#ffffff', border: 'none',
+                    fontWeight: 800, fontSize: '16px', cursor: 'pointer',
+                    boxShadow: '0 8px 24px rgba(234, 88, 12, 0.25)',
+                  }}
+                >
+                  Try Booking Again
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
+
 
       {/* ── Terms & Conditions Modal ── */}
       {showTCModal && (
@@ -822,29 +1084,62 @@ export default function Print2ProfitClient({ sessions }: Props) {
 
             {/* Scrollable T&C Content */}
             <div style={{ margin: '0 2rem', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1rem 1.25rem', maxHeight: '320px', overflowY: 'auto', background: '#f8fafc', fontSize: '0.82rem', color: '#475569', lineHeight: 1.6 }}>
-              <h4 style={{ margin: '0 0 0.6rem 0', fontWeight: 800, color: '#0f172a', fontSize: '0.88rem' }}>{pendingSession?.module?.name || 'Makerlab Workshop'} — Terms &amp; Conditions</h4>
-              <ol style={{ paddingLeft: '1.25rem', margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <li><strong>Payment:</strong> Full payment of ₱3,500 is required upon checkout to confirm your reservation. Unpaid reservations expire within 15 minutes.</li>
-                <li><strong>Non-Refundable:</strong> All payments are non-refundable. In case of personal conflict, rescheduling is allowed subject to slot availability.</li>
-                <li><strong>Rescheduling:</strong> Rescheduling requests must be made at least <strong>48 hours</strong> before your scheduled session. Late requests may result in forfeiture.</li>
-                <li><strong>No-Show Policy:</strong> Failure to attend without prior notice will be treated as a completed session with no refund or rescheduling credit.</li>
-                <li><strong>Session Capacity:</strong> Workshop sessions are limited. Confirmed seats are assigned on a first-come, first-served basis upon payment completion.</li>
-                <li><strong>Participant Responsibilities:</strong> Participants must arrive on time and comply with all workshop safety guidelines and code of conduct.</li>
-                <li><strong>Workshop Changes:</strong> Makerlab reserves the right to reschedule or cancel sessions due to unforeseen circumstances. Affected registrants will be notified and offered an alternative date.</li>
-                <li><strong>Data Privacy:</strong> Your personal information is collected solely for booking and communication purposes and will not be shared with third parties.</li>
-              </ol>
+              <h4 style={{ margin: '0 0 0.75rem 0', fontWeight: 800, color: '#0f172a', fontSize: '0.92rem' }}>
+                Workshop Terms &amp; Conditions, Participant Waiver, Consent, Photo Release &amp; Data Privacy Agreement
+              </h4>
+
+              {/* Section 1: Refund Policy */}
+              <div style={{ marginBottom: '0.85rem' }}>
+                <strong style={{ color: '#0f172a', display: 'block', marginBottom: '0.25rem' }}>Refund Policy:</strong>
+                <p style={{ margin: 0 }}>
+                  Payments are fully refundable for cancellations made at least 5 days before the scheduled event. Cancellations made less than 5 days before the event are non-refundable. Rescheduling may be allowed, subject to slot availability.
+                </p>
+              </div>
+
+              {/* Section 2: Workshop Rules & Guidelines */}
+              <div style={{ marginBottom: '0.85rem' }}>
+                <strong style={{ color: '#0f172a', display: 'block', marginBottom: '0.35rem' }}>Workshop Rules and Guidelines:</strong>
+                <ul style={{ paddingLeft: '1.2rem', margin: 0, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <li>Please arrive at least 15 minutes before the workshop starts.</li>
+                  <li>Follow all instructions given by the facilitators and staff.</li>
+                  <li>Handle all equipment and tools with care.</li>
+                  <li>Food and drinks are not allowed inside the workshop area or near the 3D printers and workshop equipment.</li>
+                  <li>Keep your workspace clean and organized.</li>
+                  <li>Be respectful to fellow participants and staff.</li>
+                  <li>For safety reasons, do not touch or operate any equipment without facilitator guidance.</li>
+                  <li>Once a workshop slot is confirmed, it is strictly non-transferable and non-refundable.</li>
+                  <li>Seating is limited and reserved for registered workshop participants only. Additional companions or guests may be asked to remain outside the workshop area due to space limitations.</li>
+                  <li>Makerlab reserves the right to remove participants who fail to follow workshop rules or safety guidelines.</li>
+                  <li>To ensure a safe and comfortable experience for all attendees, participants and accompanying guardians are requested to leave the workshop area after the session concludes. This will allow our team to sanitize the area and prepare the equipment for the next scheduled workshop.</li>
+                </ul>
+              </div>
+
+              {/* Section 3: Consent, Waiver, Photo Release, and Data Privacy Agreement */}
+              <div>
+                <strong style={{ color: '#0f172a', display: 'block', marginBottom: '0.35rem' }}>CONSENT, WAIVER, PHOTO RELEASE, AND DATA PRIVACY AGREEMENT:</strong>
+                <p style={{ margin: '0 0 0.35rem 0' }}>By completing and submitting this registration form, I acknowledge and agree to the following:</p>
+                <ul style={{ paddingLeft: '1.2rem', margin: 0, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <li>I am voluntarily registering for and participating in the Free Basic 3D Printing Workshop organized by Makerlab.</li>
+                  <li>I understand that workshop activities may involve the use of 3D printers, tools, equipment, and materials. I agree to follow all safety instructions and guidelines provided by the organizers and facilitators.</li>
+                  <li>I assume responsibility for my participation and release Makerlab, its employees, instructors, partners, sponsors, venue providers, and representatives from any claims, liabilities, damages, losses, or injuries that may arise from my participation, except in cases of gross negligence or willful misconduct.</li>
+                  <li>I authorize Makerlab to take photographs, videos, audio recordings, and other media during the workshop and to use, reproduce, publish, and distribute such materials for marketing, promotional, educational, advertising, social media, website, print, and other business-related purposes without compensation or further notice.</li>
+                  <li>I understand that photographs and videos taken during the event may be posted on Makerlab&apos;s social media platforms, website, promotional materials, and other marketing channels.</li>
+                  <li>I consent to the collection, storage, and processing of my personal information for workshop registration, event communications, customer support, future workshop invitations, product updates, promotions, and other Makerlab-related activities, in accordance with applicable data privacy laws.</li>
+                  <li>I certify that all information provided in this registration form is true and accurate.</li>
+                </ul>
+              </div>
             </div>
 
             {/* Agree Checkbox */}
             <div style={{ margin: '0 2rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: '#0f172a' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: '#0f172a', lineHeight: 1.4 }}>
                 <input
                   type="checkbox"
                   checked={agreedToTC}
                   onChange={e => setAgreedToTC(e.target.checked)}
-                  style={{ accentColor: '#ea580c', cursor: 'pointer', width: '16px', height: '16px' }}
+                  style={{ accentColor: '#ea580c', cursor: 'pointer', width: '16px', height: '16px', marginTop: '2px', flexShrink: 0 }}
                 />
-                I have read and agree to the Terms &amp; Conditions
+                <span>I have read, understood, and agree to the Consent, Waiver, Photo Release, and Data Privacy Agreement. By checking this box and submitting this form, I authorize Makerlab to use event photos and videos containing my image for marketing and promotional purposes.</span>
               </label>
             </div>
 
@@ -865,6 +1160,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
                   setCustomerName('')
                   setCustomerEmail('')
                   setCustomerPhone('')
+                  setModalMode('FORM')
                   setShowModal(true)
                 }}
                 disabled={!agreedToTC}
@@ -884,6 +1180,11 @@ export default function Print2ProfitClient({ sessions }: Props) {
       )}
 
       <style>{`
+        @keyframes pulse {
+          0% { opacity: 0.3; transform: scale(0.95); }
+          50% { opacity: 1; transform: scale(1.1); }
+          100% { opacity: 0.3; transform: scale(0.95); }
+        }
         @media (max-width: 768px) {
           .p2p-grid { grid-template-columns: 1fr !important; }
           .p2p-hero-stats { flex-direction: column !important; gap: 12px !important; padding: 14px 20px !important; }
@@ -894,6 +1195,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
           .p2p-hero-h1 { font-size: 22px !important; }
         }
       `}</style>
+
     </div>
   )
 }

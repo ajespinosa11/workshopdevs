@@ -483,6 +483,7 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
   const [walkInPhone, setWalkInPhone] = useState('')
   const [walkInCount, setWalkInCount] = useState<number>(1)
   const [walkInPaymentMethod, setWalkInPaymentMethod] = useState('CASH')
+  const [walkInWorkshopType, setWalkInWorkshopType] = useState<'PAID' | 'FREE'>('PAID')
   const [walkInNotes, setWalkInNotes] = useState('')
   const [successBooking, setSuccessBooking] = useState<any>(null)
   const [loading, setLoading] = useState(false)
@@ -578,6 +579,7 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
     formData.append('sessionId', walkInSessionId)
     formData.append('participantsCount', String(walkInCount))
     formData.append('paymentMethod', walkInPaymentMethod)
+    formData.append('workshopType', walkInWorkshopType)
     formData.append('notes', walkInNotes)
     try {
       const res = await adminManualBookSlot(formData)
@@ -1078,7 +1080,14 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
             {/* Step 3 */}
             {walkInStep === 3 && (
               <div>
-                <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>Step 3: Payment & Booking Details</h4>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>Step 3: Payment & Workshop Type</h4>
+                <div style={{ marginBottom: '0.85rem' }}>
+                  <label style={S.modalLabel}>Workshop Classification *</label>
+                  <select value={walkInWorkshopType} onChange={e => setWalkInWorkshopType(e.target.value as 'PAID' | 'FREE')} style={S.modalInput}>
+                    <option value="PAID">Paid Workshop (Sends Paid Confirmation Email)</option>
+                    <option value="FREE">Free Workshop (Sends Free Confirmation Email)</option>
+                  </select>
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.85rem' }}>
                   <div>
                     <label style={S.modalLabel}>Number of Participants *</label>
@@ -1109,6 +1118,7 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                   <InfoRow label="Session">{new Date(currentWalkInSession?.sessionDate).toLocaleDateString()} ({currentWalkInSession?.startTime} - {currentWalkInSession?.endTime})</InfoRow>
                   <InfoRow label="Customer">{walkInName} ({walkInEmail})</InfoRow>
                   <InfoRow label="Phone">{walkInPhone}</InfoRow>
+                  <InfoRow label="Workshop Type">{walkInWorkshopType === 'FREE' ? 'Free Workshop (Complimentary)' : 'Paid Workshop'}</InfoRow>
                   <InfoRow label="Participants">{walkInCount}</InfoRow>
                   <InfoRow label="Payment">{walkInPaymentMethod} — Completed on-site</InfoRow>
                 </div>

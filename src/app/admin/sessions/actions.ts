@@ -99,13 +99,36 @@ async function checkOverlap(
   endTime: string,
   excludeSessionId?: string
 ): Promise<string | null> {
-  const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+  const toMin = (timeStr: string) => {
+    if (!timeStr) return 0
+    const clean = timeStr.trim().toUpperCase()
+    const isPM = clean.includes('PM')
+    const isAM = clean.includes('AM')
+    const timeOnly = clean.replace(/[A-Z]/g, '').trim()
+    const parts = timeOnly.split(':')
+    let hours = parseInt(parts[0], 10) || 0
+    const minutes = parseInt(parts[1], 10) || 0
+
+    if (isPM && hours < 12) hours += 12
+    if (isAM && hours === 12) hours = 0
+
+    return hours * 60 + minutes
+  }
+
+  const getDateKey = (d: Date) => {
+    // Add 8h offset to normalize any local-midnight or UTC-noon DB records to Philippine calendar day
+    const adj = new Date(d.getTime() + 8 * 3600 * 1000)
+    const y = adj.getUTCFullYear()
+    const m = String(adj.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(adj.getUTCDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
 
   const newStart = toMin(startTime)
   let newEnd = toMin(endTime)
   if (newEnd <= newStart) newEnd += 24 * 60
 
-  const targetDateStr = sessionDate.toISOString().split('T')[0]
+  const targetDateStr = getDateKey(sessionDate)
 
   // Retrieve all non-cancelled sessions to compare dates timezone-safely
   const existing = await prisma.workshopSession.findMany({
@@ -117,7 +140,7 @@ async function checkOverlap(
   })
 
   for (const s of existing) {
-    const sDateStr = s.sessionDate.toISOString().split('T')[0]
+    const sDateStr = getDateKey(s.sessionDate)
     if (sDateStr !== targetDateStr) continue
 
     const sStart = toMin(s.startTime)
@@ -169,11 +192,13 @@ export async function createSession(formData: FormData) {
     if (endMin < startMin) endMin += 24 * 60
     const durationHours = Math.max(1, Math.round((endMin - startMin) / 60))
 
-    const sessionDate = new Date(sessionDateStr)
-    sessionDate.setHours(0, 0, 0, 0)
+    // Parse YYYY-MM-DD as UTC noon so the calendar date is timezone-invariant
+    // (avoids the local setHours shifting UTC-midnight to the previous day in UTC+8)
+    const sessionDate = new Date(`${sessionDateStr}T12:00:00.000Z`)
 
     const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    today.setUTCHours(0, 0, 0, 0)
+    // Compare against start-of-day UTC so a session on today is still allowed
     if (sessionDate < today) return { error: 'Cannot schedule a session in the past.' }
 
     const overlapError = await checkOverlap(sessionDate, startTime, endTime)
@@ -420,11 +445,11 @@ export async function copySessionToDate(sessionId: string, targetDateStr: string
       return { error: 'Session not found.' }
     }
 
-    const targetDate = new Date(targetDateStr)
-    targetDate.setHours(0, 0, 0, 0)
+    // Parse as UTC noon so it stays on the intended calendar date regardless of server TZ
+    const targetDate = new Date(`${targetDateStr}T12:00:00.000Z`)
 
     const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    today.setUTCHours(0, 0, 0, 0)
     if (targetDate < today) {
       return { error: 'Cannot copy a session to a past date.' }
     }

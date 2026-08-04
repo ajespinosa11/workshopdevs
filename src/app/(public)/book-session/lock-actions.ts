@@ -147,3 +147,96 @@ export async function createSoftLockReservation(params: {
     }
   })
 }
+
+/**
+ * Checks the current status of a temporary soft lock / registration by booking reference.
+ */
+export async function checkReservationStatus(bookingReference: string) {
+  if (!bookingReference) return { error: 'Booking reference is required.' }
+
+  // Clean up any expired locks
+  await releaseExpiredSoftLocks()
+
+  const registration = await prisma.workshopRegistration.findUnique({
+    where: { bookingReference },
+    include: {
+      session: {
+        include: {
+          module: true
+        }
+      }
+    }
+  })
+
+  if (!registration) {
+    return { error: 'Reservation not found.' }
+  }
+
+  const now = new Date()
+  const isExpired = registration.status === 'CANCELLED' || (registration.status === 'PENDING_CHECKOUT' && registration.reservedUntil && registration.reservedUntil < now)
+
+  return {
+    status: registration.status,
+    isExpired,
+    customerName: registration.customerName,
+    customerEmail: registration.customerEmail,
+    bookingReference: registration.bookingReference,
+    reservedUntil: registration.reservedUntil ? registration.reservedUntil.toISOString() : null,
+    sessionDate: registration.session?.sessionDate ? registration.session.sessionDate.toISOString() : null,
+    startTime: registration.session?.startTime || null,
+    endTime: registration.session?.endTime || null,
+    moduleName: registration.session?.module?.name || 'Workshop Session'
+  }
+}
+
+/**
+ * Manually cancels a soft lock reservation.
+ */
+export async function cancelSoftLockReservation(bookingReference: string) {
+  if (!bookingReference) return { error: 'Booking reference is required.' }
+
+  const registration = await prisma.workshopRegistration.findUnique({
+    where: { bookingReference },
+    include: { session: true }
+  })
+
+  if (!registration) return { error: 'Reservation not found.' }
+
+  if (registration.status !== 'PENDING_CHECKOUT') {
+    return { success: true, message: 'Reservation is already finalized or cancelled.' }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.workshopRegistration.update({
+      where: { id: registration.id },
+      data: {
+        status: 'CANCELLED',
+        notes: 'Reservation cancelled manually by user.'
+      }
+    })
+
+    if (registration.sessionId && registration.session) {
+      const restoredSlots = registration.session.availableSlots + registration.participantsCount
+      const newStatus = restoredSlots > 0 ? 'OPEN' : registration.session.status
+
+      await tx.workshopSession.update({
+        where: { id: registration.sessionId },
+        data: {
+          availableSlots: restoredSlots,
+          status: newStatus
+        }
+      })
+    }
+
+    await tx.auditTrail.create({
+      data: {
+        registrationId: registration.id,
+        action: 'SOFT_LOCK_CANCELLED_BY_USER',
+        details: `Soft lock cancelled by user for ref ${registration.bookingReference}. Restored ${registration.participantsCount} slot(s).`
+      }
+    })
+  })
+
+  return { success: true }
+}
+

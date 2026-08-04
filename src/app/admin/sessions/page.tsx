@@ -7,7 +7,7 @@ export default async function AdminSessionsPage() {
 
   const sessions = await prisma.workshopSession.findMany({
     orderBy: { sessionDate: 'asc' },
-    where: { sessionDate: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
+    where: { sessionDate: { gte: new Date(new Date().setUTCHours(0, 0, 0, 0)) } },
     include: {
       module: true,
       bookings: {

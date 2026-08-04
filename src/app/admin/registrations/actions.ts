@@ -2,7 +2,17 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { sendFreeBookingConfirmationEmail } from '@/lib/email'
+import { sendFreeBookingConfirmationEmail, sendPaidBookingConfirmationEmail } from '@/lib/email'
+
+function isRegistrationPaid(reg: any): boolean {
+  if (!reg) return false
+  const channel = (reg.salesChannel || '').toUpperCase()
+  if (['SHOPIFY', 'STOREHUB', 'WALK_IN_PAID', 'MANUAL_PAID'].includes(channel)) return true
+  if (reg.shopifyOrder || reg.storehubTransactionId) return true
+  if (['PAID_FOR_ADMIN_VERIFICATION', 'PAID'].includes(reg.status)) return true
+  if (channel === 'WALK_IN' && reg.notes && !reg.notes.toLowerCase().includes('free')) return true
+  return false
+}
 
 export async function createRegistration(formData: FormData) {
   const customerName = formData.get('customerName') as string
@@ -80,6 +90,7 @@ export async function adminManualBookSlot(formData: FormData) {
   const sessionId = formData.get('sessionId') as string
   const notes = formData.get('notes') as string
   const paymentMethod = (formData.get('paymentMethod') as string) || 'WALK_IN_POS'
+  const workshopType = (formData.get('workshopType') as string) || 'PAID' // 'PAID' or 'FREE'
 
   if (!customerName || !customerEmail || !customerPhone || !sessionId) {
     return { error: 'Customer Name, Email, Phone, and Session date are required.' }
@@ -91,6 +102,8 @@ export async function adminManualBookSlot(formData: FormData) {
   }
 
   try {
+    const salesChannel = workshopType === 'FREE' ? 'WALK_IN_FREE' : 'WALK_IN_PAID'
+
     const result = await prisma.$transaction(async (tx) => {
       const session = await tx.workshopSession.findUnique({
         where: { id: sessionId },
@@ -111,14 +124,14 @@ export async function adminManualBookSlot(formData: FormData) {
       const registration = await tx.workshopRegistration.create({
         data: {
           bookingReference,
-          salesChannel: 'WALK_IN',
+          salesChannel,
           sku: 'BW001',
           customerName,
           customerEmail,
           customerPhone,
           participantsCount,
           branchLocation,
-          notes: notes ? `Walk-in booking (${paymentMethod}): ${notes}` : `Walk-in booking via admin (${paymentMethod})`,
+          notes: notes ? `Walk-in booking (${workshopType} - ${paymentMethod}): ${notes}` : `Walk-in booking via admin (${workshopType} - ${paymentMethod})`,
           sessionId,
           status: 'CONFIRMED',
           reservedAt: new Date(),
@@ -140,12 +153,46 @@ export async function adminManualBookSlot(formData: FormData) {
         data: {
           registrationId: registration.id,
           action: 'WALK_IN_BOOKING_CREATED',
-          details: `Admin booked ${participantsCount} walk-in slot(s) for ${customerName} (${bookingReference}). Payment verified on-site.`
+          details: `Admin booked ${participantsCount} walk-in slot(s) [${workshopType}] for ${customerName} (${bookingReference}).`
         }
       })
 
       return registration
     })
+
+    // Send appropriate confirmation email based on workshopType
+    try {
+      if (result.sessionId) {
+        const session = await prisma.workshopSession.findUnique({
+          where: { id: result.sessionId },
+          include: { module: true }
+        })
+        if (session && result.customerEmail) {
+          const emailParams = {
+            to: result.customerEmail,
+            customerName: result.customerName,
+            customerEmail: result.customerEmail,
+            customerPhone: result.customerPhone,
+            bookingReference: result.bookingReference,
+            moduleName: session.module?.name || (workshopType === 'FREE' ? 'Free Workshop' : 'Print 2 Profit Workshop'),
+            sessionDate: session.sessionDate.toISOString(),
+            startTime: session.startTime,
+            endTime: session.endTime,
+            paxCount: result.participantsCount,
+            qrCodeUrl: '',
+          }
+
+          if (workshopType === 'FREE') {
+            await sendFreeBookingConfirmationEmail(emailParams)
+          } else {
+            await sendPaidBookingConfirmationEmail(emailParams)
+          }
+          console.log(`[adminManualBookSlot] Sent ${workshopType} confirmation email to ${result.customerEmail}`)
+        }
+      }
+    } catch (emailErr) {
+      console.error('[adminManualBookSlot] Email send error:', emailErr)
+    }
 
     revalidatePath('/admin/registrations')
     revalidatePath('/admin/sessions')
@@ -245,20 +292,22 @@ export async function adminReserveSlot(
           include: { module: true }
         })
         if (session && result.customerEmail) {
-          await sendFreeBookingConfirmationEmail({
+          const isPaid = isRegistrationPaid(result)
+          const sendEmailFn = isPaid ? sendPaidBookingConfirmationEmail : sendFreeBookingConfirmationEmail
+          await sendEmailFn({
             to: result.customerEmail,
             customerName: result.customerName,
             customerEmail: result.customerEmail,
             customerPhone: result.customerPhone,
             bookingReference: result.bookingReference,
-            moduleName: session.module?.name || 'Print 2 Profit Workshop',
+            moduleName: session.module?.name || (isPaid ? 'Print 2 Profit Workshop' : 'Free Workshop'),
             sessionDate: session.sessionDate.toISOString(),
             startTime: session.startTime,
             endTime: session.endTime,
             paxCount: result.participantsCount,
             qrCodeUrl: '',
           })
-          console.log(`[adminReserveSlot] Reservation confirmation email sent to ${result.customerEmail}`)
+          console.log(`[adminReserveSlot] ${isPaid ? 'Paid' : 'Free'} reservation confirmation email sent to ${result.customerEmail}`)
         }
       }
     } catch (emailErr) {
@@ -385,7 +434,7 @@ export async function sendReservationConfirmationEmail(registrationId: string) {
   try {
     const reg = await prisma.workshopRegistration.findUnique({
       where: { id: registrationId },
-      include: { session: { include: { module: true } } }
+      include: { session: { include: { module: true } }, shopifyOrder: true }
     })
 
     if (!reg) return { error: 'Registration not found.' }
@@ -393,14 +442,16 @@ export async function sendReservationConfirmationEmail(registrationId: string) {
     if (!reg.sessionId || !reg.session) return { error: 'No workshop session is assigned to this registration yet.' }
 
     const session = reg.session
+    const isPaid = isRegistrationPaid(reg)
+    const sendEmailFn = isPaid ? sendPaidBookingConfirmationEmail : sendFreeBookingConfirmationEmail
 
-    await sendFreeBookingConfirmationEmail({
+    await sendEmailFn({
       to: reg.customerEmail,
       customerName: reg.customerName,
       customerEmail: reg.customerEmail,
       customerPhone: reg.customerPhone,
       bookingReference: reg.bookingReference,
-      moduleName: session.module?.name || 'Print 2 Profit Workshop',
+      moduleName: session.module?.name || (isPaid ? 'Print 2 Profit Workshop' : 'Free Workshop'),
       sessionDate: session.sessionDate.toISOString(),
       startTime: session.startTime,
       endTime: session.endTime,

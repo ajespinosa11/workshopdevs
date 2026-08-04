@@ -7,37 +7,69 @@ import { useRouter, useSearchParams } from 'next/navigation'
 
 function TermsAndConditionsContainer({ checked, onChange }: { checked: boolean, onChange: (val: boolean) => void }) {
   return (
-    <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+    <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
       <div 
         style={{ 
-          border: '1px solid var(--admin-border)', 
+          border: '1px solid var(--admin-border, #e2e8f0)', 
           borderRadius: '0.75rem', 
-          padding: '1rem', 
-          maxHeight: '150px', 
+          padding: '1rem 1.25rem', 
+          maxHeight: '260px', 
           overflowY: 'auto', 
           background: '#f8fafc',
           fontSize: '0.8rem',
-          color: 'var(--secondary-foreground)',
-          lineHeight: '1.4'
+          color: 'var(--secondary-foreground, #475569)',
+          lineHeight: '1.5'
         }}
       >
-        <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: 800, color: 'var(--primary)', fontSize: '0.9rem' }}>Workshop Voucher Terms & Conditions</h4>
-        <ol style={{ paddingLeft: '1.25rem', margin: 0 }}>
-          <li style={{ marginBottom: '0.5rem' }}><strong>Voucher Value:</strong> Each voucher ticket is equivalent to <strong>1 Event Session booking</strong>.</li>
-          <li style={{ marginBottom: '0.5rem' }}><strong>Validity:</strong> Vouchers are valid only until the expiration date indicated and cannot be used after expiry.</li>
-          <li style={{ marginBottom: '0.5rem' }}><strong>Non-Transferable & Non-Refundable:</strong> Vouchers are non-transferable, non-refundable, and cannot be exchanged for cash.</li>
-          <li style={{ marginBottom: '0.5rem' }}><strong>Booking & Availability:</strong> Advance booking is required. Workshop schedules are subject to slot availability.</li>
-          <li style={{ marginBottom: '0.5rem' }}><strong>Rescheduling:</strong> Rescheduling requests must be made at least <strong>48 hours</strong> before the scheduled workshop. Requests made after this period may result in voucher forfeiture.</li>
-          <li style={{ marginBottom: '0.5rem' }}><strong>No-Show Policy:</strong> Failure to attend without prior notice will be treated as a redeemed voucher.</li>
-          <li style={{ marginBottom: '0.5rem' }}><strong>Voucher Redemption:</strong> Vouchers must be redeemed for the designated workshop and cannot be partially redeemed unless otherwise specified.</li>
-          <li style={{ marginBottom: '0.5rem' }}><strong>Lost or Damaged Vouchers:</strong> Lost, stolen, or damaged vouchers will not be replaced.</li>
-          <li style={{ marginBottom: '0.5rem' }}><strong>Workshop Changes:</strong> Makerlab reserves the right to reschedule, postpone, or cancel workshops due to unforeseen circumstances. An alternative schedule will be provided when applicable.</li>
-          <li style={{ marginBottom: '0.5rem' }}><strong>Participant Responsibilities:</strong> Participants must bring the required equipment and software and comply with all workshop safety guidelines and code of conduct.</li>
-        </ol>
+        <h4 style={{ margin: '0 0 0.75rem 0', fontWeight: 800, color: 'var(--primary, #0f172a)', fontSize: '0.95rem' }}>
+          Workshop Terms &amp; Conditions, Participant Waiver, Consent, Photo Release &amp; Data Privacy Agreement
+        </h4>
+
+        {/* Section 1: Refund Policy */}
+        <div style={{ marginBottom: '0.85rem' }}>
+          <strong style={{ color: 'var(--primary, #0f172a)', display: 'block', marginBottom: '0.25rem' }}>Refund Policy:</strong>
+          <p style={{ margin: 0 }}>
+            Payments are fully refundable for cancellations made at least 5 days before the scheduled event. Cancellations made less than 5 days before the event are non-refundable. Rescheduling may be allowed, subject to slot availability.
+          </p>
+        </div>
+
+        {/* Section 2: Workshop Rules & Guidelines */}
+        <div style={{ marginBottom: '0.85rem' }}>
+          <strong style={{ color: 'var(--primary, #0f172a)', display: 'block', marginBottom: '0.35rem' }}>Workshop Rules and Guidelines:</strong>
+          <ul style={{ paddingLeft: '1.2rem', margin: 0, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <li>Please arrive at least 15 minutes before the workshop starts.</li>
+            <li>Follow all instructions given by the facilitators and staff.</li>
+            <li>Handle all equipment and tools with care.</li>
+            <li>Food and drinks are not allowed inside the workshop area or near the 3D printers and workshop equipment.</li>
+            <li>Keep your workspace clean and organized.</li>
+            <li>Be respectful to fellow participants and staff.</li>
+            <li>For safety reasons, do not touch or operate any equipment without facilitator guidance.</li>
+            <li>Once a workshop slot is confirmed, it is strictly non-transferable and non-refundable.</li>
+            <li>Seating is limited and reserved for registered workshop participants only. Additional companions or guests may be asked to remain outside the workshop area due to space limitations.</li>
+            <li>Makerlab reserves the right to remove participants who fail to follow workshop rules or safety guidelines.</li>
+            <li>To ensure a safe and comfortable experience for all attendees, participants and accompanying guardians are requested to leave the workshop area after the session concludes. This will allow our team to sanitize the area and prepare the equipment for the next scheduled workshop.</li>
+          </ul>
+        </div>
+
+        {/* Section 3: Consent, Waiver, Photo Release, and Data Privacy Agreement */}
+        <div>
+          <strong style={{ color: 'var(--primary, #0f172a)', display: 'block', marginBottom: '0.35rem' }}>CONSENT, WAIVER, PHOTO RELEASE, AND DATA PRIVACY AGREEMENT:</strong>
+          <p style={{ margin: '0 0 0.35rem 0' }}>By completing and submitting this registration form, I acknowledge and agree to the following:</p>
+          <ul style={{ paddingLeft: '1.2rem', margin: 0, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <li>I am voluntarily registering for and participating in the Free Basic 3D Printing Workshop organized by Makerlab.</li>
+            <li>I understand that workshop activities may involve the use of 3D printers, tools, equipment, and materials. I agree to follow all safety instructions and guidelines provided by the organizers and facilitators.</li>
+            <li>I assume responsibility for my participation and release Makerlab, its employees, instructors, partners, sponsors, venue providers, and representatives from any claims, liabilities, damages, losses, or injuries that may arise from my participation, except in cases of gross negligence or willful misconduct.</li>
+            <li>I authorize Makerlab to take photographs, videos, audio recordings, and other media during the workshop and to use, reproduce, publish, and distribute such materials for marketing, promotional, educational, advertising, social media, website, print, and other business-related purposes without compensation or further notice.</li>
+            <li>I understand that photographs and videos taken during the event may be posted on Makerlab&apos;s social media platforms, website, promotional materials, and other marketing channels.</li>
+            <li>I consent to the collection, storage, and processing of my personal information for workshop registration, event communications, customer support, future workshop invitations, product updates, promotions, and other Makerlab-related activities, in accordance with applicable data privacy laws.</li>
+            <li>I certify that all information provided in this registration form is true and accurate.</li>
+          </ul>
+        </div>
       </div>
-      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary)' }}>
-        <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} style={{ accentColor: 'var(--accent)', cursor: 'pointer' }} />
-        <span>I have read and agree to the Terms & Conditions</span>
+
+      <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: 'var(--primary, #0f172a)', lineHeight: '1.4' }}>
+        <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} style={{ accentColor: 'var(--accent)', cursor: 'pointer', marginTop: '2px', flexShrink: 0 }} />
+        <span>I have read, understood, and agree to the Consent, Waiver, Photo Release, and Data Privacy Agreement. By checking this box and submitting this form, I authorize Makerlab to use event photos and videos containing my image for marketing and promotional purposes.</span>
       </label>
     </div>
   )
@@ -542,10 +574,57 @@ export default function BookSessionForm() {
           </svg>
         </div>
         <h2 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '0.5rem' }}>Booking Confirmed!</h2>
-        <p style={{ color: 'var(--secondary-foreground)', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.6 }}>
+        <p style={{ color: 'var(--secondary-foreground)', fontSize: '0.95rem', marginBottom: '1.5rem', lineHeight: 1.6 }}>
           Thank you for choosing Makerlab! We have sent a comprehensive receipt and entry ticket instructions to{' '}
           <strong>{successData.customerEmail || voucher?.customerEmail}</strong>.
         </p>
+
+        {/* ── Email notification banner ── */}
+        <div style={{
+          background: 'linear-gradient(135deg, #eff6ff, #dbeafe)',
+          border: '1.5px solid #93c5fd',
+          borderRadius: '1rem',
+          padding: '1.25rem 1.5rem',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '0.85rem',
+          textAlign: 'left',
+          animation: 'pulse-border 2s ease-in-out infinite',
+        }}>
+          <div style={{
+            background: '#2563eb',
+            color: '#fff',
+            borderRadius: '50%',
+            width: '38px',
+            height: '38px',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2" />
+              <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+            </svg>
+          </div>
+          <div>
+            <p style={{ margin: '0 0 4px', fontWeight: 800, color: '#1d4ed8', fontSize: '0.9rem' }}>
+              Check your email inbox!
+            </p>
+            <p style={{ margin: 0, color: '#1e40af', fontSize: '0.82rem', lineHeight: 1.55 }}>
+              A confirmation email with your <strong>booking reference</strong>, session details, and QR code for check-in has been sent to{' '}
+              <strong>{successData.customerEmail || voucher?.customerEmail}</strong>.
+              {' '}Please check your spam/junk folder if you don&apos;t see it within a few minutes.
+            </p>
+          </div>
+        </div>
+        <style>{`
+          @keyframes pulse-border {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(37,99,235,0.18); }
+            50% { box-shadow: 0 0 0 6px rgba(37,99,235,0); }
+          }
+        `}</style>
 
         <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '1rem', padding: '1.5rem', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '0.85rem', marginBottom: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
@@ -985,6 +1064,79 @@ export default function BookSessionForm() {
                       {loading ? 'Confirming Booking...' : 'Confirm Booking Reservation →'}
                     </button>
                   </form>
+                </div>
+              )}
+
+              {/* FREE WORKSHOP SUCCESS (Step 3) */}
+              {activePanel === 'free' && step === 3 && successData && (
+                <div className="animate-fade-in" style={{ textAlign: 'center' }}>
+                  <div style={{ background: '#dcfce7', color: '#15803d', width: '56px', height: '56px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </div>
+                  <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '0.4rem' }}>Booking Confirmed!</h2>
+                  <p style={{ color: 'var(--secondary-foreground)', fontSize: '0.9rem', marginBottom: '1.25rem', lineHeight: 1.6 }}>
+                    You are registered for the Free Workshop. A confirmation has been sent to{' '}
+                    <strong>{successData.customerEmail}</strong>.
+                  </p>
+
+                  {/* Email notification banner */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, #eff6ff, #dbeafe)',
+                    border: '1.5px solid #93c5fd',
+                    borderRadius: '1rem',
+                    padding: '1rem 1.25rem',
+                    marginBottom: '1.25rem',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.75rem',
+                    textAlign: 'left',
+                    animation: 'pulse-border 2s ease-in-out infinite',
+                  }}>
+                    <div style={{ background: '#2563eb', color: '#fff', borderRadius: '50%', width: '34px', height: '34px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="2" y="4" width="20" height="16" rx="2" />
+                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p style={{ margin: '0 0 3px', fontWeight: 800, color: '#1d4ed8', fontSize: '0.85rem' }}>Check your email inbox!</p>
+                      <p style={{ margin: 0, color: '#1e40af', fontSize: '0.78rem', lineHeight: 1.55 }}>
+                        Your <strong>booking reference</strong>, session details, and QR check-in code have been sent to{' '}
+                        <strong>{successData.customerEmail}</strong>.
+                        {' '}Please also check your spam/junk folder if you don&apos;t see it.
+                      </p>
+                    </div>
+                  </div>
+                  <style>{`
+                    @keyframes pulse-border {
+                      0%, 100% { box-shadow: 0 0 0 0 rgba(37,99,235,0.18); }
+                      50% { box-shadow: 0 0 0 6px rgba(37,99,235,0); }
+                    }
+                  `}</style>
+
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '1rem', padding: '1.25rem', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+                      <span style={{ color: 'var(--secondary-foreground)', fontWeight: 600, fontSize: '0.85rem' }}>Reference:</span>
+                      <strong style={{ color: 'var(--accent)', fontFamily: 'monospace' }}>{successData.bookingReference}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--secondary-foreground)', fontSize: '0.85rem' }}>Workshop:</span>
+                      <span style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '0.85rem' }}>{successData.moduleName}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--secondary-foreground)', fontSize: '0.85rem' }}>Status:</span>
+                      <span style={{ background: '#dcfce7', color: '#16a34a', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700 }}>RESERVED</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleResetAll}
+                    style={{ width: '100%', padding: '0.85rem', borderRadius: '0.75rem', background: 'var(--primary)', color: '#fff', border: 'none', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}
+                  >
+                    Done
+                  </button>
                 </div>
               )}
 

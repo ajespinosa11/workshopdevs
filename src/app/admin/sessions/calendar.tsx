@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createModule, createSession, updateSession, deleteSession, updateModule } from './actions'
@@ -33,6 +33,181 @@ interface SessionData {
     description: string | null
     units: number
   }
+}
+
+function FormattedTextarea({
+  label,
+  optionalHint,
+  value,
+  onChange,
+  placeholder,
+  minHeight = '150px'
+}: {
+  label: string
+  optionalHint?: string
+  value: string
+  onChange: (val: string) => void
+  placeholder?: string
+  minHeight?: string
+}) {
+  const editorRef = useRef<HTMLDivElement>(null)
+  const lastValueRef = useRef(value)
+  const isInternalChange = useRef(false)
+
+  // Initialize on mount
+  useEffect(() => {
+    const el = editorRef.current
+    if (!el) return
+    el.innerHTML = value || ''
+    lastValueRef.current = value
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Sync external value changes (e.g. modal reset) without disrupting typing
+  useEffect(() => {
+    const el = editorRef.current
+    if (!el || isInternalChange.current) return
+    if (value !== lastValueRef.current) {
+      el.innerHTML = value || ''
+      lastValueRef.current = value
+    }
+  }, [value])
+
+  const handleInput = () => {
+    const el = editorRef.current
+    if (!el) return
+    isInternalChange.current = true
+    const html = el.innerHTML
+    lastValueRef.current = html
+    onChange(html)
+    setTimeout(() => { isInternalChange.current = false }, 0)
+  }
+
+  const execCmd = (cmd: string, arg?: string) => {
+    editorRef.current?.focus()
+    document.execCommand(cmd, false, arg)
+    handleInput()
+  }
+
+  const insertHTML = (html: string) => {
+    editorRef.current?.focus()
+    document.execCommand('insertHTML', false, html)
+    handleInput()
+  }
+
+  return (
+    <div className="input-group">
+      <label style={{ fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+        <span>
+          {label}{' '}
+          {optionalHint && (
+            <span style={{ fontWeight: 400, color: 'var(--admin-text-secondary)', fontSize: '0.8rem' }}>
+              ({optionalHint})
+            </span>
+          )}
+        </span>
+      </label>
+
+      {/* Formatting Toolbar */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.45rem 0.75rem',
+        background: '#f8fafc', border: '1px solid #cbd5e1', borderBottom: 'none',
+        borderRadius: '0.65rem 0.65rem 0 0', flexWrap: 'wrap'
+      }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--admin-text-secondary)', marginRight: '0.3rem' }}>Text Tools:</span>
+        <button
+          type="button"
+          title="Bold — select text then click"
+          onMouseDown={(e) => { e.preventDefault(); execCmd('bold') }}
+          style={{ padding: '0.25rem 0.65rem', fontWeight: 800, fontSize: '0.85rem', borderRadius: '0.35rem', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', cursor: 'pointer' }}
+        >
+          B
+        </button>
+        <button
+          type="button"
+          title="Italic — select text then click"
+          onMouseDown={(e) => { e.preventDefault(); execCmd('italic') }}
+          style={{ padding: '0.25rem 0.65rem', fontStyle: 'italic', fontWeight: 700, fontSize: '0.85rem', borderRadius: '0.35rem', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', cursor: 'pointer' }}
+        >
+          I
+        </button>
+        <button
+          type="button"
+          title="Underline — select text then click"
+          onMouseDown={(e) => { e.preventDefault(); execCmd('underline') }}
+          style={{ padding: '0.25rem 0.65rem', textDecoration: 'underline', fontWeight: 700, fontSize: '0.85rem', borderRadius: '0.35rem', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', cursor: 'pointer' }}
+        >
+          U
+        </button>
+        <div style={{ width: '1px', height: '18px', background: '#cbd5e1', margin: '0 0.2rem' }} />
+        <button
+          type="button"
+          title="Section Heading"
+          onMouseDown={(e) => { e.preventDefault(); insertHTML('<div><strong style="font-size:1rem;font-weight:800;display:inline-block;">Heading</strong></div><div><br></div>') }}
+          style={{ padding: '0.25rem 0.65rem', fontWeight: 800, fontSize: '0.75rem', borderRadius: '0.35rem', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', cursor: 'pointer' }}
+        >
+          H3
+        </button>
+        <button
+          type="button"
+          title="Insert bullet point"
+          onMouseDown={(e) => { e.preventDefault(); insertHTML('• ') }}
+          style={{ padding: '0.25rem 0.65rem', fontWeight: 700, fontSize: '0.8rem', borderRadius: '0.35rem', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', cursor: 'pointer' }}
+        >
+          • List
+        </button>
+        <button
+          type="button"
+          title="Highlight — select text then click"
+          onMouseDown={(e) => { e.preventDefault(); execCmd('hiliteColor', '#fef08a') }}
+          style={{ padding: '0.25rem 0.65rem', fontWeight: 700, fontSize: '0.75rem', borderRadius: '0.35rem', border: '1px solid #fde047', background: '#fef9c3', color: '#854d0e', cursor: 'pointer' }}
+        >
+          Highlight
+        </button>
+      </div>
+
+      {/* WYSIWYG ContentEditable editor */}
+      <style>{`
+        .wysiwyg-editor:empty:before {
+          content: attr(data-placeholder);
+          color: #94a3b8;
+          pointer-events: none;
+        }
+        .wysiwyg-editor:focus { outline: none; border-color: var(--accent) !important; }
+      `}</style>
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        className="wysiwyg-editor"
+        onInput={handleInput}
+        data-placeholder={placeholder}
+        style={{
+          borderRadius: '0 0 0.65rem 0.65rem',
+          minHeight,
+          padding: '0.85rem',
+          border: '1px solid #cbd5e1',
+          fontFamily: 'inherit',
+          fontSize: '0.92rem',
+          lineHeight: '1.55',
+          overflowY: 'auto',
+          background: '#fff',
+          color: '#0f172a',
+          wordBreak: 'break-word',
+        }}
+      />
+    </div>
+  )
+}
+
+export function renderFormattedText(text: string | null | undefined) {
+  if (!text) return null
+  // Strip dangerous tags only — the content comes from the admin's WYSIWYG editor
+  const safe = text
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/on\w+="[^"]*"/gi, '')
+    .replace(/javascript:/gi, '')
+  return <span dangerouslySetInnerHTML={{ __html: safe }} />
 }
 
 export default function AdminSessionsCalendar({ sessions, modules }: { sessions: SessionData[], modules: any[] }) {
@@ -132,7 +307,10 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
 
     const formData = new FormData()
     formData.append('moduleId', selectedModuleId)
-    formData.append('sessionDate', selectedDate.toISOString())
+    // Format as YYYY-MM-DD using local date parts to avoid UTC offset shifting the day
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const localDateStr = `${selectedDate.getFullYear()}-${pad(selectedDate.getMonth() + 1)}-${pad(selectedDate.getDate())}`
+    formData.append('sessionDate', localDateStr)
     formData.append('startTime', startTime)
     formData.append('endTime', endTime)
     formData.append('capacity', capacity.toString())
@@ -255,12 +433,17 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
       setCopyError(res.error)
     } else {
       setCopySuccess('Session successfully copied to target date!')
+      const [y, m, d] = copyDate.split('-').map(Number)
+      const targetLocalDate = new Date(y, m - 1, d)
+
       setTimeout(() => {
         setCopySuccess('')
         setCopyDate('')
         setEditSession(null)
+        setSelectedDate(targetLocalDate)
+        setCurrentDate(new Date(y, m - 1, 1))
         router.refresh()
-      }, 1500)
+      }, 1000)
     }
     setCopyLoading(false)
   }
@@ -286,26 +469,35 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
   for (let i = 0; i < firstDayIndex; i++) calendarDays.push(null)
   for (let day = 1; day <= totalDays; day++) calendarDays.push(new Date(year, month, day))
 
+  const isSameCalendarDay = (date1: Date, sessionDateStr: string | Date) => {
+    const sDate = new Date(sessionDateStr)
+    // Add 8h offset to normalize any local-midnight or UTC-noon DB records to Philippine calendar day
+    const adjDate = new Date(date1.getTime() + 8 * 3600 * 1000)
+    const adjSDate = new Date(sDate.getTime() + 8 * 3600 * 1000)
+    return adjDate.getUTCFullYear() === adjSDate.getUTCFullYear() &&
+           adjDate.getUTCMonth() === adjSDate.getUTCMonth() &&
+           adjDate.getUTCDate() === adjSDate.getUTCDate()
+  }
+
   const dateHasSessions = (date: Date) =>
-    sessions.some(s => {
-      const sDate = new Date(s.sessionDate)
-      return sDate.getFullYear() === date.getFullYear() && sDate.getMonth() === date.getMonth() && sDate.getDate() === date.getDate()
-    })
+    sessions.some(s => isSameCalendarDay(date, s.sessionDate))
 
   const filteredSessions = sessions.filter(s => {
     if (!selectedDate) return false
-    const sDate = new Date(s.sessionDate)
-    return sDate.getFullYear() === selectedDate.getFullYear() && sDate.getMonth() === selectedDate.getMonth() && sDate.getDate() === selectedDate.getDate()
+    return isSameCalendarDay(selectedDate, s.sessionDate)
   })
 
   const changeMonth = (offset: number) => setCurrentDate(new Date(year, month + offset, 1))
 
   // Count sessions per day for the badge
   const getSessionCount = (date: Date) =>
-    sessions.filter(s => {
-      const sDate = new Date(s.sessionDate)
-      return sDate.getFullYear() === date.getFullYear() && sDate.getMonth() === date.getMonth() && sDate.getDate() === date.getDate()
-    }).length
+    sessions.filter(s => isSameCalendarDay(date, s.sessionDate)).length
+
+  // Total available slots per day (for color coding)
+  const getAvailableSlotsForDay = (date: Date) =>
+    sessions
+      .filter(s => isSameCalendarDay(date, s.sessionDate))
+      .reduce((sum, s) => sum + s.availableSlots, 0)
 
   // Total stats
   const totalSessions = sessions.length
@@ -380,6 +572,24 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
               const count = getSessionCount(day)
               const isPast = day < today
 
+              // Availability-based color scheme
+              const totalSlots = getAvailableSlotsForDay(day)
+              const isFull    = hasSessions && totalSlots === 0
+              const isNearFull = hasSessions && totalSlots > 0 && totalSlots < 5
+              const isAvail   = hasSessions && totalSlots >= 5
+
+              const dotColor = isFull ? '#ef4444' : isNearFull ? '#f97316' : '#22c55e'
+              const cellBgOverride = !isSelected && hasSessions && !isPast
+                ? isFull    ? '#fef2f2'
+                : isNearFull ? '#fff7ed'
+                : '#f0fdf4'
+                : undefined
+              const cellBorderOverride = !isSelected && hasSessions && !isPast
+                ? isFull    ? '1.5px solid #fca5a5'
+                : isNearFull ? '1.5px solid #fdba74'
+                : '1.5px solid #86efac'
+                : undefined
+
               return (
                 <button
                   key={`day-${day.getDate()}`}
@@ -387,17 +597,37 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                   className={`calendar-day-cell ${isSelected ? 'active-day' : ''} ${hasSessions ? 'has-sessions' : ''} ${isPast ? 'disabled' : ''}`}
                   onClick={() => !isPast && setSelectedDate(day)}
                   disabled={isPast}
-                  style={{ position: 'relative' }}
+                  style={{
+                    position: 'relative',
+                    background: cellBgOverride,
+                    border: cellBorderOverride,
+                  }}
                 >
                   {day.getDate()}
                   {hasSessions && count > 0 && !isSelected && (
-                    <span style={{ position: 'absolute', top: '2px', right: '4px', fontSize: '0.6rem', background: 'var(--accent)', color: '#fff', borderRadius: '50%', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
-                      {count}
-                    </span>
+                    <span style={{
+                      position: 'absolute', bottom: '3px', left: '50%', transform: 'translateX(-50%)',
+                      width: '6px', height: '6px', borderRadius: '50%', background: dotColor,
+                      display: 'block',
+                    }} />
                   )}
                 </button>
               )
             })}
+          </div>
+
+          {/* Calendar Color Legend */}
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', padding: '0.6rem 0.5rem 0.25rem', borderTop: '1px solid var(--admin-border)', marginTop: '0.5rem' }}>
+            {[
+              { color: '#22c55e', label: 'Available' },
+              { color: '#f97316', label: 'Limited (<5)' },
+              { color: '#ef4444', label: 'Fully Booked' },
+            ].map(({ color, label }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--admin-text-secondary)' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, flexShrink: 0 }} />
+                {label}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -506,7 +736,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                     ) : (
                       s.module?.description && (
                         <div style={{ fontSize: '0.78rem', color: 'var(--admin-text-secondary)', marginTop: '4px', fontStyle: 'italic', lineHeight: 1.4 }}>
-                          {s.module.description}
+                          {renderFormattedText(s.module.description)}
                         </div>
                       )
                     )}
@@ -543,7 +773,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
                         {s.notes ? (
                           <div style={{ fontSize: '0.8rem', color: 'var(--admin-text-primary)', fontWeight: 500, lineHeight: 1.4 }}>
-                            📝 {s.notes}
+                            📝 {renderFormattedText(s.notes)}
                           </div>
                         ) : (
                           <div />
@@ -660,8 +890,8 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
 
       {/* Bookings Modal */}
       {selectedSession && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1.5rem' }}>
-          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '600px', borderRadius: '1.5rem', background: '#ffffff', color: 'var(--foreground)', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1.5rem' }}>
+          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '750px', borderRadius: '1.5rem', background: '#ffffff', color: 'var(--foreground)', padding: '2.25rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)' }}>
             
             {/* Modal Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem' }}>
@@ -682,13 +912,13 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
             </div>
 
             {/* Modal Content */}
-            <div style={{ flex: 1, overflowY: 'auto', maxHeight: '50vh' }}>
+            <div style={{ flex: 1, overflowY: 'auto', maxHeight: '55vh' }}>
               {selectedSession.bookings && selectedSession.bookings.filter((b: any) => !['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED'].includes(b.status)).length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {selectedSession.bookings.filter((b: any) => !['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED'].includes(b.status)).map((booking: any) => (
                     <div 
                       key={booking.id} 
-                      style={{ padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}
+                      style={{ padding: '1rem 1.25rem', border: '1px solid #e2e8f0', borderRadius: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}
                     >
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         {booking.kidName ? (
@@ -751,19 +981,19 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
 
       {/* Edit Session Modal */}
       {editSession && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1.5rem' }}>
-          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '520px', borderRadius: '1.5rem', background: '#ffffff', color: 'var(--foreground)', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1.5rem' }}>
+          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '780px', borderRadius: '1.5rem', background: '#ffffff', color: 'var(--foreground)', padding: '2.25rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
               <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>Edit Workshop Event</h3>
-                <p style={{ fontSize: '0.82rem', color: 'var(--admin-text-secondary)', margin: '4px 0 0 0' }}>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>Edit Workshop Event</h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--admin-text-secondary)', margin: '4px 0 0 0' }}>
                   {new Date(editSession.sessionDate).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                 </p>
               </div>
-              <button onClick={() => setEditSession(null)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: 'var(--admin-text-secondary)', cursor: 'pointer' }}>&times;</button>
+              <button onClick={() => setEditSession(null)} style={{ background: 'none', border: 'none', fontSize: '1.75rem', color: 'var(--admin-text-secondary)', cursor: 'pointer' }}>&times;</button>
             </div>
 
-            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
               {editError && <div style={{ padding: '0.6rem 0.85rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.5rem', fontSize: '0.85rem', borderLeft: '3px solid #ef4444' }}>{editError}</div>}
 
               <div className="input-group">
@@ -774,7 +1004,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                   onChange={(e) => setEditModuleId(e.target.value)}
                   className="input-field"
                   required
-                  style={{ borderRadius: '0.5rem', padding: '0.5rem' }}
+                  style={{ borderRadius: '0.5rem', padding: '0.55rem' }}
                 >
                   {modules.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -813,11 +1043,19 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                 )}
               </div>
 
-
+              {/* Formatted Textarea for Event Note */}
+              <FormattedTextarea
+                label="Event Note"
+                optionalHint="optional"
+                value={editNotes}
+                onChange={setEditNotes}
+                placeholder="e.g. Bring your laptop, limited seats, parking info..."
+                minHeight="160px"
+              />
 
               {/* Copy this Event to Another Date UI */}
               <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem', marginTop: '0.5rem' }}>
-                <label style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--primary)', display: 'block', marginBottom: '0.4rem' }}>
+                <label style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--primary)', display: 'block', marginBottom: '0.4rem' }}>
                   Copy this Event to Another Date
                 </label>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -827,21 +1065,21 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                     onChange={(e) => setCopyDate(e.target.value)}
                     min={new Date().toISOString().split('T')[0]}
                     className="input-field"
-                    style={{ borderRadius: '0.5rem', flex: 1, padding: '0.4rem' }}
+                    style={{ borderRadius: '0.5rem', flex: 1, padding: '0.5rem' }}
                   />
                   <button
                     type="button"
                     onClick={handleCopySession}
                     disabled={copyLoading || !copyDate}
                     style={{
-                      padding: '0.5rem 1rem',
+                      padding: '0.55rem 1.1rem',
                       borderRadius: '0.5rem',
                       background: 'var(--accent)',
                       color: 'white',
                       border: 'none',
                       fontWeight: 600,
                       cursor: (copyLoading || !copyDate) ? 'not-allowed' : 'pointer',
-                      fontSize: '0.82rem'
+                      fontSize: '0.85rem'
                     }}
                   >
                     {copyLoading ? 'Copying...' : 'Copy Event'}
@@ -857,7 +1095,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                   onClick={handleDeleteSession}
                   disabled={deleteLoading}
                   style={{
-                    padding: '0.5rem 1rem',
+                    padding: '0.55rem 1.1rem',
                     borderRadius: '0.5rem',
                     background: '#fecaca',
                     color: '#dc2626',
@@ -870,8 +1108,8 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                 >
                   {deleteLoading ? 'Deleting...' : '🗑️ Delete'}
                 </button>
-                <button type="button" onClick={() => setEditSession(null)} className="admin-btn-outline" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem' }}>Cancel</button>
-                <button type="submit" disabled={editLoading} className="pricing-btn pricing-btn-solid" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem', background: 'var(--accent)', border: 'none', color: 'white', fontWeight: 600 }}>
+                <button type="button" onClick={() => setEditSession(null)} className="admin-btn-outline" style={{ flex: 1, padding: '0.55rem', borderRadius: '0.5rem' }}>Cancel</button>
+                <button type="submit" disabled={editLoading} className="pricing-btn pricing-btn-solid" style={{ flex: 1, padding: '0.55rem', borderRadius: '0.5rem', background: 'var(--accent)', border: 'none', color: 'white', fontWeight: 600 }}>
                   {editLoading ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
@@ -882,20 +1120,20 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
 
       {/* Schedule Session Modal */}
       {showCreateModal && selectedDate && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1.5rem' }}>
-          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '500px', borderRadius: '1.5rem', background: '#ffffff', color: 'var(--foreground)', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1.5rem' }}>
+          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '780px', borderRadius: '1.5rem', background: '#ffffff', color: 'var(--foreground)', padding: '2.25rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>
                 Schedule Workshop Event
               </h3>
-              <button onClick={() => setShowCreateModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: 'var(--admin-text-secondary)', cursor: 'pointer' }}>&times;</button>
+              <button onClick={() => setShowCreateModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.75rem', color: 'var(--admin-text-secondary)', cursor: 'pointer' }}>&times;</button>
             </div>
 
-            <form onSubmit={handleScheduleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {actionError && <div style={{ padding: '0.5rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.375rem', fontSize: '0.85rem' }}>{actionError}</div>}
+            <form onSubmit={handleScheduleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
+              {actionError && <div style={{ padding: '0.65rem 0.85rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.5rem', fontSize: '0.85rem', borderLeft: '3px solid #ef4444' }}>{actionError}</div>}
               
-              <div style={{ fontSize: '0.85rem', color: 'var(--admin-text-secondary)', fontWeight: 600 }}>
-                Date: {selectedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              <div style={{ fontSize: '0.9rem', color: 'var(--admin-text-secondary)', fontWeight: 600, background: '#f8fafc', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
+                📅 Date: <strong style={{ color: 'var(--primary)' }}>{selectedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</strong>
               </div>
 
               <div className="input-group">
@@ -906,7 +1144,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                   onChange={(e) => setSelectedModuleId(e.target.value)}
                   className="input-field"
                   required
-                  style={{ borderRadius: '0.5rem', padding: '0.5rem' }}
+                  style={{ borderRadius: '0.5rem', padding: '0.55rem' }}
                 >
                   {modules.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -932,32 +1170,29 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                 <input type="number" min="1" value={capacity} onChange={(e) => setCapacity(parseInt(e.target.value, 10))} className="input-field" required style={{ borderRadius: '0.5rem' }} />
               </div>
 
-              <div className="input-group">
-                <label style={{ fontWeight: 600 }}>Event Description <span style={{ fontWeight: 400, color: 'var(--admin-text-secondary)', fontSize: '0.8rem' }}>(optional)</span></label>
-                <textarea
-                  value={newSessionDesc}
-                  onChange={(e) => setNewSessionDesc(e.target.value)}
-                  className="input-field"
-                  placeholder="Describe what attendees will learn or experience..."
-                  style={{ borderRadius: '0.5rem', minHeight: '80px', padding: '0.5rem', resize: 'vertical' }}
-                />
-              </div>
+              {/* Formatted Textarea for Event Description */}
+              <FormattedTextarea
+                label="Event Description"
+                optionalHint="optional"
+                value={newSessionDesc}
+                onChange={setNewSessionDesc}
+                placeholder="Describe what attendees will learn or experience..."
+                minHeight="160px"
+              />
 
-              <div className="input-group">
-                <label style={{ fontWeight: 600 }}>Event Note <span style={{ fontWeight: 400, color: 'var(--admin-text-secondary)', fontSize: '0.8rem' }}>(optional)</span></label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="input-field"
-                  placeholder="e.g. Bring your laptop, limited seats, parking info..."
-                  style={{ borderRadius: '0.5rem', minHeight: '60px', padding: '0.5rem', resize: 'vertical' }}
-                />
-              </div>
+              {/* Formatted Textarea for Event Note */}
+              <FormattedTextarea
+                label="Event Note"
+                optionalHint="optional"
+                value={notes}
+                onChange={setNotes}
+                placeholder="e.g. Bring your laptop, limited seats, parking info..."
+                minHeight="140px"
+              />
 
-
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <button type="button" onClick={() => setShowCreateModal(false)} className="admin-btn-outline" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem' }}>Cancel</button>
-                <button type="submit" disabled={actionLoading || modules.length === 0} className="pricing-btn pricing-btn-solid" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem', background: 'var(--accent)', border: 'none', color: 'white', fontWeight: 600 }}>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem' }}>
+                <button type="button" onClick={() => setShowCreateModal(false)} className="admin-btn-outline" style={{ flex: 1, padding: '0.6rem', borderRadius: '0.5rem' }}>Cancel</button>
+                <button type="submit" disabled={actionLoading || modules.length === 0} className="pricing-btn pricing-btn-solid" style={{ flex: 1, padding: '0.6rem', borderRadius: '0.5rem', background: 'var(--accent)', border: 'none', color: 'white', fontWeight: 600 }}>
                   {actionLoading ? 'Scheduling...' : 'Schedule Event'}
                 </button>
               </div>
@@ -968,31 +1203,35 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
 
       {/* Create Module Modal */}
       {showModuleModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1010, padding: '1.5rem' }}>
-          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '450px', borderRadius: '1.5rem', background: '#ffffff', color: 'var(--foreground)', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1010, padding: '1.5rem' }}>
+          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '620px', borderRadius: '1.5rem', background: '#ffffff', color: 'var(--foreground)', padding: '2.25rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>
                 Create Academic Module
               </h3>
-              <button onClick={() => setShowModuleModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: 'var(--admin-text-secondary)', cursor: 'pointer' }}>&times;</button>
+              <button onClick={() => setShowModuleModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.75rem', color: 'var(--admin-text-secondary)', cursor: 'pointer' }}>&times;</button>
             </div>
 
-            <form onSubmit={handleModuleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {actionError && <div style={{ padding: '0.5rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.375rem', fontSize: '0.85rem' }}>{actionError}</div>}
+            <form onSubmit={handleModuleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
+              {actionError && <div style={{ padding: '0.65rem 0.85rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.5rem', fontSize: '0.85rem' }}>{actionError}</div>}
 
               <div className="input-group">
                 <label style={{ fontWeight: 600 }}>Module Title / Name</label>
                 <input type="text" value={moduleName} onChange={(e) => setModuleName(e.target.value)} className="input-field" placeholder="e.g. Intro to 3D Printing" required style={{ borderRadius: '0.5rem' }} />
               </div>
 
-              <div className="input-group">
-                <label style={{ fontWeight: 600 }}>Description</label>
-                <textarea value={moduleDesc} onChange={(e) => setModuleDesc(e.target.value)} className="input-field" placeholder="Brief description of the module" style={{ borderRadius: '0.5rem', minHeight: '100px', padding: '0.5rem' }} />
-              </div>
+              <FormattedTextarea
+                label="Description"
+                optionalHint="optional"
+                value={moduleDesc}
+                onChange={setModuleDesc}
+                placeholder="Brief description of the module"
+                minHeight="100px"
+              />
 
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <button type="button" onClick={() => setShowModuleModal(false)} className="admin-btn-outline" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem' }}>Cancel</button>
-                <button type="submit" disabled={actionLoading} className="pricing-btn pricing-btn-solid" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem', background: 'var(--accent)', border: 'none', color: 'white', fontWeight: 600 }}>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem' }}>
+                <button type="button" onClick={() => setShowModuleModal(false)} className="admin-btn-outline" style={{ flex: 1, padding: '0.6rem', borderRadius: '0.5rem' }}>Cancel</button>
+                <button type="submit" disabled={actionLoading} className="pricing-btn pricing-btn-solid" style={{ flex: 1, padding: '0.6rem', borderRadius: '0.5rem', background: 'var(--accent)', border: 'none', color: 'white', fontWeight: 600 }}>
                   {actionLoading ? 'Creating...' : 'Create Module'}
                 </button>
               </div>
@@ -1001,13 +1240,10 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
         </div>
       )}
 
-
-
-
       {/* ── Cancellation Reason Modal ── */}
       {showCancelModal && editSession && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: '#fff', borderRadius: '1.5rem', padding: '2.5rem', maxWidth: '520px', width: '100%', boxShadow: '0 25px 50px rgba(0,0,0,0.25)' }}>
+          <div style={{ background: '#fff', borderRadius: '1.5rem', padding: '2.25rem', maxWidth: '620px', width: '100%', boxShadow: '0 25px 50px rgba(0,0,0,0.25)' }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
