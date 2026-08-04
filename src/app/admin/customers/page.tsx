@@ -2,93 +2,66 @@ import { prisma } from '@/lib/prisma'
 import CustomersClient from './client'
 
 export default async function AdminCustomersPage() {
-  const bookings = await prisma.booking.findMany({
+  const registrations = await prisma.workshopRegistration.findMany({
     include: {
       session: {
         include: {
           module: true
         }
       },
-      voucher: true
+      shopifyOrder: true
     },
     orderBy: {
       createdAt: 'desc'
     }
   })
 
-  const vouchers = await prisma.voucher.findMany({
-    include: {
-      plan: true
-    }
-  })
-
-  // Map to group by customer email
+  // Group by customer email
   const customersMap = new Map<string, {
     name: string
     email: string
     phone: string
-    bookings: any[]
-    vouchers: any[]
+    registrations: any[]
   }>()
 
-  // Add customers from vouchers
-  for (const v of vouchers) {
-    const email = v.customerEmail.toLowerCase().trim()
+  for (const r of registrations) {
+    const email = r.customerEmail.toLowerCase().trim()
     if (!customersMap.has(email)) {
       customersMap.set(email, {
-        name: v.customerName,
-        email: v.customerEmail,
-        phone: v.customerPhone,
-        bookings: [],
-        vouchers: []
+        name: r.customerName,
+        email: r.customerEmail,
+        phone: r.customerPhone,
+        registrations: []
       })
     }
-    customersMap.get(email)!.vouchers.push({
-      id: v.id,
-      voucherCode: v.voucherCode,
-      planName: v.plan.name,
-      totalUnits: v.totalUnits,
-      remainingUnits: v.remainingUnits,
-      status: v.status,
-      createdAt: v.createdAt.toISOString()
+    customersMap.get(email)!.registrations.push({
+      id: r.id,
+      bookingReference: r.bookingReference,
+      status: r.status,
+      salesChannel: r.salesChannel,
+      sku: r.sku,
+      participantsCount: r.participantsCount,
+      branchLocation: r.branchLocation,
+      notes: r.notes,
+      reservedAt: r.reservedAt?.toISOString() ?? null,
+      reservedUntil: r.reservedUntil?.toISOString() ?? null,
+      createdAt: r.createdAt.toISOString(),
+      session: r.session ? {
+        id: r.session.id,
+        category: r.session.category,
+        sessionDate: r.session.sessionDate.toISOString(),
+        startTime: r.session.startTime,
+        endTime: r.session.endTime,
+        durationHours: r.session.durationHours,
+        moduleName: r.session.module?.name ?? null
+      } : null,
+      shopifyOrder: r.shopifyOrder ? {
+        shopifyOrderNumber: r.shopifyOrder.shopifyOrderNumber,
+        totalAmount: r.shopifyOrder.totalAmount,
+        currency: r.shopifyOrder.currency,
+        financialStatus: r.shopifyOrder.financialStatus
+      } : null
     })
-  }
-
-  // Add customer bookings
-  for (const b of bookings) {
-    const email = b.customerEmail.toLowerCase().trim()
-    if (!customersMap.has(email)) {
-      customersMap.set(email, {
-        name: b.customerName,
-        email: b.customerEmail,
-        phone: b.customerPhone,
-        bookings: [],
-        vouchers: []
-      })
-    }
-    
-    // Check if the booking is already in the list
-    const exists = customersMap.get(email)!.bookings.some(existing => existing.id === b.id)
-    if (!exists) {
-      customersMap.get(email)!.bookings.push({
-        id: b.id,
-        bookingReference: b.bookingReference,
-        status: b.status,
-        unitsToDeduct: b.unitsToDeduct,
-        balanceDueAmount: b.balanceDueAmount,
-        balanceDuePaid: b.balanceDuePaid,
-        createdAt: b.createdAt.toISOString(),
-        session: {
-          id: b.session.id,
-          category: b.session.category,
-          sessionDate: b.session.sessionDate.toISOString(),
-          startTime: b.session.startTime,
-          endTime: b.session.endTime,
-          durationHours: b.session.durationHours,
-          moduleName: b.session.module?.name
-        }
-      })
-    }
   }
 
   const customersList = Array.from(customersMap.values())
@@ -97,7 +70,7 @@ export default async function AdminCustomersPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-3xl font-bold mb-1" style={{ fontSize: '2rem', fontWeight: 800 }}>Customers</h1>
-        <p style={{ color: 'var(--admin-text-secondary)', fontSize: '0.95rem' }}>View customer workshop history, active reservations, and active vouchers.</p>
+        <p style={{ color: 'var(--admin-text-secondary)', fontSize: '0.95rem' }}>View customer workshop booking history and active reservations.</p>
       </div>
 
       <CustomersClient customers={customersList} />

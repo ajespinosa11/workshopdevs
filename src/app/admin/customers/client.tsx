@@ -1,15 +1,41 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { topUpVoucher } from '../vouchers/actions'
+
+interface Registration {
+  id: string
+  bookingReference: string
+  status: string
+  salesChannel: string
+  sku: string
+  participantsCount: number
+  branchLocation: string | null
+  notes: string | null
+  reservedAt: string | null
+  reservedUntil: string | null
+  createdAt: string
+  session: {
+    id: string
+    category: string
+    sessionDate: string
+    startTime: string
+    endTime: string
+    durationHours: number
+    moduleName: string | null
+  } | null
+  shopifyOrder: {
+    shopifyOrderNumber: string
+    totalAmount: number
+    currency: string
+    financialStatus: string
+  } | null
+}
 
 interface Customer {
   name: string
   email: string
   phone: string
-  bookings: any[]
-  vouchers: any[]
+  registrations: Registration[]
 }
 
 interface CustomersClientProps {
@@ -22,48 +48,6 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
     customers.length > 0 ? customers[0].email : null
   )
 
-  const router = useRouter()
-  // Top Up Modal State
-  const [showTopUpModal, setShowTopUpModal] = useState(false)
-  const [topUpVoucherId, setTopUpVoucherId] = useState('')
-  const [topUpCode, setTopUpCode] = useState('')
-  const [topUpUnits, setTopUpUnits] = useState(1)
-  const [topUpAmount, setTopUpAmount] = useState(300)
-  const [topUpNotes, setTopUpNotes] = useState('')
-  const [topUpLoading, setTopUpLoading] = useState(false)
-  const [topUpError, setTopUpError] = useState('')
-
-  function openTopUpModal(vid: string, code: string) {
-    setTopUpVoucherId(vid)
-    setTopUpCode(code)
-    setTopUpUnits(1)
-    setTopUpAmount(300)
-    setTopUpNotes('')
-    setTopUpError('')
-    setShowTopUpModal(true)
-  }
-
-  async function handleTopUpSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setTopUpLoading(true)
-    setTopUpError('')
-
-    const formData = new FormData()
-    formData.append('voucherId', topUpVoucherId)
-    formData.append('units', topUpUnits.toString())
-    formData.append('amountPaid', topUpAmount.toString())
-    formData.append('notes', topUpNotes)
-
-    const res = await topUpVoucher(formData)
-    if (res.error) {
-      setTopUpError(res.error)
-    } else {
-      setShowTopUpModal(false)
-      router.refresh()
-    }
-    setTopUpLoading(false)
-  }
-
   // Filter customers by name or email
   const filteredCustomers = customers.filter(
     c =>
@@ -73,14 +57,42 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
 
   const selectedCustomer = customers.find(c => c.email === selectedEmail)
 
-  // Separate bookings into reserved/active and history
+  // Separate registrations into active reservations/pending payment and historical bookings
+  const activeStatuses = [
+    'AWAITING_PAYMENT',
+    'PAYMENT_PENDING',
+    'PAID_FOR_ADMIN_VERIFICATION',
+    'PENDING_SCHEDULE_CONFIRMATION',
+    'RESERVED',
+    'RESCHEDULING_REQUESTED'
+  ]
+
   const activeReservations = selectedCustomer
-    ? selectedCustomer.bookings.filter(b => b.status === 'RESERVED' || b.status === 'BALANCE_DUE')
+    ? selectedCustomer.registrations.filter(r => activeStatuses.includes(r.status))
     : []
 
   const bookingHistory = selectedCustomer
-    ? selectedCustomer.bookings.filter(b => b.status !== 'RESERVED' && b.status !== 'BALANCE_DUE')
+    ? selectedCustomer.registrations.filter(r => !activeStatuses.includes(r.status))
     : []
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'CONFIRMED':
+      case 'ATTENDED':
+        return 'badge-green'
+      case 'AWAITING_PAYMENT':
+      case 'PAYMENT_PENDING':
+      case 'PAID_FOR_ADMIN_VERIFICATION':
+      case 'PENDING_SCHEDULE_CONFIRMATION':
+      case 'RESERVED':
+        return 'badge-yellow'
+      case 'CANCELLED':
+      case 'REFUNDED':
+        return 'badge-red'
+      default:
+        return 'badge-blue'
+    }
+  }
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: '24px', alignItems: 'start' }}>
@@ -143,10 +155,7 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
                   </div>
                   <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                     <span className="badge badge-gray" style={{ fontSize: '0.7rem', padding: '2px 6px' }}>
-                      {c.bookings.length} booking{c.bookings.length !== 1 ? 's' : ''}
-                    </span>
-                    <span className="badge badge-blue" style={{ fontSize: '0.7rem', padding: '2px 6px' }}>
-                      {c.vouchers.length} voucher{c.vouchers.length !== 1 ? 's' : ''}
+                      {c.registrations.length} booking{c.registrations.length !== 1 ? 's' : ''}
                     </span>
                   </div>
                 </button>
@@ -163,7 +172,7 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
             <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.3 }}>👤</div>
             <h3>Select a Customer</h3>
             <p style={{ fontSize: '0.9rem', maxWidth: '300px', textAlign: 'center' }}>
-              Choose a customer from the left directory to view their voucher balances, active reservations, and check-in history.
+              Choose a customer from the left directory to view their active reservations and booking history.
             </p>
           </div>
         ) : (
@@ -192,58 +201,7 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
               </div>
             </div>
 
-            {/* 2. Active Vouchers Section */}
-            <div className="admin-card-table" style={{ padding: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--admin-text-primary)' }}>Associated Vouchers</h3>
-              {selectedCustomer.vouchers.length === 0 ? (
-                <div style={{ color: 'var(--admin-text-secondary)', fontSize: '0.9rem' }}>No vouchers assigned.</div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-                  {selectedCustomer.vouchers.map(v => (
-                    <div key={v.id} style={{ border: '1px solid var(--admin-border)', borderRadius: '0.75rem', padding: '1rem', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--accent)' }}>{v.voucherCode}</span>
-                        <span className={`badge ${v.status === 'ACTIVE' ? 'badge-green' : v.status === 'FULLY_USED' ? 'badge-gray' : 'badge-blue'}`} style={{ fontSize: '0.7rem' }}>
-                          {v.status}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--admin-text-primary)' }}>{v.planName}</div>
-                      <div style={{ marginTop: '0.5rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--admin-text-secondary)', marginBottom: '4px' }}>
-                          <span>Ticket Meter:</span>
-                          <strong>{v.remainingUnits} / {v.totalUnits} ticket{v.totalUnits !== 1 ? 's' : ''} remaining</strong>
-                        </div>
-                        <div style={{ width: '100%', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div style={{ width: `${(v.remainingUnits / v.totalUnits) * 100}%`, height: '100%', background: 'var(--accent)', borderRadius: '3px' }}></div>
-                        </div>
-                      </div>
-                      <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'flex-end' }}>
-                        <button
-                          onClick={() => openTopUpModal(v.id, v.voucherCode)}
-                          style={{
-                            padding: '0.35rem 0.75rem',
-                            fontSize: '0.75rem',
-                            borderRadius: '0.5rem',
-                            background: '#fff',
-                            color: 'var(--accent)',
-                            border: '1.5px solid var(--accent)',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(249,115,22,0.06)' }}
-                          onMouseOut={(e) => { e.currentTarget.style.background = '#fff' }}
-                        >
-                          💸 Top Up
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* 3. Bookings Section */}
+            {/* 2. Registrations Section */}
             <div className="admin-card-table" style={{ padding: '1.5rem' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 
@@ -262,28 +220,34 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
                           <tr>
                             <th>Booking Ref</th>
                             <th>Session Details</th>
-                            <th>Credits</th>
+                            <th>Participants</th>
                             <th>Status</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {activeReservations.map(b => (
-                            <tr key={b.id}>
-                              <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{b.bookingReference}</td>
+                          {activeReservations.map(r => (
+                            <tr key={r.id}>
+                              <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{r.bookingReference}</td>
                               <td>
-                                <div style={{ fontWeight: 500 }}>
-                                  {new Date(b.session.sessionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                  {' | '}
-                                  {b.session.startTime} - {b.session.endTime}
-                                </div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>
-                                  Category: {b.session.category} | Module: {b.session.moduleName}
-                                </div>
+                                {r.session ? (
+                                  <>
+                                    <div style={{ fontWeight: 500 }}>
+                                      {new Date(r.session.sessionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                      {' | '}
+                                      {r.session.startTime} - {r.session.endTime}
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>
+                                      Module: {r.session.moduleName ?? r.session.category}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div style={{ fontSize: '0.85rem', color: 'var(--admin-text-secondary)' }}>Pending Schedule</div>
+                                )}
                               </td>
-                              <td style={{ fontWeight: 600 }}>{b.unitsToDeduct} units</td>
+                              <td style={{ fontWeight: 600 }}>{r.participantsCount} pax</td>
                               <td>
-                                <span className={`badge ${b.status === 'RESERVED' ? 'badge-blue' : 'badge-yellow'}`}>
-                                  {b.status.replace(/_/g, ' ')}
+                                <span className={`badge ${getStatusBadge(r.status)}`}>
+                                  {r.status.replace(/_/g, ' ')}
                                 </span>
                               </td>
                             </tr>
@@ -297,7 +261,7 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
                 {/* Booking History */}
                 <div>
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--admin-text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    Booking History & Check-ins
+                    Booking History
                     <span className="badge badge-gray" style={{ fontSize: '0.75rem' }}>{bookingHistory.length}</span>
                   </h3>
                   {bookingHistory.length === 0 ? (
@@ -309,31 +273,34 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
                           <tr>
                             <th>Booking Ref</th>
                             <th>Session Details</th>
-                            <th>Credits</th>
+                            <th>Participants</th>
                             <th>Status</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {bookingHistory.map(b => (
-                            <tr key={b.id}>
-                              <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{b.bookingReference}</td>
+                          {bookingHistory.map(r => (
+                            <tr key={r.id}>
+                              <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{r.bookingReference}</td>
                               <td>
-                                <div style={{ fontWeight: 500 }}>
-                                  {new Date(b.session.sessionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                  {' | '}
-                                  {b.session.startTime} - {b.session.endTime}
-                                </div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>
-                                  Category: {b.session.category} | Module: {b.session.moduleName}
-                                </div>
+                                {r.session ? (
+                                  <>
+                                    <div style={{ fontWeight: 500 }}>
+                                      {new Date(r.session.sessionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                      {' | '}
+                                      {r.session.startTime} - {r.session.endTime}
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)' }}>
+                                      Module: {r.session.moduleName ?? r.session.category}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div style={{ fontSize: '0.85rem', color: 'var(--admin-text-secondary)' }}>Pending Schedule</div>
+                                )}
                               </td>
-                              <td style={{ fontWeight: 600 }}>{b.unitsToDeduct} units</td>
+                              <td style={{ fontWeight: 600 }}>{r.participantsCount} pax</td>
                               <td>
-                                <span className={`badge ${
-                                  b.status === 'CHECKED_IN' || b.status === 'WALKIN_CONFIRMED' ? 'badge-green' : 
-                                  b.status === 'CANCELLED_BY_CUSTOMER' ? 'badge-red' : 'badge-gray'
-                                }`}>
-                                  {b.status.replace(/_/g, ' ')}
+                                <span className={`badge ${getStatusBadge(r.status)}`}>
+                                  {r.status.replace(/_/g, ' ')}
                                 </span>
                               </td>
                             </tr>
@@ -355,75 +322,6 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
           background-color: #f8fafc !important;
         }
       `}</style>
-      {/* Top Up Voucher Modal */}
-      {showTopUpModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1.5rem' }}>
-          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '450px', borderRadius: '1.5rem', background: '#ffffff', color: 'var(--foreground)', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>Top Up Voucher</h3>
-                <p style={{ fontSize: '0.82rem', color: 'var(--admin-text-secondary)', margin: '4px 0 0 0' }}>
-                  Voucher: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--accent)' }}>{topUpCode}</span>
-                </p>
-              </div>
-              <button onClick={() => setShowTopUpModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: 'var(--admin-text-secondary)', cursor: 'pointer' }}>&times;</button>
-            </div>
-
-            <form onSubmit={handleTopUpSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {topUpError && <div style={{ padding: '0.6rem 0.85rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.5rem', fontSize: '0.85rem', borderLeft: '3px solid #ef4444' }}>{topUpError}</div>}
-
-              <div className="input-group">
-                <label style={{ fontWeight: 600 }}>Units to Add</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={topUpUnits}
-                  onChange={(e) => {
-                    const units = parseInt(e.target.value, 10) || 1
-                    setTopUpUnits(units)
-                    setTopUpAmount(units * 300)
-                  }}
-                  className="input-field"
-                  required
-                  style={{ borderRadius: '0.5rem' }}
-                />
-              </div>
-
-              <div className="input-group">
-                <label style={{ fontWeight: 600 }}>Amount Paid (Fixed Price)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={topUpAmount}
-                  onChange={(e) => setTopUpAmount(parseFloat(e.target.value) || 0)}
-                  className="input-field"
-                  required
-                  style={{ borderRadius: '0.5rem' }}
-                />
-              </div>
-
-              <div className="input-group">
-                <label style={{ fontWeight: 600 }}>Notes / Transaction Description</label>
-                <textarea
-                  value={topUpNotes}
-                  onChange={(e) => setTopUpNotes(e.target.value)}
-                  className="input-field"
-                  placeholder="e.g. Paid cash for 1 extra unit top up"
-                  style={{ borderRadius: '0.5rem', minHeight: '60px', padding: '0.5rem' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                <button type="button" onClick={() => setShowTopUpModal(false)} className="admin-btn-outline" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem' }}>Cancel</button>
-                <button type="submit" disabled={topUpLoading} className="pricing-btn pricing-btn-solid" style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem', background: 'var(--accent)', border: 'none', color: 'white', fontWeight: 600 }}>
-                  {topUpLoading ? 'Processing...' : 'Confirm Top Up'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

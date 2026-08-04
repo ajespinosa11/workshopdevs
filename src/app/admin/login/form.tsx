@@ -51,12 +51,12 @@ export default function AdminLoginForm() {
       
       <div className="input-group">
         <label htmlFor="email">Email</label>
-        <input type="email" id="email" name="email" required className="input-field" placeholder="admin@workshop.com" defaultValue="admin@workshop.com" />
+        <input type="email" id="email" name="email" required className="input-field" placeholder="admin@workshop.com" autoComplete="off" />
       </div>
 
       <div className="input-group">
         <label htmlFor="password">Password</label>
-        <input type="password" id="password" name="password" required className="input-field" defaultValue="admin123" />
+        <input type="password" id="password" name="password" required className="input-field" placeholder="Enter password" autoComplete="new-password" />
       </div>
 
       <button type="submit" className="btn btn-primary mt-2" disabled={loading}>
