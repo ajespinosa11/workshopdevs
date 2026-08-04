@@ -39,7 +39,7 @@ export default async function AdminSessionsPage() {
   const modules = await prisma.module.findMany({
     where: {
       name: {
-        in: ['Print 2 Profit', 'Make-ur-robot workshop', 'Free Workshop']
+        in: ['Prints 2 Profit', 'Print 2 Profit', 'Make-ur-robot workshop', 'Free Workshop']
       }
     },
     orderBy: { name: 'asc' }
