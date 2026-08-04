@@ -694,7 +694,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                   <div style={{ margin: '2px 0 6px 0', borderLeft: '3px solid var(--accent)', paddingLeft: '8px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--admin-text-primary)' }}>
-                        {s.module?.name || 'Print 2 Profit Event'}
+                        {s.module?.name || 'Prints 2 Profit Event'}
                       </div>
                       {s.module?.id && editingDescModuleId !== s.module.id && (
                         <button

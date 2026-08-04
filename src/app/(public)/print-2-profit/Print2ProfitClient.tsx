@@ -91,7 +91,7 @@ export function getModuleTheme(moduleName?: string | null) {
       border: '#ffedd5',
       badgeText: '#c2410c',
       dot: '#f97316',
-      name: moduleName || 'Print 2 Profit'
+      name: moduleName || 'Prints 2 Profit'
     }
   }
   if (name.includes('robot') || name.includes('make-ur-robot')) {
@@ -984,7 +984,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <span style={{ color: '#64748b' }}>Workshop:</span>
-                    <strong style={{ color: '#0f172a' }}>{modalSession.module?.name || 'Print 2 Profit'}</strong>
+                    <strong style={{ color: '#0f172a' }}>{modalSession.module?.name || 'Prints 2 Profit'}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <span style={{ color: '#64748b' }}>Date &amp; Time:</span>
@@ -1060,7 +1060,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <span style={{ color: '#166534' }}>Workshop:</span>
-                    <strong style={{ color: '#14532d' }}>{modalSession.module?.name || 'Print 2 Profit'}</strong>
+                    <strong style={{ color: '#14532d' }}>{modalSession.module?.name || 'Prints 2 Profit'}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <span style={{ color: '#166534' }}>Date &amp; Time:</span>

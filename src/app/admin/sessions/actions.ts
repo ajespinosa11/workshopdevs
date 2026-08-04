@@ -167,9 +167,9 @@ export async function createSession(formData: FormData) {
 
   let finalModuleId = moduleId
   if (!finalModuleId) {
-    const p2pModule = await prisma.module.findFirst({ where: { name: 'Print 2 Profit' } })
+    const p2pModule = await prisma.module.findFirst({ where: { name: 'Prints 2 Profit' } })
     if (!p2pModule) {
-      return { error: 'Print 2 Profit event module not found in the database. Please seed it first.' }
+      return { error: 'Prints 2 Profit event module not found in the database. Please seed it first.' }
     }
     finalModuleId = p2pModule.id
   }
@@ -248,7 +248,7 @@ export async function updateSession(formData: FormData) {
 
   let finalModuleId = moduleId
   if (!finalModuleId) {
-    const p2pModule = await prisma.module.findFirst({ where: { name: 'Print 2 Profit' } })
+    const p2pModule = await prisma.module.findFirst({ where: { name: 'Prints 2 Profit' } })
     if (p2pModule) {
       finalModuleId = p2pModule.id
     } else {
