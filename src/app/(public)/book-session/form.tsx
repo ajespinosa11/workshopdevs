@@ -598,7 +598,7 @@ export default function BookSessionForm() {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: '2.5rem', alignItems: 'start' }} className="booking-layout-grid">
+      <div className="booking-layout-grid">
         
         {/* ========================================================
             LEFT COLUMN: Venue details & gallery (secondary focus)

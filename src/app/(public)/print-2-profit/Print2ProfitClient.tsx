@@ -178,14 +178,14 @@ export default function Print2ProfitClient({ sessions }: Props) {
           }}>
             Makerlab Workshops &amp; Events
           </span>
-          <h1 style={{ fontSize: '38px', fontWeight: 900, lineHeight: 1.15, marginBottom: '16px', letterSpacing: '-0.5px' }}>
+          <h1 className="p2p-hero-h1" style={{ fontSize: '38px', fontWeight: 900, lineHeight: 1.15, marginBottom: '16px', letterSpacing: '-0.5px' }}>
             Book Your Workshop &amp; Event Session
           </h1>
-          <p style={{ fontSize: '16px', color: '#cbd5e1', maxWidth: '640px', margin: '0 auto 28px', lineHeight: 1.6 }}>
+          <p className="p2p-hero-sub" style={{ fontSize: '16px', color: '#cbd5e1', maxWidth: '640px', margin: '0 auto 28px', lineHeight: 1.6 }}>
             Explore available 3D printing masterclasses and hands-on workshops created by Makerlab. Select your workshop, pick a schedule, and reserve your seat.
           </p>
 
-          <div style={{
+          <div className="p2p-hero-stats" style={{
             display: 'inline-flex', gap: '32px', background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(20px)',
             padding: '16px 32px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.9)',
             boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
@@ -886,6 +886,12 @@ export default function Print2ProfitClient({ sessions }: Props) {
       <style>{`
         @media (max-width: 768px) {
           .p2p-grid { grid-template-columns: 1fr !important; }
+          .p2p-hero-stats { flex-direction: column !important; gap: 12px !important; padding: 14px 20px !important; }
+          .p2p-hero-h1 { font-size: 26px !important; }
+          .p2p-hero-sub { font-size: 14px !important; }
+        }
+        @media (max-width: 480px) {
+          .p2p-hero-h1 { font-size: 22px !important; }
         }
       `}</style>
     </div>

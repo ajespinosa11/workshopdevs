@@ -22,6 +22,11 @@
 
 
 
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -256,6 +261,81 @@ a {
   color: #f97316;
 }
 
+/* Navigation Responsive Styles */
+.navbar {
+  position: relative;
+  z-index: 1000;
+}
+
+.nav-container {
+  display: flex;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+}
+
+.nav-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  color: var(--primary);
+  border-radius: 0.5rem;
+  transition: background 0.2s ease;
+}
+
+.nav-hamburger:hover {
+  background: rgba(15, 37, 64, 0.05);
+}
+
+.nav-mobile-menu {
+  background: #ffffff;
+  border-top: 1px solid #f1f5f9;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+  animation: navSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes navSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .nav-container {
+    padding: 0.75rem 1rem !important;
+  }
+
+  .nav-links {
+    display: none !important;
+  }
+
+  .nav-hamburger {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 /* Layout classes */
 .container {
   width: 100%;
@@ -276,6 +356,16 @@ a {
   display: flex;
   flex-direction: column;
   padding: 3rem 0;
+}
+
+@media (max-width: 640px) {
+  .container, .container-fluid {
+    padding: 0 1rem;
+  }
+
+  .page-wrapper {
+    padding: 1.5rem 0;
+  }
 }
 
 /* Grid Utilities */
@@ -868,6 +958,74 @@ a {
   padding: 2.25rem 2rem;
   overflow-y: auto;
   flex-grow: 1;
+}
+
+/* Admin Responsive Layout */
+@media (max-width: 1024px) {
+  .admin-layout {
+    flex-direction: column;
+  }
+
+  .admin-sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+    padding: 0.75rem 1rem;
+    border-right: none;
+    border-bottom: 1px solid var(--admin-border);
+  }
+
+  .admin-sidebar-menu {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-menu-item {
+    white-space: nowrap;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .admin-sidebar-section-title {
+    display: none;
+  }
+
+  .admin-sidebar-logo-container {
+    margin-bottom: 0.5rem;
+  }
+
+  .admin-header {
+    padding: 0 1rem;
+    height: 60px;
+  }
+
+  .admin-header-title {
+    font-size: 1.15rem;
+  }
+
+  .admin-content {
+    padding: 1.25rem 1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-header-right {
+    gap: 0.75rem;
+  }
+
+  .admin-header-title {
+    font-size: 0.95rem;
+  }
+}
+
+/* Responsive Table Container */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
 }
 
 /* Stats Cards */
@@ -2021,4 +2179,243 @@ a {
 /* admin-content padding reset for light-panel pages */
 .admin-content:has(.light-panel) {
   padding: 0 !important;
+}
+
+/* ══════════════════════════════════════════════
+   BOOKING SESSION – two-column layout
+   ══════════════════════════════════════════════ */
+.booking-layout-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .booking-layout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Move the form / right column above the venue gallery on mobile */
+  .booking-location-column {
+    order: 2;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   HERO – tighter padding on mobile
+   ══════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .hero-section {
+    padding: 4rem 1rem 3rem;
+    min-height: 80vh;
+  }
+
+  .hero-content {
+    gap: 1.25rem;
+  }
+
+  .hero-badge {
+    font-size: 0.72rem;
+    padding: 0.4rem 0.85rem;
+  }
+
+  .hero-btn-primary,
+  .hero-btn-secondary {
+    font-size: 0.9rem;
+    padding: 0.8rem 1.5rem;
+  }
+
+  .hero-stat-number {
+    font-size: 1.1rem;
+  }
+
+  .hero-scroll-indicator {
+    display: none;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   GALLERY – reduce section padding on mobile
+   ══════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .gallery-section {
+    padding: 2.5rem 1rem;
+  }
+
+  .gallery-video-sticky {
+    position: static;
+  }
+
+  .lightbox-overlay {
+    padding: 1rem;
+  }
+
+  .lightbox-close {
+    top: -2.75rem;
+    width: 38px;
+    height: 38px;
+  }
+
+  .lightbox-title {
+    font-size: 1.1rem;
+  }
+
+  .lightbox-desc {
+    font-size: 0.85rem;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   CONFIRMATION CARD – full-width on mobile
+   ══════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .cal-confirmation-card {
+    padding: 2rem 1.25rem;
+    margin: 1rem auto;
+    border-radius: 1rem;
+  }
+
+  .cal-confirm-title {
+    font-size: 1.4rem;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   ADMIN TABLE – force table overflow on mobile
+   ══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .admin-card-table {
+    border-radius: 1rem;
+  }
+
+  .admin-card-table-header {
+    padding: 1rem 1.25rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  /* Wrap the data tables in overflow container */
+  .admin-card-table .data-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  .admin-theme .data-table th,
+  .admin-theme .data-table td {
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .admin-stats-grid {
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .admin-stat-card {
+    padding: 1.25rem 1rem;
+  }
+
+  .admin-stat-value {
+    font-size: 1.6rem;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   PRICING CARDS – touch-friendly spacing
+   ══════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .pricing-card {
+    padding: 2rem 1.5rem;
+    border-radius: 1.5rem;
+  }
+
+  .pricing-card-price {
+    font-size: 2.5rem;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   CALENDAR SCHEDULER – full width on mobile
+   ══════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .calendar-box {
+    padding: 1.25rem;
+  }
+
+  .slots-box {
+    padding: 1.25rem;
+  }
+
+  .slots-list {
+    max-height: 260px;
+  }
+
+  .calendar-day-cell {
+    font-size: 0.8rem;
+  }
+
+  .booking-col {
+    padding: 1.25rem;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   BOOKING FORM – step 3 success screen buttons
+   ══════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  /* Stack success action buttons vertically */
+  .cal-confirmation-card > div[style*="flex"] {
+    flex-direction: column;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   GLOBAL TEXT/IMG safeguards
+   ══════════════════════════════════════════════ */
+img, video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Prevent long unbroken strings from causing overflow */
+p, h1, h2, h3, h4, h5, h6, li, td, th {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* ios-glass-card touch target enhancements */
+@media (max-width: 768px) {
+  .ios-glass-card {
+    border-radius: 1rem !important;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   BOOK SESSION PAGE – responsive heading
+   ══════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  /* Booking page h1 is set via inline style at 2.5rem — scale it down */
+  .w-full.animate-fade-in > div > h1 {
+    font-size: 1.75rem !important;
+  }
+
+  /* Compress top padding on the booking page wrapper */
+  .w-full.animate-fade-in {
+    padding-top: 1.5rem !important;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   MISC – ensure modal overlays are touch-safe
+   ══════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  /* T&C modal full-width on mobile */
+  div[style*="position: fixed"] > div[style*="maxWidth: '500px'"] {
+    width: 95% !important;
+    padding: 1.5rem !important;
+  }
 }

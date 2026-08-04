@@ -28,20 +28,20 @@ export default function Navigation() {
 
   return (
     <nav className="navbar" style={{ background: 'rgba(255, 255, 255, 0.95)', borderBottom: '1px solid #e2e8f0', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
-      <div className="container flex justify-between items-center" style={{ display: 'flex', width: '100%', maxWidth: '1240px', margin: '0 auto', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link href="/" className="nav-logo">
+      <div className="container nav-container" style={{ display: 'flex', width: '100%', maxWidth: '1240px', margin: '0 auto', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Link href="/" className="nav-logo" style={{ display: 'flex', alignItems: 'center' }}>
           <Image
             src="/New Logo 2024 Liner Name Dark large symbol.png"
             alt="Makerlab 3D Workshop Logo"
             height={44}
             width={160}
-            style={{ objectFit: 'contain', objectPosition: 'left center' }}
+            style={{ objectFit: 'contain', objectPosition: 'left center', maxWidth: '140px', height: 'auto' }}
             priority
           />
         </Link>
 
         {/* Desktop links */}
-        <div className="nav-links" style={{ display: 'flex', alignItems: 'center', gap: '1.75rem' }}>
+        <div className="nav-links">
           {links.map(l => {
             const isActive = activeTab === l.key
             return (
@@ -81,29 +81,19 @@ export default function Navigation() {
           type="button"
           aria-label="Toggle navigation"
           onClick={() => setMobileOpen(o => !o)}
-          style={{
-            display: 'none',
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: '0.5rem', color: 'var(--primary)'
-          }}
           className="nav-hamburger"
         >
           {mobileOpen ? (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           ) : (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           )}
         </button>
       </div>
 
       {/* Mobile dropdown */}
       {mobileOpen && (
-        <div style={{
-          background: '#fff', borderTop: '1px solid #f1f5f9',
-          padding: '0.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.25rem'
-        }}
-          className="nav-mobile-menu"
-        >
+        <div className="nav-mobile-menu">
           {links.map(l => {
             const isActive = activeTab === l.key
             return (
@@ -113,12 +103,13 @@ export default function Navigation() {
                 className="nav-link"
                 onClick={() => setMobileOpen(false)}
                 style={{ 
-                  padding: '0.65rem 0.5rem', 
+                  padding: '0.75rem 0.75rem', 
                   borderRadius: '0.5rem', 
                   fontSize: '0.95rem',
                   fontWeight: 700,
                   color: isActive ? 'var(--accent)' : 'var(--primary)',
-                  background: isActive ? '#fff7ed' : 'transparent'
+                  background: isActive ? '#fff7ed' : 'transparent',
+                  display: 'block'
                 }}
               >
                 {l.label}
