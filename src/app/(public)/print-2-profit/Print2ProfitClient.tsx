@@ -37,6 +37,19 @@ function formatSeconds(totalSecs: number) {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
 }
 
+function formatTime(timeStr?: string | null) {
+  if (!timeStr) return ''
+  const parts = timeStr.split(':')
+  if (parts.length < 2) return timeStr
+  let hours = parseInt(parts[0], 10)
+  const minutes = parts[1]
+  if (isNaN(hours)) return timeStr
+  const ampm = hours >= 12 ? 'PM' : 'AM'
+  hours = hours % 12
+  if (hours === 0) hours = 12
+  return `${hours}:${minutes} ${ampm}`
+}
+
 function renderFormattedText(text: string | null | undefined) {
   if (!text) return null
   // Strip dangerous tags — content is HTML from the admin's WYSIWYG editor
@@ -593,7 +606,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
                     return (
                       <>
                         {[
-                          ['🕐', 'Time Slot', `${session.startTime} – ${session.endTime}`],
+                          ['🕐', 'Time Slot', `${formatTime(session.startTime)} – ${formatTime(session.endTime)}`],
                           ['👥', 'Slots Available', `${session.availableSlots} of ${session.capacity} remaining`],
                           ['💳', 'Investment', isFree ? 'FREE (₱0)' : '₱3,500 per participant'],
                           ['📍', 'Location', 'Makerlab Experience Hub, Ayala Malls Manila Bay'],
@@ -975,7 +988,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <span style={{ color: '#64748b' }}>Date &amp; Time:</span>
-                    <strong style={{ color: '#0f172a' }}>{formatDate(modalSession.sessionDate)} ({modalSession.startTime})</strong>
+                    <strong style={{ color: '#0f172a' }}>{formatDate(modalSession.sessionDate)} ({formatTime(modalSession.startTime)})</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b' }}>Customer:</span>
@@ -1051,7 +1064,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <span style={{ color: '#166534' }}>Date &amp; Time:</span>
-                    <strong style={{ color: '#14532d' }}>{formatDate(modalSession.sessionDate)} ({modalSession.startTime})</strong>
+                    <strong style={{ color: '#14532d' }}>{formatDate(modalSession.sessionDate)} ({formatTime(modalSession.startTime)})</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#166534' }}>Location:</span>

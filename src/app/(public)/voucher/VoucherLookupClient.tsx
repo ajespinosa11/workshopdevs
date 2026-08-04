@@ -3,6 +3,19 @@
 import { useState } from 'react'
 import { checkVoucherStatusAction } from './actions'
 
+function formatTime(timeStr?: string | null) {
+  if (!timeStr) return ''
+  const parts = timeStr.split(':')
+  if (parts.length < 2) return timeStr
+  let hours = parseInt(parts[0], 10)
+  const minutes = parts[1]
+  if (isNaN(hours)) return timeStr
+  const ampm = hours >= 12 ? 'PM' : 'AM'
+  hours = hours % 12
+  if (hours === 0) hours = 12
+  return `${hours}:${minutes} ${ampm}`
+}
+
 export default function VoucherLookupClient() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -209,7 +222,7 @@ export default function VoucherLookupClient() {
                         <span>📅</span>
                         {new Date(booking.session.sessionDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                         {' · '}
-                        {booking.session.startTime} - {booking.session.endTime}
+                        {formatTime(booking.session.startTime)} - {formatTime(booking.session.endTime)}
                       </span>
                     </div>
 

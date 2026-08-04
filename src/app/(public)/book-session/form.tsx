@@ -75,6 +75,19 @@ function TermsAndConditionsContainer({ checked, onChange }: { checked: boolean, 
   )
 }
 
+function formatTime(timeStr?: string | null) {
+  if (!timeStr) return ''
+  const parts = timeStr.split(':')
+  if (parts.length < 2) return timeStr
+  let hours = parseInt(parts[0], 10)
+  const minutes = parts[1]
+  if (isNaN(hours)) return timeStr
+  const ampm = hours >= 12 ? 'PM' : 'AM'
+  hours = hours % 12
+  if (hours === 0) hours = 12
+  return `${hours}:${minutes} ${ampm}`
+}
+
 export default function BookSessionForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -964,7 +977,7 @@ export default function BookSessionForm() {
                                 style={{ marginTop: '2px' }}
                               />
                               <div>
-                                <strong style={{ color: 'var(--primary)' }}>{s.startTime} - {s.endTime}</strong>
+                                <strong style={{ color: 'var(--primary)' }}>{formatTime(s.startTime)} - {formatTime(s.endTime)}</strong>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--secondary-foreground)', marginTop: '2px' }}>{s.module?.name} · Slots Left: {s.availableSlots}</div>
                               </div>
                             </label>
@@ -1018,7 +1031,7 @@ export default function BookSessionForm() {
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ color: 'var(--secondary-foreground)' }}>Time Slot:</span>
-                        <strong style={{ color: 'var(--primary)' }}>{selSession.startTime} - {selSession.endTime}</strong>
+                        <strong style={{ color: 'var(--primary)' }}>{formatTime(selSession.startTime)} - {formatTime(selSession.endTime)}</strong>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ color: 'var(--secondary-foreground)' }}>Attendees:</span>
@@ -1186,7 +1199,7 @@ export default function BookSessionForm() {
                               </div>
                               <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem', color: 'var(--primary)' }}>
                                 <div><strong>Workshop:</strong> {b.session.module?.name || 'Makerlab Session'}</div>
-                                <div><strong>Schedule:</strong> {new Date(b.session.sessionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} at {b.session.startTime} - {b.session.endTime}</div>
+                                <div><strong>Schedule:</strong> {new Date(b.session.sessionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} at {formatTime(b.session.startTime)} - {formatTime(b.session.endTime)}</div>
                                 <div><strong>Attendee:</strong> {b.customerName} ({b.customerEmail})</div>
                               </div>
                               
@@ -1275,7 +1288,7 @@ export default function BookSessionForm() {
                               />
                               <div>
                                 <strong style={{ color: 'var(--primary)' }}>{new Date(s.sessionDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</strong>
-                                <div style={{ fontSize: '0.8rem', color: 'var(--secondary-foreground)', marginTop: '2px' }}>⏰ {s.startTime} - {s.endTime}</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--secondary-foreground)', marginTop: '2px' }}>⏰ {formatTime(s.startTime)} - {formatTime(s.endTime)}</div>
                               </div>
                             </label>
                           ))}
@@ -1423,7 +1436,7 @@ export default function BookSessionForm() {
                                 style={{ marginTop: '2px' }}
                               />
                               <div>
-                                <strong style={{ color: 'var(--primary)' }}>{s.startTime} - {s.endTime}</strong>
+                                <strong style={{ color: 'var(--primary)' }}>{formatTime(s.startTime)} - {formatTime(s.endTime)}</strong>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--secondary-foreground)', marginTop: '2px' }}>{s.module?.name} · Slots Left: {s.availableSlots}</div>
                               </div>
                             </label>

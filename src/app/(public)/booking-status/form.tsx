@@ -3,6 +3,19 @@
 import { useState } from 'react'
 import { checkBookingStatusAction } from './actions'
 
+function formatTime(timeStr?: string | null) {
+  if (!timeStr) return ''
+  const parts = timeStr.split(':')
+  if (parts.length < 2) return timeStr
+  let hours = parseInt(parts[0], 10)
+  const minutes = parts[1]
+  if (isNaN(hours)) return timeStr
+  const ampm = hours >= 12 ? 'PM' : 'AM'
+  hours = hours % 12
+  if (hours === 0) hours = 12
+  return `${hours}:${minutes} ${ampm}`
+}
+
 export default function BookingStatusForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -207,7 +220,7 @@ export default function BookingStatusForm() {
               <span>{new Date(booking.session.sessionDate).toLocaleDateString()}</span>
               
               <span className="text-secondary-foreground font-medium">Time:</span>
-              <span>{booking.session.startTime} - {booking.session.endTime} ({booking.session.durationHours} hrs)</span>
+              <span>{formatTime(booking.session.startTime)} - {formatTime(booking.session.endTime)} ({booking.session.durationHours} hrs)</span>
               
               <span className="text-secondary-foreground font-medium">Status:</span>
               <span>
