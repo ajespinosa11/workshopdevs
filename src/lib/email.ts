@@ -727,13 +727,16 @@ export async function sendPaidBookingConfirmationEmail({
         <div class="header">
           <div class="header-badge">PAYMENT CONFIRMED</div>
           <h1>You're All Set!</h1>
-          <p>Your Paid Workshop reservation has been confirmed at Makerlab Experience Hub</p>
+          <p>Your workshop booking has been successfully registered at Makerlab Experience Hub</p>
         </div>
         <div class="green-banner">PAID WORKSHOP — SESSION CONFIRMED</div>
         <div class="content">
           <p class="greeting">Hello, ${customerName}!</p>
           <p class="intro-text">
-            We are excited to welcome you to <strong>Makerlab Experience Hub</strong>! Your payment for the workshop has been successfully confirmed. Please keep this email as your booking reference and present it at reception on the day of your session.
+            We're excited to welcome you to <strong>Makerlab Experience Hub</strong>!<br/><br/>
+            Your workshop booking has been successfully registered. Please keep this email as your booking reference and present it at the reception on the day of your session.<br/><br/>
+            Please wait for another email containing important instructions on what to bring and how to prepare for your workshop.<br/><br/>
+            We look forward to seeing you at Makerlab Experience Hub!
           </p>
 
           <div class="ref-box">
@@ -802,7 +805,7 @@ export async function sendPaidBookingConfirmationEmail({
           ` : ''}
 
           <div class="reminder-box">
-            <p><strong>Please arrive 10 minutes early</strong> before your scheduled workshop to ensure a smooth check-in experience.</p>
+            <p><strong>Please arrive 15 minutes early</strong> before your scheduled workshop to ensure a smooth check-in experience.</p>
             <p><strong>Present this confirmation email</strong> (printed or on your phone) together with your valid ID for verification.</p>
             <p><strong>Payment Status:</strong> Payment verified in full.</p>
           </div>
@@ -812,7 +815,7 @@ export async function sendPaidBookingConfirmationEmail({
           </p>
 
           <div style="text-align: center; margin-top: 28px;">
-            <a href="${hostUrl}/book-session" class="cta-button">Manage My Booking</a>
+            <a href="https://workshop.makerlab.ph/book-session?tab=manage" class="cta-button">Manage Booking</a>
           </div>
         </div>
         <div class="footer">

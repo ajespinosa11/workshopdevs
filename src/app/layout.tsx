@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "3D Printing Workshop",
-  description: "Subscription and Booking System for 3D Printing Workshops",
+  title: "Makerlab Workshop",
+  description: "Subscription and Booking System for Makerlab Workshops",
 };
 
 export const viewport: Viewport = {

@@ -13,6 +13,7 @@ interface Session {
   capacity: number
   status: string
   module?: { name: string; description?: string | null } | null
+  collaborator?: string | null
 }
 
 interface Props {
@@ -120,7 +121,8 @@ export default function Print2ProfitClient({ sessions }: Props) {
   const [showModal, setShowModal] = useState(false)
   const [modalMode, setModalMode] = useState<ModalMode>('FORM')
   const [modalSession, setModalSession] = useState<Session | null>(null)
-  const [customerName, setCustomerName] = useState('')
+  const [customerFirstName, setCustomerFirstName] = useState('')
+  const [customerLastName, setCustomerLastName] = useState('')
   const [customerEmail, setCustomerEmail] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -223,7 +225,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
 
   return (
     <div style={{ background: '#f8fafc', minHeight: '100vh', paddingBottom: '64px', fontFamily: "'Inter', sans-serif" }} className="ios-liquid-bg">
-      
+
       {/* Hero Banner */}
       <div style={{
         background: 'linear-gradient(135deg, #0f2540 0%, #1e3a8a 100%)',
@@ -306,7 +308,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
 
         {/* ─── Left Side: Photo Gallery + Calendar ─── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          
+
           {/* 5-Image Venue Photo Collage */}
           <div className="ios-glass-card" style={{
             padding: '16px',
@@ -422,9 +424,9 @@ export default function Print2ProfitClient({ sessions }: Props) {
                 const isAvailable = hasSession && totalSlots >= 5
 
                 // Color definitions
-                const GREEN  = { bg: '#f0fdf4', border: '#86efac', text: '#15803d', dot: '#22c55e' }
+                const GREEN = { bg: '#f0fdf4', border: '#86efac', text: '#15803d', dot: '#22c55e' }
                 const ORANGE = { bg: '#fff7ed', border: '#fdba74', text: '#c2410c', dot: '#f97316' }
-                const RED    = { bg: '#fef2f2', border: '#fecaca', text: '#ef4444', dot: '#ef4444' }
+                const RED = { bg: '#fef2f2', border: '#fecaca', text: '#ef4444', dot: '#ef4444' }
 
                 let theme = isAvailable ? GREEN : isNearFull ? ORANGE : RED
 
@@ -564,12 +566,22 @@ export default function Print2ProfitClient({ sessions }: Props) {
 
                 {/* Session Details List */}
                 <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  
+
                   {/* Workshop Title & Description */}
                   <div style={{ borderBottom: '1px dashed #e2e8f0', paddingBottom: '14px' }}>
                     <div style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>
                       {session.module?.name || 'Workshop Session'}
                     </div>
+                    {session.collaborator && (
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        background: '#eff6ff', border: '1px solid #bfdbfe',
+                        borderRadius: '8px', padding: '4px 10px', fontSize: '12px',
+                        fontWeight: 600, color: '#1e40af', marginBottom: '8px',
+                      }}>
+                        🤝 In collaboration with: <strong>{session.collaborator}</strong>
+                      </div>
+                    )}
                     <div style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.6 }}>
                       {session.module?.description ? renderFormattedText(session.module.description) : 'Hands-on practical workshop session at Makerlab.'}
                     </div>
@@ -679,11 +691,13 @@ export default function Print2ProfitClient({ sessions }: Props) {
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {[
-                'FDM & SLA 3D Printer Hands-On Setup',
-                'Product Costing & Commercial Pricing',
-                'Materials Masterclass (PLA, PETG, Resin)',
-                '1-on-1 Dedicated Instructor Coaching',
-                'Scaling Your 3D Printing Business',
+                'Hands-on learning experience',
+                'Professional equipment and tools',
+                'Workshop materials and supplies',
+                'Expert Mentor Guidance',
+                'Step-by-step activities',
+                'Take-home project or creation',
+                'Certificate / Micro-Credential'
               ].map(item => (
                 <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#475569', fontWeight: 500 }}>
                   <span style={{ color: '#16a34a', fontWeight: 800, flexShrink: 0 }}>✓</span>
@@ -750,21 +764,32 @@ export default function Print2ProfitClient({ sessions }: Props) {
                 <form onSubmit={async (e) => {
                   e.preventDefault()
                   if (submitting) return
-                  if (!customerName || !customerEmail || !customerPhone) {
+
+                  if (!customerFirstName.trim() || !customerLastName.trim() || !customerEmail.trim() || !customerPhone.trim()) {
                     setModalError('Please fill in all required fields.')
+                    return
+                  }
+
+                  const phoneDigits = customerPhone.replace(/\D/g, '')
+                  if (phoneDigits.length !== 11) {
+                    setModalError('Phone number must be exactly 11 digits (e.g. 09171234567).')
                     return
                   }
 
                   setSubmitting(true)
                   setModalError('')
 
+                  const fullName = `${customerFirstName.trim()} ${customerLastName.trim()}`
+
                   try {
                     const res = await createSoftLockReservation({
                       sessionId: modalSession.id,
                       participantsCount: 1,
-                      customerName,
-                      customerEmail,
-                      customerPhone,
+                      customerName: fullName,
+                      customerFirstName: customerFirstName.trim(),
+                      customerLastName: customerLastName.trim(),
+                      customerEmail: customerEmail.trim(),
+                      customerPhone: phoneDigits,
                       salesChannel: 'SHOPIFY'
                     })
 
@@ -775,7 +800,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
                       const shopifyVariantId = process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID || '45713497981119'
                       const shopifyDomain = process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN || 'www.makerlab.ph'
                       const url = `https://${shopifyDomain}/cart/${shopifyVariantId}:1?attributes[booking_reference]=${res.bookingReference}&note=${res.bookingReference}`
-                      
+
                       setCheckoutUrl(url)
                       setActiveBookingRef(res.bookingReference)
                       setReservedUntilTime(new Date(res.reservedUntil).getTime())
@@ -797,23 +822,44 @@ export default function Print2ProfitClient({ sessions }: Props) {
                   }
                 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Full Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        placeholder="John Doe"
-                        disabled={submitting}
-                        style={{
-                          width: '100%', padding: '12px 16px', borderRadius: '12px',
-                          border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none',
-                          transition: 'border-color 0.2s', fontFamily: 'inherit'
-                        }}
-                      />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          First Name *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={customerFirstName}
+                          onChange={(e) => setCustomerFirstName(e.target.value)}
+                          placeholder="John"
+                          disabled={submitting}
+                          style={{
+                            width: '100%', padding: '12px 16px', borderRadius: '12px',
+                            border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none',
+                            transition: 'border-color 0.2s', fontFamily: 'inherit'
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Last Name *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={customerLastName}
+                          onChange={(e) => setCustomerLastName(e.target.value)}
+                          placeholder="Doe"
+                          disabled={submitting}
+                          style={{
+                            width: '100%', padding: '12px 16px', borderRadius: '12px',
+                            border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none',
+                            transition: 'border-color 0.2s', fontFamily: 'inherit'
+                          }}
+                        />
+                      </div>
                     </div>
 
                     <div>
@@ -837,13 +883,19 @@ export default function Print2ProfitClient({ sessions }: Props) {
 
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Phone Number *
+                        Phone Number (11 Digits) *
                       </label>
                       <input
-                        type="tel"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={11}
                         required
                         value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 11)
+                          setCustomerPhone(val)
+                        }}
                         placeholder="09171234567"
                         disabled={submitting}
                         style={{
@@ -927,7 +979,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b' }}>Customer:</span>
-                    <strong style={{ color: '#0f172a' }}>{customerName}</strong>
+                    <strong style={{ color: '#0f172a' }}>{customerFirstName} {customerLastName}</strong>
                   </div>
                 </div>
 
@@ -985,7 +1037,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
                   Payment Confirmed!
                 </h3>
                 <p style={{ fontSize: '14px', color: '#475569', marginBottom: '20px', lineHeight: 1.5 }}>
-                  Thank you, <strong>{customerName}</strong>! Your workshop slot has been officially reserved.
+                  Thank you, <strong>{customerFirstName}</strong>! Your workshop slot has been officially reserved.
                 </p>
 
                 <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '16px', padding: '16px', textAlign: 'left', fontSize: '13px', marginBottom: '20px' }}>
@@ -1071,7 +1123,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
       {/* ── Terms & Conditions Modal ── */}
       {showTCModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '1.5rem' }}>
-        <div style={{ background: '#fff', borderRadius: '24px', width: '100%', maxWidth: '720px', display: 'flex', flexDirection: 'column', gap: '1.25rem', boxShadow: '0 30px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+          <div style={{ background: '#fff', borderRadius: '24px', width: '100%', maxWidth: '720px', display: 'flex', flexDirection: 'column', gap: '1.25rem', boxShadow: '0 30px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
 
             {/* Header */}
             <div style={{ padding: '1.75rem 2rem 0 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1157,7 +1209,8 @@ export default function Print2ProfitClient({ sessions }: Props) {
                   setShowTCModal(false)
                   setModalSession(pendingSession)
                   setModalError('')
-                  setCustomerName('')
+                  setCustomerFirstName('')
+                  setCustomerLastName('')
                   setCustomerEmail('')
                   setCustomerPhone('')
                   setModalMode('FORM')

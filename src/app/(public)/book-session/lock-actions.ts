@@ -76,6 +76,8 @@ export async function createSoftLockReservation(params: {
   sessionId: string
   participantsCount: number
   customerName: string
+  customerFirstName?: string
+  customerLastName?: string
   customerEmail: string
   customerPhone: string
   salesChannel?: string
@@ -83,7 +85,7 @@ export async function createSoftLockReservation(params: {
   // Always clean up any stale soft locks first
   await releaseExpiredSoftLocks()
 
-  const { sessionId, participantsCount, customerName, customerEmail, customerPhone, salesChannel = 'SHOPIFY' } = params
+  const { sessionId, participantsCount, customerName, customerFirstName, customerLastName, customerEmail, customerPhone, salesChannel = 'SHOPIFY' } = params
 
   return await prisma.$transaction(async (tx) => {
     const session = await tx.workshopSession.findUnique({
@@ -116,7 +118,7 @@ export async function createSoftLockReservation(params: {
     const registration = await tx.workshopRegistration.create({
       data: {
         bookingReference,
-        sessionId,
+        session: { connect: { id: sessionId } },
         customerName,
         customerEmail,
         customerPhone,
@@ -125,7 +127,7 @@ export async function createSoftLockReservation(params: {
         status: 'PENDING_CHECKOUT',
         reservedAt: now,
         reservedUntil,
-        notes: `Temporary 15-minute checkout lock created.`
+        notes: `First Name: ${customerFirstName || ''} | Last Name: ${customerLastName || ''}`
       }
     })
 

@@ -163,6 +163,7 @@ export async function createSession(formData: FormData) {
   const capacityStr = formData.get('capacity') as string
   const notes = formData.get('notes') as string | undefined
   const description = formData.get('description') as string | undefined
+  const collaborator = formData.get('collaborator') as string | undefined
 
   let finalModuleId = moduleId
   if (!finalModuleId) {
@@ -215,7 +216,8 @@ export async function createSession(formData: FormData) {
         capacity,
         availableSlots: capacity,
         status: 'OPEN',
-        notes
+        notes,
+        collaborator: collaborator?.trim() || null
       }
     })
 
@@ -242,6 +244,7 @@ export async function updateSession(formData: FormData) {
   const endTime = formData.get('endTime') as string
   const capacityStr = formData.get('capacity') as string
   const notes = formData.get('notes') as string | undefined
+  const collaborator = formData.get('collaborator') as string | undefined
 
   let finalModuleId = moduleId
   if (!finalModuleId) {
@@ -294,7 +297,8 @@ export async function updateSession(formData: FormData) {
         durationHours,
         capacity,
         availableSlots: newAvailableSlots,
-        notes
+        notes,
+        collaborator: collaborator?.trim() || null
       }
     })
 

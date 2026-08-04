@@ -79,6 +79,7 @@ export default async function AdminSessionsPage() {
       availableSlots: s.availableSlots,
       status: s.status,
       notes: s.notes,
+      collaborator: s.collaborator,
       bookingsCount: totalParticipants,
       bookings: combinedBookings,
       module: {

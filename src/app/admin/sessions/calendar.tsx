@@ -27,6 +27,7 @@ interface SessionData {
   bookingsCount: number
   bookings: any[]
   notes?: string | null
+  collaborator?: string | null
   module?: {
     id: string
     name: string
@@ -221,6 +222,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
   const [actionError, setActionError] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
   const [notes, setNotes] = useState('')
+  const [collaborator, setCollaborator] = useState('')
   const [newSessionDesc, setNewSessionDesc] = useState('')
 
   // Edit session modal state
@@ -230,6 +232,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
   const [editEndTime, setEditEndTime] = useState('11:00')
   const [editCapacity, setEditCapacity] = useState(20)
   const [editNotes, setEditNotes] = useState('')
+  const [editCollaborator, setEditCollaborator] = useState('')
   const [editError, setEditError] = useState('')
   const [editLoading, setEditLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -316,6 +319,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     formData.append('capacity', capacity.toString())
     formData.append('notes', notes)
     formData.append('description', newSessionDesc)
+    formData.append('collaborator', collaborator)
 
     const res = await createSession(formData)
     if (res.error) {
@@ -324,6 +328,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
       setShowCreateModal(false)
       setNotes('')
       setNewSessionDesc('')
+      setCollaborator('')
       router.refresh()
     }
     setActionLoading(false)
@@ -363,6 +368,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     setEditEndTime(s.endTime)
     setEditCapacity(s.capacity)
     setEditNotes(s.notes || '')
+    setEditCollaborator(s.collaborator || '')
     setEditError('')
   }
 
@@ -379,6 +385,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     formData.append('endTime', editEndTime)
     formData.append('capacity', editCapacity.toString())
     formData.append('notes', editNotes)
+    formData.append('collaborator', editCollaborator)
 
     const res = await updateSession(formData)
     if (res.error) {
@@ -1053,6 +1060,21 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                 minHeight="160px"
               />
 
+              {/* Collaboration field */}
+              <div className="input-group">
+                <label style={{ fontWeight: 600 }}>
+                  In collaboration with: <span style={{ fontWeight: 400, color: 'var(--admin-text-secondary)', fontSize: '0.82rem' }}>(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={editCollaborator}
+                  onChange={(e) => setEditCollaborator(e.target.value)}
+                  className="input-field"
+                  placeholder="e.g. TechHub PH, DOST, UP Diliman..."
+                  style={{ borderRadius: '0.5rem' }}
+                />
+              </div>
+
               {/* Copy this Event to Another Date UI */}
               <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem', marginTop: '0.5rem' }}>
                 <label style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--primary)', display: 'block', marginBottom: '0.4rem' }}>
@@ -1189,6 +1211,21 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                 placeholder="e.g. Bring your laptop, limited seats, parking info..."
                 minHeight="140px"
               />
+
+              {/* Collaboration field */}
+              <div className="input-group">
+                <label style={{ fontWeight: 600 }}>
+                  In collaboration with: <span style={{ fontWeight: 400, color: 'var(--admin-text-secondary)', fontSize: '0.82rem' }}>(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={collaborator}
+                  onChange={(e) => setCollaborator(e.target.value)}
+                  className="input-field"
+                  placeholder="e.g. TechHub PH, DOST, UP Diliman..."
+                  style={{ borderRadius: '0.5rem' }}
+                />
+              </div>
 
               <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem' }}>
                 <button type="button" onClick={() => setShowCreateModal(false)} className="admin-btn-outline" style={{ flex: 1, padding: '0.6rem', borderRadius: '0.5rem' }}>Cancel</button>

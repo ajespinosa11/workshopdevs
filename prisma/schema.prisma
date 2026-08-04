@@ -104,6 +104,7 @@ model WorkshopSession {
   availableSlots   Int
   status           String   @default("OPEN") // OPEN, FULL, CANCELLED, COMPLETED
   notes            String?
+  collaborator     String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -197,6 +198,8 @@ model WorkshopRegistration {
   sku                     String             @default("BW001")
   
   customerName            String
+  customerFirstName       String?
+  customerLastName        String?
   customerEmail           String
   customerPhone           String
   participantsCount       Int                @default(1)

@@ -55,8 +55,8 @@ export default async function Home() {
             </div>
             <div className="hero-stat-divider" />
             <div className="hero-stat">
-              <span className="hero-stat-number">FDM & Resin</span>
-              <span className="hero-stat-label">Printer Types</span>
+              <span className="hero-stat-number">Beginner to Advance</span>
+              <span className="hero-stat-label">Workshop Levels</span>
             </div>
             <div className="hero-stat-divider" />
             <div className="hero-stat">
