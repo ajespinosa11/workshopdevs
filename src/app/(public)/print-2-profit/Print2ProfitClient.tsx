@@ -1172,7 +1172,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
                   <li>Keep your workspace clean and organized.</li>
                   <li>Be respectful to fellow participants and staff.</li>
                   <li>For safety reasons, do not touch or operate any equipment without facilitator guidance.</li>
-                  <li>Once a workshop slot is confirmed, it is strictly non-transferable and non-refundable.</li>
+                  <li>Workshop slots are non-transferable. Refunds, if applicable, shall be governed by the Refund Policy above.</li>
                   <li>Seating is limited and reserved for registered workshop participants only. Additional companions or guests may be asked to remain outside the workshop area due to space limitations.</li>
                   <li>Makerlab reserves the right to remove participants who fail to follow workshop rules or safety guidelines.</li>
                   <li>To ensure a safe and comfortable experience for all attendees, participants and accompanying guardians are requested to leave the workshop area after the session concludes. This will allow our team to sanitize the area and prepare the equipment for the next scheduled workshop.</li>

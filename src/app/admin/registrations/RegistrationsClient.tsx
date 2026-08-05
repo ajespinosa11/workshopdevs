@@ -331,7 +331,7 @@ const S = {
     boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
     padding: '2rem',
     width: '100%',
-    maxWidth: '520px',
+    maxWidth: '680px',
     maxHeight: '90vh',
     overflowY: 'auto' as const,
   },
@@ -477,8 +477,9 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
   const [newStatus, setNewStatus] = useState('')
   const [statusNotes, setStatusNotes] = useState('')
   const [walkInStep, setWalkInStep] = useState<number>(1)
-  const [walkInSessionId, setWalkInSessionId] = useState(openSessions[0]?.id || '')
-  const [walkInName, setWalkInName] = useState('')
+  const [walkInStep1Filter, setWalkInStep1Filter] = useState<'ALL' | 'FREE' | 'PAID'>('ALL')
+  const [walkInFirstName, setWalkInFirstName] = useState('')
+  const [walkInLastName, setWalkInLastName] = useState('')
   const [walkInEmail, setWalkInEmail] = useState('')
   const [walkInPhone, setWalkInPhone] = useState('')
   const [walkInCount, setWalkInCount] = useState<number>(1)
@@ -495,6 +496,16 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
   const [hoveredRow, setHoveredRow] = useState<string | null>(null)
   const [manualOrderNumber, setManualOrderNumber] = useState('')
   const [manualAmount, setManualAmount] = useState('')
+
+  const filteredOpenSessions = useMemo(() => {
+    if (walkInStep1Filter === 'ALL') return openSessions
+    return openSessions.filter(s => {
+      const isFree = (s.module?.name || '').toLowerCase().includes('free')
+      return walkInStep1Filter === 'FREE' ? isFree : !isFree
+    })
+  }, [openSessions, walkInStep1Filter])
+
+  const [walkInSessionId, setWalkInSessionId] = useState(filteredOpenSessions[0]?.id || openSessions[0]?.id || '')
 
   const summaryCounts = useMemo(() => {
     const pendingVerification = registrations.filter(r =>
@@ -572,10 +583,11 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
 
   const handleWalkInSubmit = async () => {
     setLoading(true); setErrorMsg('')
+    const fullName = `${walkInFirstName.trim()} ${walkInLastName.trim()}`
     const formData = new FormData()
-    formData.append('customerName', walkInName)
-    formData.append('customerEmail', walkInEmail)
-    formData.append('customerPhone', walkInPhone)
+    formData.append('customerName', fullName)
+    formData.append('customerEmail', walkInEmail.trim())
+    formData.append('customerPhone', walkInPhone.replace(/\D/g, ''))
     formData.append('sessionId', walkInSessionId)
     formData.append('participantsCount', String(walkInCount))
     formData.append('paymentMethod', walkInPaymentMethod)
@@ -583,14 +595,23 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
     formData.append('notes', walkInNotes)
     try {
       const res = await adminManualBookSlot(formData)
-      if (res.error) { setErrorMsg(res.error) } else { setModalType(null); setSuccessBooking(res.registration); setWalkInStep(1); setWalkInName(''); setWalkInEmail(''); setWalkInPhone(''); setWalkInNotes('') }
+      if (res.error) { setErrorMsg(res.error) } else {
+        setModalType(null)
+        setSuccessBooking(res.registration)
+        setWalkInStep(1)
+        setWalkInFirstName('')
+        setWalkInLastName('')
+        setWalkInEmail('')
+        setWalkInPhone('')
+        setWalkInNotes('')
+      }
     } catch (err: any) { setErrorMsg(err.message || 'Failed to record walk-in booking.') }
     finally { setLoading(false) }
   }
 
   const currentWalkInSession = useMemo(() =>
-    openSessions.find(s => s.id === walkInSessionId) || openSessions[0],
-    [openSessions, walkInSessionId])
+    filteredOpenSessions.find(s => s.id === walkInSessionId) || filteredOpenSessions[0] || openSessions[0],
+    [filteredOpenSessions, openSessions, walkInSessionId])
 
   const renderPaymentChip = (status: string) => {
     switch (status) {
@@ -1039,18 +1060,108 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
             {walkInStep === 1 && (
               <div>
                 <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>Step 1: Select Workshop Session</h4>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={S.modalLabel}>Filter Workshop Type</label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setWalkInStep1Filter('ALL')
+                        if (openSessions.length > 0) setWalkInSessionId(openSessions[0].id)
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '0.5rem',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        background: walkInStep1Filter === 'ALL' ? '#6366f1' : '#f8fafc',
+                        color: walkInStep1Filter === 'ALL' ? '#fff' : '#64748b',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      All Sessions
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setWalkInStep1Filter('FREE')
+                        const frees = openSessions.filter(s => (s.module?.name || '').toLowerCase().includes('free'))
+                        if (frees.length > 0) setWalkInSessionId(frees[0].id)
+                        else setWalkInSessionId('')
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '0.5rem',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        background: walkInStep1Filter === 'FREE' ? '#10b981' : '#f8fafc',
+                        color: walkInStep1Filter === 'FREE' ? '#fff' : '#64748b',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      🎁 Free Workshops
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setWalkInStep1Filter('PAID')
+                        const paids = openSessions.filter(s => !(s.module?.name || '').toLowerCase().includes('free'))
+                        if (paids.length > 0) setWalkInSessionId(paids[0].id)
+                        else setWalkInSessionId('')
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '0.5rem',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        background: walkInStep1Filter === 'PAID' ? '#6366f1' : '#f8fafc',
+                        color: walkInStep1Filter === 'PAID' ? '#fff' : '#64748b',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      💳 Paid Workshops
+                    </button>
+                  </div>
+                </div>
+
                 <label style={S.modalLabel}>Available Workshop Date & Time *</label>
-                <select value={walkInSessionId} onChange={e => setWalkInSessionId(e.target.value)} style={{ ...S.modalInput, marginBottom: '1rem' }}>
-                  {openSessions.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {new Date(s.sessionDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} ({s.startTime} - {s.endTime}) [{s.availableSlots} slots]
-                    </option>
-                  ))}
+                <select
+                  value={walkInSessionId}
+                  onChange={e => setWalkInSessionId(e.target.value)}
+                  style={{ ...S.modalInput, marginBottom: '1rem' }}
+                >
+                  {filteredOpenSessions.length === 0 ? (
+                    <option value="">No available sessions match this filter</option>
+                  ) : (
+                    filteredOpenSessions.map(s => {
+                      const isFree = (s.module?.name || '').toLowerCase().includes('free')
+                      return (
+                        <option key={s.id} value={s.id}>
+                          {isFree ? '[FREE] ' : '[PAID] '}
+                          {new Date(s.sessionDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} ({s.startTime} - {s.endTime}) [{s.availableSlots} slots]
+                        </option>
+                      )
+                    })
+                  )}
                 </select>
                 {currentWalkInSession && (
                   <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '10px', padding: '0.9rem', fontSize: '0.76rem', color: '#4f46e5' }}>
                     <div style={{ fontWeight: 700, marginBottom: '0.3rem' }}>📍 Makerlab Experience Hub</div>
-                    <div style={{ color: '#64748b' }}>Remaining Capacity: <strong style={{ color: '#4f46e5' }}>{currentWalkInSession.availableSlots}</strong> of {currentWalkInSession.capacity} slots</div>
+                    <div style={{ color: '#64748b' }}>
+                      Workshop: <strong>{currentWalkInSession.module?.title || currentWalkInSession.module?.name || '3D Printing Workshop'}</strong>
+                    </div>
+                    <div style={{ color: '#64748b', marginTop: '0.2rem' }}>
+                      Remaining Capacity: <strong style={{ color: '#4f46e5' }}>{currentWalkInSession.availableSlots}</strong> of {currentWalkInSession.capacity} slots
+                    </div>
                   </div>
                 )}
               </div>
@@ -1060,18 +1171,57 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
             {walkInStep === 2 && (
               <div>
                 <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>Step 2: Customer Information</h4>
-                <div style={{ marginBottom: '0.85rem' }}>
-                  <label style={S.modalLabel}>Customer Full Name *</label>
-                  <input type="text" placeholder="John Doe" value={walkInName} onChange={e => setWalkInName(e.target.value)} style={S.modalInput} onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')} onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.85rem' }}>
+                  <div>
+                    <label style={S.modalLabel}>First Name *</label>
+                    <input
+                      type="text"
+                      placeholder="John"
+                      value={walkInFirstName}
+                      onChange={e => setWalkInFirstName(e.target.value)}
+                      style={S.modalInput}
+                      onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')}
+                      onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
+                    />
+                  </div>
+                  <div>
+                    <label style={S.modalLabel}>Last Name *</label>
+                    <input
+                      type="text"
+                      placeholder="Doe"
+                      value={walkInLastName}
+                      onChange={e => setWalkInLastName(e.target.value)}
+                      style={S.modalInput}
+                      onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')}
+                      onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
+                    />
+                  </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label style={S.modalLabel}>Mobile Phone *</label>
-                    <input type="tel" placeholder="+639123456789" value={walkInPhone} onChange={e => setWalkInPhone(e.target.value)} style={S.modalInput} onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')} onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')} />
+                    <label style={S.modalLabel}>Mobile Phone (11 digits) *</label>
+                    <input
+                      type="tel"
+                      placeholder="09123456789"
+                      maxLength={11}
+                      value={walkInPhone}
+                      onChange={e => setWalkInPhone(e.target.value.replace(/\D/g, ''))}
+                      style={S.modalInput}
+                      onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')}
+                      onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
+                    />
                   </div>
                   <div>
                     <label style={S.modalLabel}>Email *</label>
-                    <input type="email" placeholder="customer@email.com" value={walkInEmail} onChange={e => setWalkInEmail(e.target.value)} style={S.modalInput} onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')} onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')} />
+                    <input
+                      type="email"
+                      placeholder="customer@email.com"
+                      value={walkInEmail}
+                      onChange={e => setWalkInEmail(e.target.value)}
+                      style={S.modalInput}
+                      onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')}
+                      onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
+                    />
                   </div>
                 </div>
               </div>
@@ -1116,7 +1266,7 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                 <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>Step 4: Review & Confirm</h4>
                 <div style={S.infoBlock}>
                   <InfoRow label="Session">{new Date(currentWalkInSession?.sessionDate).toLocaleDateString()} ({currentWalkInSession?.startTime} - {currentWalkInSession?.endTime})</InfoRow>
-                  <InfoRow label="Customer">{walkInName} ({walkInEmail})</InfoRow>
+                  <InfoRow label="Customer">{`${walkInFirstName.trim()} ${walkInLastName.trim()}`} ({walkInEmail})</InfoRow>
                   <InfoRow label="Phone">{walkInPhone}</InfoRow>
                   <InfoRow label="Workshop Type">{walkInWorkshopType === 'FREE' ? 'Free Workshop (Complimentary)' : 'Paid Workshop'}</InfoRow>
                   <InfoRow label="Participants">{walkInCount}</InfoRow>
@@ -1132,7 +1282,22 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
               </GhostBtn>
               {walkInStep < 4 ? (
                 <PrimaryBtn onClick={() => {
-                  if (walkInStep === 2 && (!walkInName || !walkInEmail || !walkInPhone)) { setErrorMsg('Please fill in customer name, email, and phone.'); return }
+                  if (walkInStep === 1) {
+                    if (!walkInSessionId) { setErrorMsg('Please select a valid workshop session.'); return }
+                  }
+                  if (walkInStep === 2) {
+                    if (!walkInFirstName.trim() || !walkInLastName.trim()) {
+                      setErrorMsg('Please enter both First Name and Last Name.'); return
+                    }
+                    const cleanPhone = walkInPhone.replace(/\D/g, '')
+                    if (cleanPhone.length !== 11) {
+                      setErrorMsg('Please enter a valid 11-digit mobile phone number (e.g. 09123456789).'); return
+                    }
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                    if (!emailRegex.test(walkInEmail.trim())) {
+                      setErrorMsg('Please enter a valid email address.'); return
+                    }
+                  }
                   setErrorMsg(''); setWalkInStep(s => s + 1)
                 }}>Continue →</PrimaryBtn>
               ) : (
