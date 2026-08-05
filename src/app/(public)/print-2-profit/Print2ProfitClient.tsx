@@ -821,9 +821,6 @@ export default function Print2ProfitClient({ sessions }: Props) {
                       setPaymentStatus('PENDING_CHECKOUT')
                       setModalMode('TIMER')
                       setSubmitting(false)
-
-                      // Open Shopify Checkout in New Tab automatically
-                      window.open(url, '_blank')
                     } else {
                       setModalError('Failed to create reservation. Please try again.')
                       setSubmitting(false)
@@ -952,10 +949,10 @@ export default function Print2ProfitClient({ sessions }: Props) {
                 </span>
 
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>
-                  Checkout Opened in New Tab
+                  Your Slot is Reserved!
                 </h3>
                 <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '20px', lineHeight: 1.5 }}>
-                  Please complete your payment in the Shopify checkout tab. Your slot is locked for 15 minutes.
+                  Click the button below to open Shopify Checkout and complete your payment. Your slot is locked for <strong>15 minutes</strong>.
                 </p>
 
                 {/* Big Live Clock Display */}
@@ -1010,7 +1007,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                     }}
                   >
-                    🚀 Open Shopify Checkout Tab Again ↗
+                    🚀 Proceed to Shopify Checkout ↗
                   </button>
                   <button
                     onClick={async () => {
