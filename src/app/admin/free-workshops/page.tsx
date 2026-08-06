@@ -4,8 +4,21 @@ import FreeWorkshopsClient from './client'
 export const dynamic = 'force-dynamic'
 
 export default async function AdminFreeWorkshopsPage() {
-  // Query both legacy free bookings & free registrations
-  const [freeBookings, freeRegistrations] = await Promise.all([
+  // Query free workshop sessions and all associated reservations
+  const [freeSessions, freeBookings, freeRegistrations] = await Promise.all([
+    prisma.workshopSession.findMany({
+      where: {
+        OR: [
+          { module: { name: { contains: 'Free', mode: 'insensitive' } } },
+          { notes: { contains: 'Free', mode: 'insensitive' } },
+          { module: { description: { contains: 'Free', mode: 'insensitive' } } },
+        ]
+      },
+      include: {
+        module: true
+      },
+      orderBy: { sessionDate: 'asc' }
+    }),
     prisma.booking.findMany({
       where: {
         voucher: {
@@ -46,14 +59,18 @@ export default async function AdminFreeWorkshopsPage() {
       customerEmail: b.customerEmail,
       customerPhone: b.customerPhone,
       status: b.status,
-      source: 'BOOKING_SYSTEM',
+      source: 'BOOKING_SYSTEM' as const,
       voucherCode: b.voucher.voucherCode,
       createdAt: b.createdAt.toISOString(),
+      participantsCount: 1,
       session: b.session ? {
         id: b.session.id,
         sessionDate: b.session.sessionDate.toISOString(),
         startTime: b.session.startTime,
         endTime: b.session.endTime,
+        capacity: b.session.capacity,
+        availableSlots: b.session.availableSlots,
+        status: b.session.status,
         moduleName: b.session.module?.name ?? 'Free Workshop'
       } : null
     })),
@@ -64,29 +81,44 @@ export default async function AdminFreeWorkshopsPage() {
       customerEmail: r.customerEmail,
       customerPhone: r.customerPhone,
       status: r.status,
-      source: 'REGISTRATION_SYSTEM',
+      source: 'REGISTRATION_SYSTEM' as const,
       voucherCode: null,
       createdAt: r.createdAt.toISOString(),
+      participantsCount: r.participantsCount || 1,
       session: r.session ? {
         id: r.session.id,
         sessionDate: r.session.sessionDate.toISOString(),
         startTime: r.session.startTime,
         endTime: r.session.endTime,
+        capacity: r.session.capacity,
+        availableSlots: r.session.availableSlots,
+        status: r.session.status,
         moduleName: r.session.module?.name ?? 'Free Workshop'
       } : null
     }))
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+  const normalizedSessions = freeSessions.map(s => ({
+    id: s.id,
+    sessionDate: s.sessionDate.toISOString(),
+    startTime: s.startTime,
+    endTime: s.endTime,
+    capacity: s.capacity,
+    availableSlots: s.availableSlots,
+    status: s.status,
+    moduleName: s.module?.name ?? 'Free Workshop'
+  }))
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-3xl font-bold mb-1" style={{ fontSize: '2rem', fontWeight: 800 }}>Free Workshops</h1>
         <p style={{ color: 'var(--admin-text-secondary)', fontSize: '0.95rem' }}>
-          Overview and reservations dashboard for all complimentary / free workshop attendees.
+          Overview and interactive calendar dashboard for all complimentary / free workshop sessions and attendees.
         </p>
       </div>
 
-      <FreeWorkshopsClient reservations={normalizedRecords} />
+      <FreeWorkshopsClient reservations={normalizedRecords} sessions={normalizedSessions} />
     </div>
   )
 }
