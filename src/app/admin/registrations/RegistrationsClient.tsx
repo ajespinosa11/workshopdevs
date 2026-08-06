@@ -909,7 +909,9 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                   const color = getModuleColor(s.module?.name || s.module?.title)
                   const sDate = new Date(s.sessionDate)
                   const isPast = sDate < new Date(new Date().setHours(0,0,0,0))
-                  const slotPct = s.capacity > 0 ? Math.round(((s.capacity - s.availableSlots) / s.capacity) * 100) : 0
+                  // Compute available slots dynamically from live reservedCount — avoids stale DB counters
+                  const liveAvailableSlots = Math.max(0, s.capacity - reservedCount)
+                  const slotPct = s.capacity > 0 ? Math.round((reservedCount / s.capacity) * 100) : 0
 
                   return (
                     <div
@@ -944,11 +946,11 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                           borderRadius: '99px',
                           fontSize: '0.62rem',
                           fontWeight: 700,
-                          background: isPast ? '#f1f5f9' : s.availableSlots === 0 ? '#fef2f2' : s.availableSlots <= 5 ? '#fffbeb' : '#f0fdf4',
-                          color: isPast ? '#94a3b8' : s.availableSlots === 0 ? '#dc2626' : s.availableSlots <= 5 ? '#d97706' : '#16a34a',
-                          border: isPast ? '1px solid #e2e8f0' : s.availableSlots === 0 ? '1px solid #fecaca' : s.availableSlots <= 5 ? '1px solid #fde68a' : '1px solid #bbf7d0',
+                          background: isPast ? '#f1f5f9' : liveAvailableSlots === 0 ? '#fef2f2' : liveAvailableSlots <= 5 ? '#fffbeb' : '#f0fdf4',
+                          color: isPast ? '#94a3b8' : liveAvailableSlots === 0 ? '#dc2626' : liveAvailableSlots <= 5 ? '#d97706' : '#16a34a',
+                          border: isPast ? '1px solid #e2e8f0' : liveAvailableSlots === 0 ? '1px solid #fecaca' : liveAvailableSlots <= 5 ? '1px solid #fde68a' : '1px solid #bbf7d0',
                         }}>
-                          {isPast ? 'Past' : s.availableSlots === 0 ? 'Full' : `${s.availableSlots} left`}
+                          {isPast ? 'Past' : liveAvailableSlots === 0 ? 'Full' : `${liveAvailableSlots} left`}
                         </span>
                       </div>
 
@@ -1060,11 +1062,16 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                       <div style={{ textAlign: 'right' as const }}>
                         <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Capacity</div>
                         <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
-                          {s.capacity - s.availableSlots} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748b' }}>/ {s.capacity}</span>
+                          {selectedSessionData.reservedCount} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748b' }}>/ {s.capacity}</span>
                         </div>
-                        <div style={{ fontSize: '0.68rem', color: s.availableSlots === 0 ? '#dc2626' : '#16a34a', fontWeight: 700 }}>
-                          {s.availableSlots === 0 ? 'Fully Booked' : `${s.availableSlots} slots left`}
-                        </div>
+                        {(() => {
+                          const liveLeft = Math.max(0, s.capacity - selectedSessionData.reservedCount)
+                          return (
+                            <div style={{ fontSize: '0.68rem', color: liveLeft === 0 ? '#dc2626' : '#16a34a', fontWeight: 700 }}>
+                              {liveLeft === 0 ? 'Fully Booked' : `${liveLeft} slots left`}
+                            </div>
+                          )
+                        })()}
                       </div>
 
                       <div style={{ textAlign: 'right' as const }}>
