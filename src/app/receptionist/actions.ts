@@ -2,172 +2,288 @@
 
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
+import { revalidatePath } from 'next/cache'
 
 export async function validateCheckInDetails(formData: FormData) {
-  const voucherCode = formData.get('voucherCode') as string
-  const bookingReference = formData.get('bookingReference') as string
+  const rawRef = (formData.get('bookingReference') as string || '').trim()
 
-  if (!voucherCode || !bookingReference) return { error: 'Both Voucher Code and Booking Reference are required.' }
-
-  const voucher = await prisma.voucher.findUnique({
-    where: { voucherCode },
-    include: { plan: true }
-  })
-
-  if (!voucher) return { error: 'Voucher not found.' }
-  if (voucher.status !== 'ACTIVE') return { error: `Voucher is ${voucher.status}.` }
-
-  const booking = await prisma.booking.findUnique({
-    where: { bookingReference },
-    include: { session: { include: { module: true } } }
-  })
-
-  if (!booking) return { error: 'Booking not found.' }
-  if (booking.voucherId !== voucher.id) return { error: 'Booking does not belong to this voucher.' }
-  
-  if (booking.status === 'CANCELLED_BY_CUSTOMER') return { error: 'Booking was cancelled by customer.' }
-  if (booking.status === 'CHECKED_IN' || booking.status === 'COMPLETED_CONSUMED') return { error: 'Already checked in.' }
-  if (booking.status === 'NO_SHOW' || booking.status === 'RELEASED_TO_WALKIN') return { error: 'Booking slot was released.' }
-
-  // Check if booking is for today
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const sessionDate = new Date(booking.session.sessionDate)
-  sessionDate.setHours(0, 0, 0, 0)
-
-  if (sessionDate.getTime() !== today.getTime()) {
-    return { error: 'This booking is not for today.' }
+  if (!rawRef) {
+    return { error: 'Please enter a Booking Reference number.' }
   }
 
-  // Enforce check-in window (e.g. 30 minutes before session starts until the end of the session)
-  const checkInSetting = await prisma.systemSetting.findUnique({
-    where: { settingKey: 'check_in_opens_minutes_before_start' }
+  // 1. Try finding in WorkshopRegistration (case-insensitive & whitespace tolerant)
+  const reg = await prisma.workshopRegistration.findFirst({
+    where: {
+      bookingReference: {
+        equals: rawRef,
+        mode: 'insensitive'
+      }
+    },
+    include: {
+      session: {
+        include: { module: true }
+      },
+      shopifyOrder: true
+    }
   })
-  const minutesBefore = checkInSetting ? parseInt(checkInSetting.settingValue, 10) : 30
 
-  const startParts = booking.session.startTime.split(':')
-  const startHours = parseInt(startParts[0], 10)
-  const startMinutes = parseInt(startParts[1], 10)
+  if (reg) {
+    // Payment status classification
+    const isPaidVerified = ['PAID_FOR_ADMIN_VERIFICATION', 'RESERVED', 'CONFIRMED', 'CHECKED_IN', 'ATTENDED'].includes(reg.status)
+    const isReservedStatus = ['RESERVED', 'CONFIRMED', 'PAID_FOR_ADMIN_VERIFICATION'].includes(reg.status)
+    const isAlreadyCheckedIn = ['CHECKED_IN', 'ATTENDED', 'COMPLETED'].includes(reg.status)
+    const isCancelled = ['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED', 'DUPLICATE_ORDER'].includes(reg.status)
 
-  const sessionStart = new Date(booking.session.sessionDate)
-  sessionStart.setHours(startHours, startMinutes, 0, 0)
+    // Schedule check (check if session is scheduled for today)
+    const now = new Date()
+    let isTodaySchedule = false
+    if (reg.session?.sessionDate) {
+      const sDate = new Date(reg.session.sessionDate)
+      isTodaySchedule = sDate.getFullYear() === now.getFullYear() &&
+                        sDate.getMonth() === now.getMonth() &&
+                        sDate.getDate() === now.getDate()
+    }
 
-  const now = new Date()
-  const earliestCheckIn = new Date(sessionStart.getTime() - minutesBefore * 60 * 1000)
-  const sessionEnd = new Date(sessionStart.getTime() + booking.session.durationHours * 60 * 60 * 1000)
+    // Determine readiness and specific guidance
+    const validationIssues: string[] = []
+    if (isCancelled) validationIssues.push(`This reservation is currently CANCELLED (${reg.status.replace(/_/g, ' ')}).`)
+    if (isAlreadyCheckedIn) validationIssues.push(`Customer is ALREADY CHECKED IN for this session.`)
+    if (!isReservedStatus && !isAlreadyCheckedIn && !isCancelled) validationIssues.push(`Reservation status is "${reg.status.replace(/_/g, ' ')}" (Must be "Reserved").`)
+    if (!isPaidVerified) validationIssues.push(`Payment status is NOT VERIFIED (Currently pending payment verification).`)
+    if (!isTodaySchedule && reg.session?.sessionDate) {
+      const formattedDate = new Date(reg.session.sessionDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+      validationIssues.push(`Schedule date is ${formattedDate}, which does not match today's date.`)
+    }
 
-  if (now < earliestCheckIn) {
-    return { error: `Check-in is only allowed starting ${minutesBefore} minutes before the session starts.` }
+    const canCheckIn = validationIssues.length === 0
+
+    return {
+      success: true,
+      recordType: 'REGISTRATION' as const,
+      canCheckIn,
+      validationIssues,
+      data: {
+        id: reg.id,
+        bookingReference: reg.bookingReference,
+        customerName: reg.customerName,
+        customerEmail: reg.customerEmail,
+        customerPhone: reg.customerPhone || 'N/A',
+        participantsCount: reg.participantsCount || 1,
+        salesChannel: reg.salesChannel || 'SHOPIFY',
+        status: reg.status,
+        paymentStatus: isPaidVerified ? 'Verified' : 'Pending Verification',
+        totalAmountPaid: reg.shopifyOrder?.totalAmount ? `₱${reg.shopifyOrder.totalAmount.toFixed(2)}` : (reg.salesChannel === 'WALK_IN_FREE' || reg.salesChannel === 'COMPLIMENTARY' ? 'Free / Complimentary' : '₱3,500.00'),
+        shopifyOrderNumber: reg.shopifyOrder?.shopifyOrderNumber || null,
+        checkedInAt: null,
+        session: reg.session ? {
+          id: reg.session.id,
+          sessionDate: reg.session.sessionDate.toISOString(),
+          startTime: reg.session.startTime,
+          endTime: reg.session.endTime,
+          moduleName: reg.session.module?.name || 'Workshop'
+        } : null,
+      }
+    }
   }
 
-  if (now > sessionEnd) {
-    return { error: 'This session has already ended.' }
+  // 2. Fallback: Try finding in legacy Booking table
+  const booking = await prisma.booking.findFirst({
+    where: {
+      bookingReference: {
+        equals: rawRef,
+        mode: 'insensitive'
+      }
+    },
+    include: {
+      session: { include: { module: true } },
+      voucher: true
+    }
+  })
+
+  if (booking) {
+    const isPaidVerified = booking.balanceDuePaid && ['RESERVED', 'CHECKED_IN', 'CONFIRMED'].includes(booking.status)
+    const isReservedStatus = ['RESERVED', 'CONFIRMED'].includes(booking.status)
+    const isAlreadyCheckedIn = ['CHECKED_IN', 'COMPLETED_CONSUMED'].includes(booking.status)
+    const isCancelled = ['CANCELLED_BY_CUSTOMER', 'RELEASED_TO_WALKIN', 'CANCELLED'].includes(booking.status)
+
+    const now = new Date()
+    let isTodaySchedule = false
+    if (booking.session?.sessionDate) {
+      const sDate = new Date(booking.session.sessionDate)
+      isTodaySchedule = sDate.getFullYear() === now.getFullYear() &&
+                        sDate.getMonth() === now.getMonth() &&
+                        sDate.getDate() === now.getDate()
+    }
+
+    const validationIssues: string[] = []
+    if (isCancelled) validationIssues.push(`This booking is CANCELLED.`)
+    if (isAlreadyCheckedIn) validationIssues.push(`Customer is ALREADY CHECKED IN.`)
+    if (!isReservedStatus && !isAlreadyCheckedIn && !isCancelled) validationIssues.push(`Reservation status is "${booking.status}" (Must be "Reserved").`)
+    if (!isPaidVerified) validationIssues.push(`Payment status is NOT VERIFIED (Balance due of ₱${booking.balanceDueAmount} remains).`)
+    if (!isTodaySchedule && booking.session?.sessionDate) {
+      const formattedDate = new Date(booking.session.sessionDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+      validationIssues.push(`Schedule date is ${formattedDate}, which does not match today's date.`)
+    }
+
+    const canCheckIn = validationIssues.length === 0
+
+    return {
+      success: true,
+      recordType: 'BOOKING' as const,
+      canCheckIn,
+      validationIssues,
+      data: {
+        id: booking.id,
+        bookingReference: booking.bookingReference,
+        customerName: booking.customerName,
+        customerEmail: booking.customerEmail,
+        customerPhone: booking.customerPhone || 'N/A',
+        participantsCount: 1,
+        salesChannel: 'VOUCHER_BOOKING',
+        status: booking.status,
+        paymentStatus: isPaidVerified ? 'Verified' : 'Balance Due',
+        totalAmountPaid: booking.voucher?.voucherCode ? `Voucher (${booking.voucher.voucherCode})` : '₱0.00',
+        shopifyOrderNumber: null,
+        checkedInAt: booking.checkedInAt ? booking.checkedInAt.toISOString() : null,
+        session: booking.session ? {
+          id: booking.session.id,
+          sessionDate: booking.session.sessionDate.toISOString(),
+          startTime: booking.session.startTime,
+          endTime: booking.session.endTime,
+          moduleName: booking.session.module?.name || 'Workshop'
+        } : null,
+      }
+    }
   }
 
-  return { success: true, voucher, booking }
+  return { error: `No reservation or booking found with reference "${rawRef}".` }
 }
 
 export async function processCheckIn(formData: FormData) {
-  const bookingId = formData.get('bookingId') as string
+  const recordId = formData.get('recordId') as string
+  const recordType = formData.get('recordType') as string
   const sessionUser = await getSession()
-  
-  if (!sessionUser) return { error: 'Unauthorized' }
+
+  if (!recordId) return { error: 'Record ID is required.' }
 
   try {
-    const booking = await prisma.booking.findUnique({ where: { id: bookingId } })
-    if (!booking) return { error: 'Booking not found.' }
-
-    if (booking.status === 'BALANCE_DUE' && !booking.balanceDuePaid) {
-      return { error: 'Balance due must be paid before check-in.' }
-    }
-
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Deduct units from Voucher
-      const voucher = await tx.voucher.update({
-        where: { id: booking.voucherId },
-        data: {
-          remainingUnits: { decrement: booking.unitsToDeduct }
-        }
+    if (recordType === 'REGISTRATION') {
+      const reg = await prisma.workshopRegistration.findUnique({
+        where: { id: recordId }
       })
 
-      // 2. Create Transaction
-      await tx.creditTransaction.create({
-        data: {
-          voucherId: voucher.id,
-          bookingId: booking.id,
-          transactionType: 'CREDIT_DEDUCTED',
-          unitsDeducted: booking.unitsToDeduct,
-          description: `Check-in unit deduction for booking ${booking.bookingReference}`,
-          createdByStaffId: sessionUser.id
-        }
-      })
-
-      // 3. Update Booking Status
-      const updatedBooking = await tx.booking.update({
-        where: { id: booking.id },
-        data: {
-          status: 'CHECKED_IN',
-          checkedInAt: new Date(),
-        }
-      })
-
-      // 4. Create Attendance
-      await tx.attendance.create({
-        data: {
-          bookingId: booking.id,
-          voucherId: voucher.id,
-          sessionId: booking.sessionId,
-          checkInMethod: 'MANUAL_ENTRY',
-          checkedInByStaffId: sessionUser.id,
-        }
-      })
-
-      // Update voucher status if fully used
-      if (voucher.remainingUnits <= 0) {
-        await tx.voucher.update({
-          where: { id: voucher.id },
-          data: { status: 'FULLY_USED' }
-        })
+      if (!reg) return { error: 'Registration not found.' }
+      if (['CHECKED_IN', 'ATTENDED'].includes(reg.status)) {
+        return { error: 'Already checked in.' }
       }
 
-      return { voucher, booking: updatedBooking }
-    })
+      await prisma.workshopRegistration.update({
+        where: { id: recordId },
+        data: {
+          status: 'CHECKED_IN'
+        }
+      })
 
-    return { success: true, result }
-  } catch (error) {
+      await prisma.auditTrail.create({
+        data: {
+          registrationId: recordId,
+          performedByStaffId: sessionUser?.id || null,
+          action: 'CHECKED_IN',
+          details: `Customer checked in by receptionist (${sessionUser?.name || 'Staff'})`
+        }
+      })
+
+      revalidatePath('/receptionist')
+      revalidatePath('/admin/registrations')
+      return { success: true }
+    } else {
+      // Legacy Booking check-in
+      const booking = await prisma.booking.findUnique({ where: { id: recordId } })
+      if (!booking) return { error: 'Booking not found.' }
+
+      if (booking.status === 'BALANCE_DUE' && !booking.balanceDuePaid) {
+        return { error: 'Balance due must be paid before check-in.' }
+      }
+
+      await prisma.$transaction(async (tx) => {
+        if (booking.voucherId) {
+          await tx.voucher.update({
+            where: { id: booking.voucherId },
+            data: { remainingUnits: { decrement: booking.unitsToDeduct } }
+          })
+
+          await tx.creditTransaction.create({
+            data: {
+              voucherId: booking.voucherId,
+              bookingId: booking.id,
+              transactionType: 'CREDIT_DEDUCTED',
+              unitsDeducted: booking.unitsToDeduct,
+              description: `Check-in unit deduction for booking ${booking.bookingReference}`,
+              createdByStaffId: sessionUser?.id || null
+            }
+          })
+        }
+
+        await tx.booking.update({
+          where: { id: booking.id },
+          data: {
+            status: 'CHECKED_IN',
+            checkedInAt: new Date(),
+          }
+        })
+
+        if (booking.sessionId) {
+          await tx.attendance.create({
+            data: {
+              bookingId: booking.id,
+              voucherId: booking.voucherId,
+              sessionId: booking.sessionId,
+              checkInMethod: 'MANUAL_ENTRY',
+              checkedInByStaffId: sessionUser?.id || null,
+            }
+          })
+        }
+      })
+
+      revalidatePath('/receptionist')
+      revalidatePath('/admin/registrations')
+      return { success: true }
+    }
+  } catch (error: any) {
     console.error(error)
-    return { error: 'Internal server error during check-in.' }
+    return { error: error.message || 'Internal server error during check-in.' }
   }
 }
 
 export async function markBalancePaid(formData: FormData) {
   const bookingId = formData.get('bookingId') as string
   const sessionUser = await getSession()
-  
-  if (!sessionUser) return { error: 'Unauthorized' }
 
   try {
     const booking = await prisma.booking.update({
       where: { id: bookingId },
       data: {
         balanceDuePaid: true,
-        status: 'RESERVED' // Becomes reserved once balance is paid, ready for checkin
+        status: 'RESERVED'
       }
     })
 
-    await prisma.creditTransaction.create({
-      data: {
-        voucherId: booking.voucherId,
-        bookingId: booking.id,
-        transactionType: 'BALANCE_DUE_PAYMENT',
-        amountPaid: booking.balanceDueAmount,
-        description: `Paid balance due of PHP ${booking.balanceDueAmount}`,
-        createdByStaffId: sessionUser.id
-      }
-    })
+    if (booking.voucherId) {
+      await prisma.creditTransaction.create({
+        data: {
+          voucherId: booking.voucherId,
+          bookingId: booking.id,
+          transactionType: 'BALANCE_DUE_PAYMENT',
+          amountPaid: booking.balanceDueAmount,
+          description: `Paid balance due of PHP ${booking.balanceDueAmount}`,
+          createdByStaffId: sessionUser?.id || null
+        }
+      })
+    }
 
     return { success: true }
   } catch (err) {
     return { error: 'Error updating balance' }
   }
 }
+

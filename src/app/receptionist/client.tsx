@@ -1,128 +1,120 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { validateCheckInDetails, processCheckIn, markBalancePaid } from './actions'
+import { useState, useEffect, useRef } from 'react'
+import { validateCheckInDetails, processCheckIn } from './actions'
+
+type RecordData = {
+  id: string
+  bookingReference: string
+  customerName: string
+  customerEmail: string
+  customerPhone: string
+  participantsCount: number
+  salesChannel: string
+  status: string
+  paymentStatus: string
+  totalAmountPaid: string
+  shopifyOrderNumber: string | null
+  checkedInAt: string | null
+  session: {
+    id: string
+    sessionDate: string
+    startTime: string
+    endTime: string
+    moduleName: string
+  } | null
+}
+
+type RecordInfo = {
+  recordType: 'REGISTRATION' | 'BOOKING'
+  canCheckIn: boolean
+  validationIssues: string[]
+  data: RecordData
+}
+
+function StatusBadge({ label, variant }: { label: string; variant: 'green' | 'purple' | 'amber' | 'red' | 'gray' }) {
+  const styles: Record<string, { bg: string; color: string; border: string }> = {
+    green:  { bg: '#f0fdf4', color: '#15803d', border: '#86efac' },
+    purple: { bg: '#eef2ff', color: '#4f46e5', border: '#c7d2fe' },
+    amber:  { bg: '#fffbeb', color: '#b45309', border: '#fde68a' },
+    red:    { bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
+    gray:   { bg: '#f8fafc', color: '#64748b', border: '#e2e8f0' },
+  }
+  const s = styles[variant]
+  return (
+    <span style={{
+      display: 'inline-block',
+      padding: '0.2rem 0.6rem',
+      borderRadius: '99px',
+      fontSize: '0.72rem',
+      fontWeight: 800,
+      background: s.bg,
+      color: s.color,
+      border: `1px solid ${s.border}`,
+      letterSpacing: '0.02em',
+      whiteSpace: 'nowrap' as const,
+    }}>
+      {label}
+    </span>
+  )
+}
+
+function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.55rem 0', borderBottom: '1px solid #f1f5f9' }}>
+      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.04em', flexShrink: 0, marginRight: '0.75rem' }}>
+        {label}
+      </span>
+      <span style={{ fontSize: '0.83rem', fontWeight: 700, color: '#0f172a', textAlign: 'right' as const }}>
+        {children}
+      </span>
+    </div>
+  )
+}
+
+function channelLabel(channel: string) {
+  const map: Record<string, string> = {
+    SHOPIFY: 'Shopify Online', STOREHUB: 'StoreHub POS', WALK_IN: 'Walk-In',
+    WALK_IN_FREE: 'Walk-In (Free)', COMPLIMENTARY: 'Complimentary',
+    MANUAL_REGISTRATION: 'Manual Registration', VOUCHER_BOOKING: 'Voucher Booking', OTHER: 'Other',
+  }
+  return map[channel] || channel.replace(/_/g, ' ')
+}
 
 export default function CheckInClient() {
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [step, setStep] = useState(1)
-  const [details, setDetails] = useState<any>(null)
-  const [success, setSuccess] = useState(false)
-
-  const [voucherCode, setVoucherCode] = useState('')
+  const [searchError, setSearchError] = useState('')
+  const [confirmError, setConfirmError] = useState('')
+  const [step, setStep] = useState<'search' | 'verify' | 'success'>('search')
+  const [recordInfo, setRecordInfo] = useState<RecordInfo | null>(null)
+  const [checkedInTime, setCheckedInTime] = useState<Date | null>(null)
   const [bookingReference, setBookingReference] = useState('')
-  const [scanning, setScanning] = useState(false)
-  const [html5Qrcode, setHtml5Qrcode] = useState<any>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    return () => {
-      if (html5Qrcode) {
-        html5Qrcode.stop().catch(console.error)
-      }
-    }
-  }, [html5Qrcode])
-
-  const startScanning = async () => {
-    setScanning(true)
-    setError('')
-    try {
-      const { Html5Qrcode } = await import('html5-qrcode')
-      const qrScanner = new Html5Qrcode('qr-reader')
-      setHtml5Qrcode(qrScanner)
-
-      await qrScanner.start(
-        { facingMode: 'environment' },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 }
-        },
-        async (decodedText) => {
-          let vCode = ''
-          let bRef = ''
-          
-          if (decodedText.includes('?')) {
-            const urlParams = new URLSearchParams(decodedText.split('?')[1])
-            vCode = urlParams.get('voucherCode') || ''
-            bRef = urlParams.get('bookingReference') || ''
-          } else if (decodedText.includes(',')) {
-            const parts = decodedText.split(',')
-            vCode = parts[0]?.trim() || ''
-            bRef = parts[1]?.trim() || ''
-          } else {
-            vCode = decodedText
-          }
-
-          if (vCode) setVoucherCode(vCode)
-          if (bRef) setBookingReference(bRef)
-
-          try {
-            await qrScanner.stop()
-          } catch (stopErr) {
-            console.error('Error stopping scanner during success callback:', stopErr)
-          }
-          setScanning(false)
-          setHtml5Qrcode(null)
-
-          if (vCode && bRef) {
-            setLoading(true)
-            const formData = new FormData()
-            formData.append('voucherCode', vCode)
-            formData.append('bookingReference', bRef)
-            const res = await validateCheckInDetails(formData)
-            if (res.error) {
-              setError(res.error)
-            } else if (res.success) {
-              setDetails({ voucher: res.voucher, booking: res.booking })
-              setStep(2)
-            }
-            setLoading(false)
-          }
-        },
-        () => {}
-      )
-    } catch (err: any) {
-      console.error(err)
-      setError('Could not access camera: ' + (err.message || err))
-      setScanning(false)
-    }
-  }
-
-  const stopScanning = async () => {
-    if (html5Qrcode) {
-      try {
-        await html5Qrcode.stop()
-      } catch (err) {
-        console.error('Error stopping scanner:', err)
-      }
-      setHtml5Qrcode(null)
-    }
-    setScanning(false)
-  }
-
+  // Auto-fill from URL params (e.g. from Calendar Roster "Check In →" buttons)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
-      const vCode = params.get('voucherCode')
-      const bRef = params.get('bookingReference')
-      
-      if (vCode) setVoucherCode(vCode)
-      if (bRef) setBookingReference(bRef)
-
-      if (vCode && bRef) {
+      const bRef = params.get('bookingReference') || params.get('ref')
+      if (bRef) {
+        const normalised = bRef.trim().toUpperCase()
+        setBookingReference(normalised)
         const autoSubmit = async () => {
           setLoading(true)
-          setError('')
-          const formData = new FormData()
-          formData.append('voucherCode', vCode)
-          formData.append('bookingReference', bRef)
-          
-          const res = await validateCheckInDetails(formData)
-          if (res.error) {
-            setError(res.error)
-          } else if (res.success) {
-            setDetails({ voucher: res.voucher, booking: res.booking })
-            setStep(2)
+          setSearchError('')
+          const fd = new FormData()
+          fd.append('bookingReference', normalised)
+          const res = await validateCheckInDetails(fd)
+          if ('error' in res && res.error) {
+            setSearchError(res.error)
+          } else if (res.success && res.data) {
+            setRecordInfo({
+              recordType: res.recordType,
+              canCheckIn: res.canCheckIn ?? false,
+              validationIssues: res.validationIssues ?? [],
+              data: res.data as RecordData,
+            })
+            setStep('verify')
           }
           setLoading(false)
         }
@@ -131,208 +123,337 @@ export default function CheckInClient() {
     }
   }, [])
 
-  async function handleValidate(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (!bookingReference.trim()) return
     setLoading(true)
-    setError('')
-    const formData = new FormData(e.currentTarget)
-    const res = await validateCheckInDetails(formData)
-    
-    if (res.error) {
-      setError(res.error)
-    } else if (res.success) {
-      setDetails({ voucher: res.voucher, booking: res.booking })
-      setStep(2)
-    }
-    setLoading(false)
-  }
-
-  async function handlePayBalance() {
-    setLoading(true)
-    const formData = new FormData()
-    formData.append('bookingId', details.booking.id)
-    const res = await markBalancePaid(formData)
-    if (res.success) {
-      setDetails({
-        ...details,
-        booking: { ...details.booking, status: 'RESERVED', balanceDuePaid: true }
+    setSearchError('')
+    const fd = new FormData(e.currentTarget)
+    const res = await validateCheckInDetails(fd)
+    if ('error' in res && res.error) {
+      setSearchError(res.error)
+    } else if (res.success && res.data) {
+      setRecordInfo({
+        recordType: res.recordType,
+        canCheckIn: res.canCheckIn ?? false,
+        validationIssues: res.validationIssues ?? [],
+        data: res.data as RecordData,
       })
-    } else {
-      setError(res.error || 'Failed to update balance')
+      setStep('verify')
     }
     setLoading(false)
   }
 
-  async function handleCheckIn() {
+  async function handleConfirmCheckIn() {
+    if (!recordInfo?.data?.id) return
     setLoading(true)
-    setError('')
-    const formData = new FormData()
-    formData.append('bookingId', details.booking.id)
-    const res = await processCheckIn(formData)
-    
-    if (res.error) {
-      setError(res.error)
+    setConfirmError('')
+    const fd = new FormData()
+    fd.append('recordId', recordInfo.data.id)
+    fd.append('recordType', recordInfo.recordType)
+    const res = await processCheckIn(fd)
+    if ('error' in res && res.error) {
+      setConfirmError(res.error)
     } else if (res.success) {
-      setSuccess(true)
+      setCheckedInTime(new Date())
+      setStep('success')
     }
     setLoading(false)
   }
 
-  if (success) {
+  function resetToSearch() {
+    setStep('search')
+    setRecordInfo(null)
+    setBookingReference('')
+    setSearchError('')
+    setConfirmError('')
+    setCheckedInTime(null)
+    setTimeout(() => inputRef.current?.focus(), 100)
+  }
+
+  // ─────────────────────────────────────────────────────
+  // SUCCESS SCREEN
+  // ─────────────────────────────────────────────────────
+  if (step === 'success' && recordInfo?.data) {
+    const { data } = recordInfo
+    const sDate = data.session?.sessionDate ? new Date(data.session.sessionDate) : null
+    const now = checkedInTime || new Date()
+
     return (
-      <div className="text-center p-8">
-        <div className="text-5xl mb-4 text-success">✓</div>
-        <h2 className="text-2xl font-bold mb-2">Check-in Complete!</h2>
-        <p className="mb-4">Credits have been deducted.</p>
-        <button onClick={() => { setSuccess(false); setStep(1); setDetails(null) }} className="btn btn-primary">
-          Process Another Check-in
-        </button>
+      <div style={{ maxWidth: 560, margin: '0 auto', padding: '0 1rem' }}>
+        <div style={{ background: '#ffffff', border: '1px solid #bbf7d0', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(16,185,129,0.12)' }}>
+          {/* Green header */}
+          <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '2rem 1.75rem', textAlign: 'center' as const }}>
+            <div style={{ fontSize: '3rem', marginBottom: '0.25rem' }}>✓</div>
+            <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.01em' }}>Check-In Confirmed</div>
+            <div style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.82)', marginTop: '0.25rem' }}>Reservation successfully accepted</div>
+          </div>
+
+          {/* Details body */}
+          <div style={{ padding: '1.5rem 1.75rem' }}>
+            <div style={{ marginBottom: '1.25rem' }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: '0.2rem' }}>Customer</div>
+              <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0f172a' }}>{data.customerName}</div>
+              <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.1rem' }}>{data.customerEmail}</div>
+            </div>
+
+            <div style={{ background: '#f8fafc', borderRadius: '14px', padding: '0.25rem 1rem', marginBottom: '1.25rem' }}>
+              <DetailRow label="Booking Ref">
+                <span style={{ fontFamily: 'monospace', color: '#4f46e5' }}>{data.bookingReference}</span>
+              </DetailRow>
+              <DetailRow label="Event">{data.session?.moduleName || 'Workshop'}</DetailRow>
+              <DetailRow label="Date">
+                {sDate ? sDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '—'}
+              </DetailRow>
+              <DetailRow label="Time">
+                {data.session ? `${data.session.startTime} – ${data.session.endTime}` : '—'}
+              </DetailRow>
+              <DetailRow label="Participants">
+                {data.participantsCount} person{data.participantsCount !== 1 ? 's' : ''}
+              </DetailRow>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.55rem 0' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Check-In Time</span>
+                <span style={{ fontSize: '0.83rem', fontWeight: 700, color: '#10b981' }}>
+                  {now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  {' · '}
+                  {now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '1.25rem' }}>
+              <span style={{ fontSize: '1rem' }}>✅</span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#15803d' }}>
+                Roster status automatically updated to <strong>Checked In</strong>
+              </span>
+            </div>
+
+            <button
+              onClick={resetToSearch}
+              style={{ width: '100%', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', color: '#ffffff', border: 'none', borderRadius: '14px', padding: '0.85rem', fontSize: '0.92rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(99,102,241,0.25)' }}
+            >
+              Check In Another Customer →
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
 
-  if (step === 2 && details) {
-    const { voucher, booking } = details
-    const needsPayment = booking.status === 'BALANCE_DUE' && !booking.balanceDuePaid
+  // ─────────────────────────────────────────────────────
+  // VERIFY SCREEN
+  // ─────────────────────────────────────────────────────
+  if (step === 'verify' && recordInfo?.data) {
+    const { data, canCheckIn, validationIssues } = recordInfo
+    const sDate = data.session?.sessionDate ? new Date(data.session.sessionDate) : null
+
+    const paymentVariant: 'green' | 'red' = data.paymentStatus === 'Verified' ? 'green' : 'red'
+    const reservationVariant: 'purple' | 'green' | 'amber' =
+      ['RESERVED', 'CONFIRMED'].includes(data.status) ? 'purple'
+      : data.status === 'CHECKED_IN' ? 'green'
+      : 'amber'
 
     return (
-      <div className="flex flex-col gap-6">
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="p-4 border border-secondary rounded-md">
-            <h3 className="font-bold text-lg mb-4">Voucher Details</h3>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <span className="text-secondary-foreground">Customer:</span>
-              <span className="font-medium">{voucher.customerName}</span>
-              <span className="text-secondary-foreground">Remaining Tickets:</span>
-              <span className="font-bold text-primary">{voucher.remainingUnits} ticket{voucher.remainingUnits !== 1 ? 's' : ''}</span>
-              <span className="text-secondary-foreground">Voucher Status:</span>
-              <span><span className="badge badge-green">{voucher.status}</span></span>
-            </div>
+      <div style={{ maxWidth: 580, margin: '0 auto', padding: '0 1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+        {/* Found banner */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)', border: '1px solid #86efac', borderRadius: '14px', padding: '0.85rem 1.1rem', flexWrap: 'wrap' as const }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '1rem', color: '#16a34a' }}>✓</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#15803d', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Reservation Found</span>
           </div>
-          <div className="p-4 border border-secondary rounded-md">
-            <h3 className="font-bold text-lg mb-4">Booking Details</h3>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <span className="text-secondary-foreground">Reference:</span>
-              <span className="font-medium">{booking.bookingReference}</span>
-              <span className="text-secondary-foreground">Session Category:</span>
-              <span>{booking.session.category}</span>
-              {booking.kidName && (
-                <>
-                  <span className="text-secondary-foreground">Kid's Name:</span>
-                  <span className="font-bold" style={{ color: '#15803d' }}>👦 {booking.kidName}</span>
-                  <span className="text-secondary-foreground">Guardian:</span>
-                  <span className="font-medium">{booking.companionName || booking.customerName}</span>
-                </>
-              )}
-              <span className="text-secondary-foreground">Module:</span>
-              <span className="font-medium text-accent">{booking.session.module?.name}</span>
-              <span className="text-secondary-foreground">Cost:</span>
-              <span className="font-bold text-primary">{booking.unitsToDeduct} units</span>
-              <span className="text-secondary-foreground">Status:</span>
-              <span><span className={`badge ${needsPayment ? 'badge-red' : 'badge-blue'}`}>{booking.status}</span></span>
-            </div>
-          </div>
+          <span style={{ fontFamily: 'monospace', fontSize: '0.78rem', fontWeight: 800, color: '#4f46e5', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '6px', padding: '0.15rem 0.5rem' }}>
+            {data.bookingReference}
+          </span>
         </div>
 
-        {error && <div className="p-3 bg-red-100 text-red-700 rounded-md">{error}</div>}
-
-        {needsPayment && (
-          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md flex justify-between items-center">
-            <div>
-              <h4 className="font-bold text-yellow-800">Balance Due</h4>
-              <p className="text-sm text-yellow-700">PHP {booking.balanceDueAmount} is required before check-in.</p>
+        {/* Main verification card */}
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.05)' }}>
+          {/* Customer header */}
+          <div style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%)', borderBottom: '1px solid #e2e8f0', padding: '1.25rem 1.5rem' }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#6366f1', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: '0.2rem' }}>Customer</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.01em' }}>{data.customerName}</div>
+            <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
+              {data.customerEmail}
+              {data.customerPhone && data.customerPhone !== 'N/A' && ` · ${data.customerPhone}`}
             </div>
-            <button onClick={handlePayBalance} disabled={loading} className="btn btn-primary">
-              Mark as Paid
-            </button>
+          </div>
+
+          {/* Detail rows */}
+          <div style={{ padding: '0 1.5rem' }}>
+            <DetailRow label="Participants">
+              {data.participantsCount} person{data.participantsCount !== 1 ? 's' : ''}
+            </DetailRow>
+            <DetailRow label="Booking Channel">{channelLabel(data.salesChannel)}</DetailRow>
+            {data.shopifyOrderNumber && (
+              <DetailRow label="Order #">
+                <span style={{ fontFamily: 'monospace' }}>#{data.shopifyOrderNumber}</span>
+              </DetailRow>
+            )}
+            <DetailRow label="Amount Paid">{data.totalAmountPaid}</DetailRow>
+            <DetailRow label="Payment Status">
+              <StatusBadge label={data.paymentStatus} variant={paymentVariant} />
+            </DetailRow>
+            <DetailRow label="Reservation Status">
+              <StatusBadge label={data.status.replace(/_/g, ' ')} variant={reservationVariant} />
+            </DetailRow>
+            <DetailRow label="Event">
+              <span style={{ color: '#4f46e5' }}>{data.session?.moduleName || '—'}</span>
+            </DetailRow>
+            <DetailRow label="Scheduled Date">
+              {sDate ? sDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+            </DetailRow>
+            <DetailRow label="Time">
+              <span style={{ fontFamily: 'monospace' }}>
+                {data.session ? `${data.session.startTime} – ${data.session.endTime}` : '—'}
+              </span>
+            </DetailRow>
+          </div>
+          <div style={{ height: '1.25rem' }} />
+        </div>
+
+        {/* Validation issues */}
+        {validationIssues.length > 0 && (
+          <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '14px', padding: '1rem 1.1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.6rem' }}>
+              <span style={{ fontSize: '1rem' }}>⚠️</span>
+              <span style={{ fontSize: '0.73rem', fontWeight: 900, color: '#c2410c', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Check-In Blocked — Action Required</span>
+            </div>
+            <ul style={{ margin: 0, paddingLeft: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              {validationIssues.map((issue, i) => (
+                <li key={i} style={{ fontSize: '0.8rem', fontWeight: 600, color: '#9a3412', lineHeight: 1.45 }}>{issue}</li>
+              ))}
+            </ul>
+            <div style={{ marginTop: '0.65rem', fontSize: '0.73rem', color: '#c2410c', fontStyle: 'italic' }}>
+              Please contact the admin to resolve these issues before proceeding.
+            </div>
           </div>
         )}
 
-        <div className="flex gap-4 mt-4">
-          <button onClick={() => setStep(1)} className="btn btn-secondary flex-1" disabled={loading}>Cancel</button>
-          <button onClick={handleCheckIn} disabled={loading || needsPayment} className="btn btn-success flex-1">
-            {loading ? 'Processing...' : 'Confirm Check-in & Deduct Units'}
+        {/* Server error */}
+        {confirmError && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: 700, color: '#dc2626' }}>
+            ⚠️ {confirmError}
+          </div>
+        )}
+
+        {/* Action buttons */}
+        <div style={{ display: 'flex', gap: '0.65rem' }}>
+          <button
+            onClick={resetToSearch}
+            disabled={loading}
+            style={{ flex: 1, background: '#ffffff', border: '1.5px solid #e2e8f0', borderRadius: '14px', padding: '0.8rem', fontSize: '0.85rem', fontWeight: 700, color: '#64748b', cursor: 'pointer' }}
+          >
+            ← Search Another
+          </button>
+          <button
+            onClick={handleConfirmCheckIn}
+            disabled={loading || !canCheckIn}
+            style={{
+              flex: 2, border: 'none', borderRadius: '14px', padding: '0.8rem', fontSize: '0.92rem', fontWeight: 900,
+              cursor: loading || !canCheckIn ? 'not-allowed' : 'pointer',
+              background: canCheckIn ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#e2e8f0',
+              color: canCheckIn ? '#ffffff' : '#94a3b8',
+              boxShadow: canCheckIn ? '0 4px 14px rgba(16,185,129,0.28)' : 'none',
+              letterSpacing: '-0.01em',
+            }}
+          >
+            {loading ? 'Confirming…' : canCheckIn ? '✓ Confirm Check-In' : 'Check-In Unavailable'}
           </button>
         </div>
       </div>
     )
   }
 
+  // ─────────────────────────────────────────────────────
+  // SEARCH SCREEN
+  // ─────────────────────────────────────────────────────
   return (
-    <form onSubmit={handleValidate} className="flex flex-col gap-4">
-      {error && <div className="p-3 bg-red-100 text-red-700 rounded-md">{error}</div>}
-      
-      {/* Webcam scanner interface */}
-      {scanning ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', margin: '1rem 0', padding: '1rem', background: '#f8fafc', borderRadius: '1rem', border: '1px solid #e2e8f0' }}>
-          <div id="qr-reader" style={{ width: '100%', maxWidth: '320px', overflow: 'hidden', borderRadius: '0.75rem', border: '2px solid var(--accent)' }}></div>
-          <button type="button" onClick={stopScanning} className="btn btn-secondary" style={{ padding: '0.4rem 1.2rem', fontSize: '0.85rem' }}>
-            Cancel Scanning
-          </button>
+    <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 1rem' }}>
+      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '24px', padding: '2rem', boxShadow: '0 2px 16px rgba(0,0,0,0.05)' }}>
+        {/* Icon + heading */}
+        <div style={{ textAlign: 'center' as const, marginBottom: '1.75rem' }}>
+          <div style={{ width: '52px', height: '52px', borderRadius: '16px', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.75rem', boxShadow: '0 4px 14px rgba(99,102,241,0.3)' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+            </svg>
+          </div>
+          <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.01em' }}>Search Reservation</div>
+          <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.25rem' }}>Enter the customer's booking reference number</div>
         </div>
-      ) : (
-        <button
-          type="button"
-          onClick={startScanning}
-          className="admin-btn-outline"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            padding: '0.75rem',
-            borderRadius: '0.75rem',
-            backgroundColor: 'var(--accent)',
-            borderColor: 'var(--accent)',
-            color: 'white',
-            fontWeight: 600,
-            fontSize: '0.9rem',
-            cursor: 'pointer',
-            boxShadow: '0 4px 6px rgba(249, 115, 22, 0.15)',
-            marginBottom: '0.5rem',
-            width: '100%',
-            height: '42px'
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-            <circle cx="12" cy="13" r="4"/>
-          </svg>
-          Scan QR Code Ticket
-        </button>
-      )}
 
-      <div className="input-group">
-        <label htmlFor="voucherCode">Voucher Code</label>
-        <input 
-          type="text" 
-          id="voucherCode" 
-          name="voucherCode" 
-          required 
-          value={voucherCode}
-          onChange={(e) => setVoucherCode(e.target.value)}
-          className="input-field" 
-          placeholder="MLWS-VCH-XXXXXX" 
-        />
+        <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 800, color: '#374151', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: '0.45rem' }}>
+              Booking Reference Number
+            </label>
+            <input
+              ref={inputRef}
+              type="text"
+              name="bookingReference"
+              required
+              autoFocus
+              autoComplete="off"
+              spellCheck={false}
+              value={bookingReference}
+              onChange={(e) => { setBookingReference(e.target.value.toUpperCase()); setSearchError('') }}
+              onKeyDown={(e) => { if (e.key === 'Escape') setBookingReference('') }}
+              placeholder="e.g. P2P-LOCK-853656-4812"
+              style={{
+                width: '100%', background: '#f8fafc',
+                border: searchError ? '2px solid #f87171' : '2px solid #e2e8f0',
+                borderRadius: '14px', padding: '0.85rem 1rem',
+                fontSize: '1rem', fontWeight: 700, fontFamily: 'monospace',
+                color: '#0f172a', outline: 'none', letterSpacing: '0.05em',
+                transition: 'border-color 0.15s', boxSizing: 'border-box' as const,
+              }}
+              onFocus={(e) => { if (!searchError) e.target.style.borderColor = '#6366f1' }}
+              onBlur={(e) => { if (!searchError) e.target.style.borderColor = '#e2e8f0' }}
+            />
+            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.35rem' }}>
+              Found in the customer&apos;s email confirmation — e.g. <span style={{ fontFamily: 'monospace' }}>P2P-LOCK-XXXXXX-XXXX</span>
+            </div>
+          </div>
+
+          {searchError && (
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '0.75rem 1rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '0.9rem', flexShrink: 0 }}>⚠️</span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#dc2626', lineHeight: 1.4 }}>{searchError}</span>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || !bookingReference.trim()}
+            style={{
+              width: '100%', border: 'none', borderRadius: '14px', padding: '0.9rem', fontSize: '0.95rem', fontWeight: 900,
+              cursor: loading || !bookingReference.trim() ? 'not-allowed' : 'pointer',
+              background: bookingReference.trim() ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : '#e2e8f0',
+              color: bookingReference.trim() ? '#ffffff' : '#94a3b8',
+              boxShadow: bookingReference.trim() ? '0 4px 16px rgba(99,102,241,0.28)' : 'none',
+              transition: 'all 0.2s', letterSpacing: '-0.01em',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+            }}
+          >
+            {loading ? (
+              <>
+                <svg style={{ animation: 'spin 1s linear infinite' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                Searching…
+              </>
+            ) : (
+              <>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                </svg>
+                Search Reservation
+              </>
+            )}
+          </button>
+        </form>
       </div>
-
-      <div className="input-group">
-        <label htmlFor="bookingReference">Booking Reference Number</label>
-        <input 
-          type="text" 
-          id="bookingReference" 
-          name="bookingReference" 
-          required 
-          value={bookingReference}
-          onChange={(e) => setBookingReference(e.target.value)}
-          className="input-field" 
-          placeholder="MLWS-BK-XXXXXX" 
-        />
-      </div>
-
-      <button type="submit" className="btn btn-primary mt-4" disabled={loading}>
-        {loading ? 'Validating...' : 'Validate Details'}
-      </button>
-    </form>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+    </div>
   )
 }
