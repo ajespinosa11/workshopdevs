@@ -13,10 +13,10 @@ interface RegistrationsClientProps {
 const S = {
   page: {
     minHeight: '100vh',
-    background: '#f1f5f9',
+    background: '#f8fafc',
     color: '#0f172a',
     fontFamily: "'Inter', sans-serif",
-    padding: '1.5rem 1.75rem',
+    padding: '1.25rem 1.5rem',
   } as React.CSSProperties,
 
   // ── Header ──
@@ -25,7 +25,7 @@ const S = {
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: '1rem',
-    marginBottom: '1.75rem',
+    marginBottom: '1.25rem',
     flexWrap: 'wrap' as const,
   },
   breadcrumb: {
@@ -35,12 +35,12 @@ const S = {
     fontSize: '0.72rem',
     fontWeight: 600,
     color: '#64748b',
-    marginBottom: '0.5rem',
+    marginBottom: '0.35rem',
     letterSpacing: '0.02em',
   },
   breadcrumbActive: { color: '#334155' },
   h1: {
-    fontSize: '1.65rem',
+    fontSize: '1.5rem',
     fontWeight: 800,
     background: 'linear-gradient(135deg, #0f172a 0%, #4f46e5 100%)',
     WebkitBackgroundClip: 'text',
@@ -50,11 +50,11 @@ const S = {
     lineHeight: 1.2,
   } as React.CSSProperties,
   subtitle: {
-    fontSize: '0.8rem',
+    fontSize: '0.78rem',
     color: '#64748b',
-    marginTop: '0.35rem',
-    maxWidth: '520px',
-    lineHeight: 1.55,
+    marginTop: '0.25rem',
+    maxWidth: '560px',
+    lineHeight: 1.5,
   },
 
   // ── Primary Action Button ──
@@ -62,7 +62,7 @@ const S = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '0.5rem',
-    padding: '0.65rem 1.25rem',
+    padding: '0.6rem 1.1rem',
     background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
     color: '#fff',
     borderRadius: '12px',
@@ -70,7 +70,7 @@ const S = {
     fontSize: '0.78rem',
     fontWeight: 700,
     cursor: 'pointer',
-    boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
+    boxShadow: '0 4px 16px rgba(99,102,241,0.35)',
     transition: 'all 0.2s ease',
     whiteSpace: 'nowrap' as const,
     flexShrink: 0,
@@ -81,52 +81,50 @@ const S = {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, 1fr)',
     gap: '0.875rem',
-    marginBottom: '1.5rem',
+    marginBottom: '1.25rem',
   },
   statCard: (active: boolean, color: string) => ({
     background: active
-      ? `linear-gradient(135deg, ${color}18 0%, rgba(255,255,255,0.85) 100%)`
-      : 'rgba(255,255,255,0.75)',
-    backdropFilter: 'blur(24px) saturate(190%)',
-    WebkitBackdropFilter: 'blur(24px) saturate(190%)',
-    border: active ? `1.5px solid ${color}70` : '1px solid rgba(255,255,255,0.9)',
-    borderRadius: '20px',
-    padding: '1.1rem 1.2rem',
+      ? `linear-gradient(135deg, ${color}15 0%, rgba(255,255,255,0.95) 100%)`
+      : '#ffffff',
+    border: active ? `1.5px solid ${color}80` : '1px solid #e2e8f0',
+    borderRadius: '16px',
+    padding: '0.9rem 1.1rem',
     cursor: 'pointer',
-    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+    transition: 'all 0.2s ease',
     boxShadow: active
-      ? `0 12px 32px ${color}25, inset 0 1px 1px rgba(255,255,255,0.9)`
-      : '0 8px 24px -6px rgba(0,0,0,0.04), inset 0 1px 1px rgba(255,255,255,0.9)',
+      ? `0 8px 24px ${color}20, inset 0 1px 1px rgba(255,255,255,0.9)`
+      : '0 1px 4px rgba(0,0,0,0.04)',
   } as React.CSSProperties),
   statIcon: (color: string) => ({
-    width: '36px',
-    height: '36px',
-    borderRadius: '10px',
+    width: '32px',
+    height: '32px',
+    borderRadius: '8px',
     background: `${color}15`,
     border: `1px solid ${color}25`,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '1rem',
-    marginBottom: '0.85rem',
+    fontSize: '0.95rem',
+    marginBottom: '0.6rem',
   } as React.CSSProperties),
   statLabel: (color: string) => ({
-    fontSize: '0.67rem',
+    fontSize: '0.65rem',
     fontWeight: 700,
     color: color,
     textTransform: 'uppercase' as const,
     letterSpacing: '0.08em',
-    marginBottom: '0.3rem',
+    marginBottom: '0.2rem',
   }),
   statNumber: {
-    fontSize: '1.9rem',
+    fontSize: '1.65rem',
     fontWeight: 800,
     color: '#0f172a',
     lineHeight: 1,
     marginBottom: '0.2rem',
   },
   statSub: {
-    fontSize: '0.7rem',
+    fontSize: '0.68rem',
     color: '#94a3b8',
   },
 
@@ -134,44 +132,44 @@ const S = {
   tabBar: {
     display: 'flex',
     gap: '0.25rem',
-    marginBottom: '1rem',
+    marginBottom: '0.85rem',
     background: '#ffffff',
     border: '1px solid #e2e8f0',
     borderRadius: '12px',
-    padding: '0.3rem',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+    padding: '0.25rem',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
   },
   tab: (active: boolean) => ({
-    padding: '0.5rem 1.1rem',
-    borderRadius: '9px',
-    fontSize: '0.75rem',
+    padding: '0.45rem 0.9rem',
+    borderRadius: '8px',
+    fontSize: '0.74rem',
     fontWeight: 700,
     border: 'none',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     background: active ? '#6366f1' : 'transparent',
     color: active ? '#ffffff' : '#64748b',
-    boxShadow: active ? '0 2px 8px rgba(99,102,241,0.3)' : 'none',
+    boxShadow: active ? '0 2px 6px rgba(99,102,241,0.25)' : 'none',
   } as React.CSSProperties),
 
   // ── Filter Bar ──
   filterBar: {
     display: 'grid',
-    gridTemplateColumns: '2fr 1fr 1fr 1fr',
-    gap: '0.75rem',
+    gridTemplateColumns: '2fr 1fr 1fr',
+    gap: '0.65rem',
     background: '#ffffff',
     border: '1px solid #e2e8f0',
-    borderRadius: '14px',
-    padding: '1rem',
-    marginBottom: '1rem',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+    borderRadius: '12px',
+    padding: '0.75rem',
+    marginBottom: '0.85rem',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
   },
   filterInput: {
     width: '100%',
     background: '#f8fafc',
     border: '1px solid #e2e8f0',
-    borderRadius: '10px',
-    padding: '0.55rem 0.85rem',
+    borderRadius: '8px',
+    padding: '0.5rem 0.75rem',
     fontSize: '0.75rem',
     color: '#0f172a',
     outline: 'none',
@@ -183,17 +181,17 @@ const S = {
   tableWrap: {
     background: '#ffffff',
     border: '1px solid #e2e8f0',
-    borderRadius: '16px',
+    borderRadius: '14px',
     overflow: 'hidden',
-    boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
   },
   thead: {
     background: '#f8fafc',
     borderBottom: '1px solid #e2e8f0',
   },
   th: {
-    padding: '0.9rem 1.1rem',
-    fontSize: '0.66rem',
+    padding: '0.75rem 0.95rem',
+    fontSize: '0.65rem',
     fontWeight: 700,
     color: '#94a3b8',
     textTransform: 'uppercase' as const,
@@ -206,8 +204,8 @@ const S = {
     transition: 'background 0.15s ease',
   },
   td: {
-    padding: '0.85rem 1.1rem',
-    fontSize: '0.78rem',
+    padding: '0.75rem 0.95rem',
+    fontSize: '0.76rem',
     color: '#334155',
     verticalAlign: 'top' as const,
   },
@@ -216,10 +214,10 @@ const S = {
   chip: (bg: string, text: string, border: string) => ({
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '0.3rem',
-    padding: '0.2rem 0.6rem',
+    gap: '0.25rem',
+    padding: '0.15rem 0.55rem',
     borderRadius: '9999px',
-    fontSize: '0.68rem',
+    fontSize: '0.66rem',
     fontWeight: 700,
     background: bg,
     color: text,
@@ -234,7 +232,7 @@ const S = {
 
   // ── Action Buttons ──
   reserveBtn: (can: boolean) => ({
-    padding: '0.4rem 0.85rem',
+    padding: '0.35rem 0.75rem',
     borderRadius: '8px',
     fontSize: '0.72rem',
     fontWeight: 700,
@@ -242,14 +240,14 @@ const S = {
     cursor: can ? 'pointer' : 'not-allowed',
     background: can ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : '#f1f5f9',
     color: can ? '#fff' : '#94a3b8',
-    boxShadow: can ? '0 2px 10px rgba(99,102,241,0.3)' : 'none',
+    boxShadow: can ? '0 2px 8px rgba(99,102,241,0.25)' : 'none',
     transition: 'all 0.2s ease',
     whiteSpace: 'nowrap' as const,
   } as React.CSSProperties),
   menuBtn: {
-    padding: '0.35rem 0.6rem',
+    padding: '0.3rem 0.5rem',
     borderRadius: '8px',
-    fontSize: '1rem',
+    fontSize: '0.9rem',
     lineHeight: 1,
     background: '#f8fafc',
     border: '1px solid #e2e8f0',
@@ -261,7 +259,7 @@ const S = {
     position: 'absolute' as const,
     right: 0,
     top: '110%',
-    width: '168px',
+    width: '160px',
     background: '#ffffff',
     border: '1px solid #e2e8f0',
     borderRadius: '12px',
@@ -272,8 +270,8 @@ const S = {
   },
   dropdownItem: {
     width: '100%',
-    padding: '0.55rem 0.75rem',
-    fontSize: '0.74rem',
+    padding: '0.5rem 0.7rem',
+    fontSize: '0.72rem',
     fontWeight: 600,
     color: '#334155',
     background: 'transparent',
@@ -288,7 +286,7 @@ const S = {
     fontFamily: 'inherit',
   } as React.CSSProperties,
 
-  // ── Drawer ──
+  // ── Drawer & Modals ──
   drawerOverlay: {
     position: 'fixed' as const,
     inset: 0,
@@ -306,13 +304,11 @@ const S = {
     borderLeft: '1px solid #e2e8f0',
     boxShadow: '-8px 0 40px rgba(0,0,0,0.12)',
     overflowY: 'auto' as const,
-    padding: '1.75rem',
+    padding: '1.5rem',
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: '1.5rem',
+    gap: '1.25rem',
   },
-
-  // ── Modal ──
   modalOverlay: {
     position: 'fixed' as const,
     inset: 0,
@@ -329,48 +325,48 @@ const S = {
     border: '1px solid #e2e8f0',
     borderRadius: '20px',
     boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
-    padding: '2rem',
+    padding: '1.75rem',
     width: '100%',
-    maxWidth: '680px',
+    maxWidth: '640px',
     maxHeight: '90vh',
     overflowY: 'auto' as const,
   },
   modalLabel: {
     display: 'block',
-    fontSize: '0.68rem',
+    fontSize: '0.67rem',
     fontWeight: 700,
     color: '#64748b',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.07em',
-    marginBottom: '0.35rem',
+    marginBottom: '0.3rem',
   },
   modalInput: {
     width: '100%',
     background: '#f8fafc',
     border: '1px solid #e2e8f0',
-    borderRadius: '10px',
-    padding: '0.65rem 0.9rem',
-    fontSize: '0.8rem',
+    borderRadius: '8px',
+    padding: '0.55rem 0.8rem',
+    fontSize: '0.78rem',
     color: '#0f172a',
     outline: 'none',
     fontFamily: 'inherit',
     transition: 'border-color 0.2s ease',
   } as React.CSSProperties,
 
-  // ── Info Block (inside drawer / modal) ──
+  // ── Info Block ──
   infoBlock: {
     background: '#f8fafc',
     border: '1px solid #e2e8f0',
-    borderRadius: '12px',
-    padding: '1rem',
-    fontSize: '0.78rem',
+    borderRadius: '10px',
+    padding: '0.85rem',
+    fontSize: '0.76rem',
     color: '#475569',
-    lineHeight: 1.7,
+    lineHeight: 1.6,
   },
   infoKey: {
     color: '#94a3b8',
     fontWeight: 600,
-    fontSize: '0.72rem',
+    fontSize: '0.7rem',
     marginRight: '0.3rem',
   },
   infoVal: {
@@ -389,24 +385,24 @@ const S = {
     fontWeight: 500,
   },
   successCheck: {
-    width: '52px',
-    height: '52px',
+    width: '48px',
+    height: '48px',
     borderRadius: '50%',
     background: 'linear-gradient(135deg, #10b981, #059669)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '1.4rem',
+    fontSize: '1.3rem',
     color: '#fff',
     margin: '0 auto 1rem',
-    boxShadow: '0 4px 20px rgba(16,185,129,0.3)',
+    boxShadow: '0 4px 16px rgba(16,185,129,0.3)',
   },
 }
 
 /* ─── Shared sub-components ─────────────────────────────────────────────── */
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: '0.35rem' }}>
+    <div style={{ marginBottom: '0.3rem' }}>
       <span style={S.infoKey}>{label}:</span>
       <span style={S.infoVal}>{children}</span>
     </div>
@@ -415,7 +411,7 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: '0.67rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.6rem' }}>
+    <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
       {children}
     </div>
   )
@@ -425,7 +421,7 @@ function GhostBtn({ onClick, children }: { onClick: () => void; children: React.
   return (
     <button
       onClick={onClick}
-      style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, padding: '0.6rem 0.9rem', fontFamily: 'inherit', transition: 'color 0.15s ease' }}
+      style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 700, padding: '0.5rem 0.8rem', fontFamily: 'inherit', transition: 'color 0.15s ease' }}
       onMouseEnter={e => (e.currentTarget.style.color = '#0f172a')}
       onMouseLeave={e => (e.currentTarget.style.color = '#64748b')}
     >
@@ -440,15 +436,15 @@ function PrimaryBtn({ onClick, disabled, children, color = '#6366f1' }: { onClic
       onClick={onClick}
       disabled={disabled}
       style={{
-        padding: '0.65rem 1.4rem',
-        borderRadius: '10px',
-        fontSize: '0.78rem',
+        padding: '0.55rem 1.25rem',
+        borderRadius: '8px',
+        fontSize: '0.76rem',
         fontWeight: 700,
         border: 'none',
         cursor: disabled ? 'not-allowed' : 'pointer',
         background: disabled ? '#f1f5f9' : `linear-gradient(135deg, ${color}, ${color}cc)`,
         color: disabled ? '#94a3b8' : '#fff',
-        boxShadow: disabled ? 'none' : `0 4px 16px ${color}40`,
+        boxShadow: disabled ? 'none' : `0 4px 12px ${color}35`,
         transition: 'all 0.2s ease',
         fontFamily: 'inherit',
         opacity: disabled ? 0.6 : 1,
@@ -462,11 +458,22 @@ function PrimaryBtn({ onClick, disabled, children, color = '#6366f1' }: { onClic
 /* ─── Main Component ─────────────────────────────────────────────────────── */
 export default function RegistrationsClient({ registrations, openSessions }: RegistrationsClientProps) {
   const [activeTab, setActiveTab] = useState<'VERIFICATION' | 'RESERVED' | 'ALL'>('VERIFICATION')
+  
+  // Event Directory States
+  const [dirTab, setDirTab] = useState<'UPCOMING' | 'TODAY' | 'PAST'>('UPCOMING')
+  const [dirSearch, setDirSearch] = useState('')
+  const [dirStatusFilter, setDirStatusFilter] = useState<'ALL' | 'PENDING' | 'FULL' | 'AVAILABLE'>('ALL')
+  const [dirCapacityFilter, setDirCapacityFilter] = useState<'ALL' | 'HAS_SLOTS' | 'FULL'>('ALL')
+  const [dirSort, setDirSort] = useState<'NEAREST' | 'MOST_REGS' | 'REMAINING_SLOTS'>('NEAREST')
+  const [dirPage, setDirPage] = useState(1)
+  const dirPageSize = 12
+
+  // Registration Filter States
   const [searchTerm, setSearchTerm] = useState('')
   const [channelFilter, setChannelFilter] = useState<string>('ALL')
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('ALL')
-  const [sessionFilter, setSessionFilter] = useState<string>('ALL')
-  const [dateFilter, setDateFilter] = useState<string>('')
+
+  // Modals and Drawers
   const [drawerBooking, setDrawerBooking] = useState<any>(null)
   const [selectedReg, setSelectedReg] = useState<any>(null)
   const [isOverride, setIsOverride] = useState(false)
@@ -476,6 +483,8 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
   const [modalType, setModalType] = useState<'RESERVE' | 'RESCHEDULE' | 'STATUS' | 'WALK_IN' | 'VERIFY_PAYMENT' | null>(null)
   const [newStatus, setNewStatus] = useState('')
   const [statusNotes, setStatusNotes] = useState('')
+  
+  // Walk-in form states
   const [walkInStep, setWalkInStep] = useState<number>(1)
   const [walkInStep1Filter, setWalkInStep1Filter] = useState<'ALL' | 'FREE' | 'PAID'>('ALL')
   const [walkInFirstName, setWalkInFirstName] = useState('')
@@ -486,29 +495,22 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
   const [walkInPaymentMethod, setWalkInPaymentMethod] = useState('CASH')
   const [walkInWorkshopType, setWalkInWorkshopType] = useState<'PAID' | 'FREE'>('PAID')
   const [walkInNotes, setWalkInNotes] = useState('')
+
   const [successBooking, setSuccessBooking] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null)
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null)
-  const [emailToastId, setEmailToastId] = useState<string | null>(null)
   const [emailToastMsg, setEmailToastMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [hoveredRow, setHoveredRow] = useState<string | null>(null)
   const [manualOrderNumber, setManualOrderNumber] = useState('')
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'CARDS' | 'LIST'>('CARDS')
   const [manualAmount, setManualAmount] = useState('')
+  
+  // Mobile / Split view handling
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false)
 
-  const filteredOpenSessions = useMemo(() => {
-    if (walkInStep1Filter === 'ALL') return openSessions
-    return openSessions.filter(s => {
-      const isFree = (s.module?.name || '').toLowerCase().includes('free')
-      return walkInStep1Filter === 'FREE' ? isFree : !isFree
-    })
-  }, [openSessions, walkInStep1Filter])
-
-  const [walkInSessionId, setWalkInSessionId] = useState(filteredOpenSessions[0]?.id || openSessions[0]?.id || '')
-
+  // ── Summary metrics top ──
   const summaryCounts = useMemo(() => {
     const pendingVerification = registrations.filter(r =>
       ['PAID_FOR_ADMIN_VERIFICATION', 'PENDING_SCHEDULE_CONFIRMATION'].includes(r.status)
@@ -522,35 +524,184 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
     return { pendingVerification, awaitingPayment, reservedConfirmed, total: registrations.length }
   }, [registrations])
 
-  const filteredRegistrations = useMemo(() => {
-    return registrations.filter((r) => {
+  // ── Session Master Data List ──
+  const sessionList = useMemo(() => {
+    const map = new Map<string, {
+      session: any
+      pendingCount: number
+      reservedCount: number
+      totalCount: number
+    }>()
+
+    // Seed openSessions
+    openSessions.forEach(s => {
+      map.set(s.id, { session: s, pendingCount: 0, reservedCount: 0, totalCount: 0 })
+    })
+
+    // Tally registrations into their sessions
+    registrations.forEach(r => {
+      if (!r.sessionId) return
+      if (['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED', 'DUPLICATE_ORDER'].includes(r.status)) return
+      if (!map.has(r.sessionId)) {
+        if (r.session) map.set(r.sessionId, { session: r.session, pendingCount: 0, reservedCount: 0, totalCount: 0 })
+      }
+      const entry = map.get(r.sessionId)
+      if (!entry) return
+      entry.totalCount++
+      if (['PAID_FOR_ADMIN_VERIFICATION', 'PENDING_SCHEDULE_CONFIRMATION', 'AWAITING_PAYMENT'].includes(r.status)) entry.pendingCount++
+      if (['RESERVED', 'CONFIRMED', 'RESCHEDULED'].includes(r.status)) entry.reservedCount++
+    })
+
+    return Array.from(map.values())
+  }, [openSessions, registrations])
+
+  // Auto-select first session if none selected
+  useMemo(() => {
+    if (!selectedSessionId && sessionList.length > 0) {
+      setSelectedSessionId(sessionList[0].session.id)
+    }
+  }, [sessionList, selectedSessionId])
+
+  // Filtered & Sorted Sessions for Master Directory Sidebar
+  const filteredSessions = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10)
+
+    return sessionList.filter(({ session: s, pendingCount }) => {
+      const sDateStr = new Date(s.sessionDate).toISOString().slice(0, 10)
+      const isPast = new Date(s.sessionDate) < new Date(new Date().setHours(0,0,0,0))
+      const isToday = sDateStr === todayStr
+
+      // Tab filter
+      if (dirTab === 'TODAY' && !isToday) return false
+      if (dirTab === 'UPCOMING' && (isPast || isToday)) return false
+      if (dirTab === 'PAST' && !isPast) return false
+
+      // Search filter (Workshop title / date)
+      if (dirSearch) {
+        const q = dirSearch.toLowerCase()
+        const title = (s.module?.name || s.module?.title || 'Workshop').toLowerCase()
+        const dateFormatted = new Date(s.sessionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toLowerCase()
+        if (!title.includes(q) && !dateFormatted.includes(q)) return false
+      }
+
+      // Status filter
+      if (dirStatusFilter === 'PENDING' && pendingCount === 0) return false
+      if (dirStatusFilter === 'FULL' && s.availableSlots > 0) return false
+      if (dirStatusFilter === 'AVAILABLE' && s.availableSlots === 0) return false
+
+      // Capacity filter
+      if (dirCapacityFilter === 'HAS_SLOTS' && s.availableSlots === 0) return false
+      if (dirCapacityFilter === 'FULL' && s.availableSlots > 0) return false
+
+      return true
+    }).sort((a, b) => {
+      if (dirSort === 'NEAREST') {
+        return new Date(a.session.sessionDate).getTime() - new Date(b.session.sessionDate).getTime()
+      }
+      if (dirSort === 'MOST_REGS') {
+        return b.totalCount - a.totalCount
+      }
+      if (dirSort === 'REMAINING_SLOTS') {
+        return b.session.availableSlots - a.session.availableSlots
+      }
+      return 0
+    })
+  }, [sessionList, dirTab, dirSearch, dirStatusFilter, dirCapacityFilter, dirSort])
+
+  // Paginated Event Directory
+  const totalPages = Math.ceil(filteredSessions.length / dirPageSize) || 1
+  const paginatedSessions = useMemo(() => {
+    const start = (dirPage - 1) * dirPageSize
+    return filteredSessions.slice(start, start + dirPageSize)
+  }, [filteredSessions, dirPage, dirPageSize])
+
+  // Selected session object & metrics
+  const selectedSessionData = useMemo(() => {
+    if (!selectedSessionId) return null
+    return sessionList.find(c => c.session.id === selectedSessionId) || null
+  }, [sessionList, selectedSessionId])
+
+  // Registrations for the selected session
+  const selectedSessionRegs = useMemo(() => {
+    if (!selectedSessionId) return []
+    return registrations.filter(r => r.sessionId === selectedSessionId)
+  }, [registrations, selectedSessionId])
+
+  // Filtered registrations inside detail table
+  const filteredSessionRegs = useMemo(() => {
+    return selectedSessionRegs.filter(r => {
       if (activeTab === 'VERIFICATION' && !['PAID_FOR_ADMIN_VERIFICATION', 'PENDING_SCHEDULE_CONFIRMATION', 'AWAITING_PAYMENT', 'PAYMENT_PENDING'].includes(r.status)) return false
       if (activeTab === 'RESERVED' && !['RESERVED', 'CONFIRMED', 'RESCHEDULED'].includes(r.status)) return false
+      if (activeTab === 'ALL' && ['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED', 'DUPLICATE_ORDER'].includes(r.status)) return false
       if (searchTerm) {
         const q = searchTerm.toLowerCase()
         if (![r.customerName, r.customerEmail, r.customerPhone, r.bookingReference, r.shopifyOrder?.shopifyOrderNumber]
-          .some(v => v?.toLowerCase().includes(q))) return false
+          .some((v: any) => v?.toLowerCase().includes(q))) return false
       }
       if (channelFilter !== 'ALL' && r.salesChannel !== channelFilter) return false
       if (paymentStatusFilter !== 'ALL') {
         if (paymentStatusFilter === 'PAID' && !['PAID_FOR_ADMIN_VERIFICATION', 'RESERVED', 'CONFIRMED'].includes(r.status)) return false
         if (paymentStatusFilter === 'PENDING' && !['AWAITING_PAYMENT', 'PAYMENT_PENDING'].includes(r.status)) return false
       }
-      if (sessionFilter !== 'ALL' && r.sessionId !== sessionFilter) return false
-      if (dateFilter && r.session?.sessionDate) {
-        const d = new Date(r.session.sessionDate).toISOString().slice(0, 10)
-        if (d !== dateFilter) return false
-      }
       return true
     })
-  }, [registrations, activeTab, searchTerm, channelFilter, paymentStatusFilter, sessionFilter, dateFilter])
+  }, [selectedSessionRegs, activeTab, searchTerm, channelFilter, paymentStatusFilter])
+
+  const filteredOpenSessions = useMemo(() => {
+    if (walkInStep1Filter === 'ALL') return openSessions
+    return openSessions.filter(s => {
+      const isFree = (s.module?.name || '').toLowerCase().includes('free')
+      return walkInStep1Filter === 'FREE' ? isFree : !isFree
+    })
+  }, [openSessions, walkInStep1Filter])
+
+  const [walkInSessionId, setWalkInSessionId] = useState(filteredOpenSessions[0]?.id || openSessions[0]?.id || '')
 
   const clearFilters = () => {
     setSearchTerm('')
     setChannelFilter('ALL')
     setPaymentStatusFilter('ALL')
-    setSessionFilter('ALL')
-    setDateFilter('')
+  }
+
+  function getModuleColor(name?: string | null) {
+    const n = (name || '').toLowerCase()
+    if (n.includes('print') || n.includes('profit') || n.includes('bw001')) return { primary: '#ea580c', light: '#fff7ed', border: '#ffedd5' }
+    if (n.includes('robot') || n.includes('make-ur')) return { primary: '#6366f1', light: '#eef2ff', border: '#c7d2fe' }
+    if (n.includes('free')) return { primary: '#10b981', light: '#ecfdf5', border: '#a7f3d0' }
+    return { primary: '#0284c7', light: '#f0f9ff', border: '#bae6fd' }
+  }
+
+  const renderPaymentChip = (status: string) => {
+    switch (status) {
+      case 'PAID_FOR_ADMIN_VERIFICATION':
+      case 'RESERVED':
+      case 'CONFIRMED':
+        return <span style={S.chip('#f0fdf4', '#16a34a', '#bbf7d0')}>✓ Verified</span>
+      case 'AWAITING_PAYMENT':
+      case 'PAYMENT_PENDING':
+        return <span style={S.chip('#fffbeb', '#d97706', '#fde68a')}>⏳ Awaiting</span>
+      case 'CANCELLED':
+      case 'REFUNDED':
+        return <span style={S.chip('#fef2f2', '#dc2626', '#fecaca')}>✕ Cancelled</span>
+      default:
+        return <span style={S.chip('#f8fafc', '#64748b', '#e2e8f0')}>{status}</span>
+    }
+  }
+
+  const renderReservationChip = (status: string) => {
+    switch (status) {
+      case 'RESERVED':
+      case 'CONFIRMED':
+        return <span style={S.chip('#f0fdf4', '#16a34a', '#bbf7d0')}>Reserved</span>
+      case 'RESCHEDULED':
+        return <span style={S.chip('#eff6ff', '#2563eb', '#bfdbfe')}>Rescheduled</span>
+      case 'PAID_FOR_ADMIN_VERIFICATION':
+        return <span style={S.chip('#fffbeb', '#d97706', '#fde68a')}>Pending Review</span>
+      case 'CANCELLED':
+        return <span style={S.chip('#fef2f2', '#dc2626', '#fecaca')}>Cancelled</span>
+      default:
+        return <span style={S.chip('#f8fafc', '#94a3b8', '#e2e8f0')}>Not Reserved</span>
+    }
   }
 
   const handleReserve = async () => {
@@ -615,107 +766,6 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
     filteredOpenSessions.find(s => s.id === walkInSessionId) || filteredOpenSessions[0] || openSessions[0],
     [filteredOpenSessions, openSessions, walkInSessionId])
 
-  // Build session cards data: merge openSessions with registration counts
-  const sessionCards = useMemo(() => {
-    const map = new Map<string, {
-      session: any
-      pendingCount: number
-      reservedCount: number
-      totalCount: number
-    }>()
-
-    // Seed from openSessions first (includes sessions with 0 regs)
-    openSessions.forEach(s => {
-      map.set(s.id, { session: s, pendingCount: 0, reservedCount: 0, totalCount: 0 })
-    })
-
-    // Tally registrations into their sessions
-    registrations.forEach(r => {
-      if (!r.sessionId) return
-      if (['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED', 'DUPLICATE_ORDER'].includes(r.status)) return
-      if (!map.has(r.sessionId)) {
-        // session not in openSessions (past session that still has regs)
-        if (r.session) map.set(r.sessionId, { session: r.session, pendingCount: 0, reservedCount: 0, totalCount: 0 })
-      }
-      const entry = map.get(r.sessionId)
-      if (!entry) return
-      entry.totalCount++
-      if (['PAID_FOR_ADMIN_VERIFICATION', 'PENDING_SCHEDULE_CONFIRMATION', 'AWAITING_PAYMENT'].includes(r.status)) entry.pendingCount++
-      if (['RESERVED', 'CONFIRMED', 'RESCHEDULED'].includes(r.status)) entry.reservedCount++
-    })
-
-    return Array.from(map.values()).sort((a, b) =>
-      new Date(a.session.sessionDate).getTime() - new Date(b.session.sessionDate).getTime()
-    )
-  }, [openSessions, registrations])
-
-  // Registrations for the selected session (in list view)
-  const selectedSessionRegs = useMemo(() => {
-    if (!selectedSessionId) return []
-    return registrations.filter(r => r.sessionId === selectedSessionId)
-  }, [registrations, selectedSessionId])
-
-  // Filtered registrations for list view (respects search + filters)
-  const filteredSessionRegs = useMemo(() => {
-    return selectedSessionRegs.filter(r => {
-      if (activeTab === 'VERIFICATION' && !['PAID_FOR_ADMIN_VERIFICATION', 'PENDING_SCHEDULE_CONFIRMATION', 'AWAITING_PAYMENT', 'PAYMENT_PENDING'].includes(r.status)) return false
-      if (activeTab === 'RESERVED' && !['RESERVED', 'CONFIRMED', 'RESCHEDULED'].includes(r.status)) return false
-      if (activeTab === 'ALL' && ['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED', 'DUPLICATE_ORDER'].includes(r.status)) return false
-      if (searchTerm) {
-        const q = searchTerm.toLowerCase()
-        if (![r.customerName, r.customerEmail, r.customerPhone, r.bookingReference, r.shopifyOrder?.shopifyOrderNumber]
-          .some((v: any) => v?.toLowerCase().includes(q))) return false
-      }
-      if (channelFilter !== 'ALL' && r.salesChannel !== channelFilter) return false
-      if (paymentStatusFilter !== 'ALL') {
-        if (paymentStatusFilter === 'PAID' && !['PAID_FOR_ADMIN_VERIFICATION', 'RESERVED', 'CONFIRMED'].includes(r.status)) return false
-        if (paymentStatusFilter === 'PENDING' && !['AWAITING_PAYMENT', 'PAYMENT_PENDING'].includes(r.status)) return false
-      }
-      return true
-    })
-  }, [selectedSessionRegs, activeTab, searchTerm, channelFilter, paymentStatusFilter])
-
-  function getModuleColor(name?: string | null) {
-    const n = (name || '').toLowerCase()
-    if (n.includes('print') || n.includes('profit') || n.includes('bw001')) return { primary: '#ea580c', light: '#fff7ed', border: '#ffedd5' }
-    if (n.includes('robot') || n.includes('make-ur')) return { primary: '#6366f1', light: '#eef2ff', border: '#c7d2fe' }
-    if (n.includes('free')) return { primary: '#10b981', light: '#ecfdf5', border: '#a7f3d0' }
-    return { primary: '#0284c7', light: '#f0f9ff', border: '#bae6fd' }
-  }
-
-  const renderPaymentChip = (status: string) => {
-    switch (status) {
-      case 'PAID_FOR_ADMIN_VERIFICATION':
-      case 'RESERVED':
-      case 'CONFIRMED':
-        return <span style={S.chip('#f0fdf4', '#16a34a', '#bbf7d0')}>✓ Verified</span>
-      case 'AWAITING_PAYMENT':
-      case 'PAYMENT_PENDING':
-        return <span style={S.chip('#fffbeb', '#d97706', '#fde68a')}>⏳ Awaiting</span>
-      case 'CANCELLED':
-      case 'REFUNDED':
-        return <span style={S.chip('#fef2f2', '#dc2626', '#fecaca')}>✕ Cancelled</span>
-      default:
-        return <span style={S.chip('#f8fafc', '#64748b', '#e2e8f0')}>{status}</span>
-    }
-  }
-
-  const renderReservationChip = (status: string) => {
-    switch (status) {
-      case 'RESERVED':
-      case 'CONFIRMED':
-        return <span style={S.chip('#f0fdf4', '#16a34a', '#bbf7d0')}>Reserved</span>
-      case 'RESCHEDULED':
-        return <span style={S.chip('#eff6ff', '#2563eb', '#bfdbfe')}>Rescheduled</span>
-      case 'PAID_FOR_ADMIN_VERIFICATION':
-        return <span style={S.chip('#fffbeb', '#d97706', '#fde68a')}>Pending Review</span>
-      case 'CANCELLED':
-        return <span style={S.chip('#fef2f2', '#dc2626', '#fecaca')}>Cancelled</span>
-      default:
-        return <span style={S.chip('#f8fafc', '#94a3b8', '#e2e8f0')}>Not Reserved</span>
-    }
-  }
-
   const statCards = [
     { label: 'Pending Verification', icon: '⏳', value: summaryCounts.pendingVerification, sub: 'Awaiting staff confirmation', color: '#f59e0b', tab: 'VERIFICATION' as const },
     { label: 'Awaiting Payment', icon: '💳', value: summaryCounts.awaitingPayment, sub: 'Orders pending checkout', color: '#8b5cf6', tab: 'VERIFICATION' as const },
@@ -724,7 +774,7 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
   ]
 
   return (
-    <div className="light-panel" style={S.page}>
+    <div style={S.page}>
       {/* ── Page Header ── */}
       <div style={S.header}>
         <div>
@@ -735,29 +785,29 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
           </div>
           <h1 style={S.h1}>Shopify & StoreHub Verification Dashboard</h1>
           <p style={S.subtitle}>
-            Review incoming online and POS payments, verify schedule availability, and finalize workshop slot reservations.
+            Manage incoming online and POS workshop reservations, verify payment status, and lock participant slots across high-volume event schedules.
           </p>
         </div>
         <button
           onClick={() => { setErrorMsg(''); setWalkInStep(1); setModalType('WALK_IN') }}
           style={S.primaryBtn}
-          onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-1px)', e.currentTarget.style.boxShadow = '0 6px 28px rgba(99,102,241,0.55)')}
-          onMouseLeave={e => (e.currentTarget.style.transform = '', e.currentTarget.style.boxShadow = '0 4px 20px rgba(99,102,241,0.4)')}
+          onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-1px)', e.currentTarget.style.boxShadow = '0 6px 20px rgba(99,102,241,0.45)')}
+          onMouseLeave={e => (e.currentTarget.style.transform = '', e.currentTarget.style.boxShadow = '0 4px 16px rgba(99,102,241,0.35)')}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Manual Walk-in Booking
         </button>
       </div>
 
-      {/* ── Stat Cards ── */}
+      {/* ── Stat Cards Summary Banner ── */}
       <div style={S.statGrid}>
         {statCards.map(({ label, icon, value, sub, color, tab }) => (
           <div
             key={label}
             onClick={() => { setActiveTab(tab); if (tab === 'ALL') clearFilters() }}
             style={S.statCard(activeTab === tab, color)}
-            onMouseEnter={e => { if (activeTab !== tab) (e.currentTarget as HTMLDivElement).style.border = `1px solid ${color}50` }}
-            onMouseLeave={e => { if (activeTab !== tab) (e.currentTarget as HTMLDivElement).style.border = '1px solid #e2e8f0' }}
+            onMouseEnter={e => { if (activeTab !== tab) (e.currentTarget as HTMLDivElement).style.borderColor = `${color}60` }}
+            onMouseLeave={e => { if (activeTab !== tab) (e.currentTarget as HTMLDivElement).style.borderColor = '#e2e8f0' }}
           >
             <div style={S.statIcon(color)}>{icon}</div>
             <div style={S.statLabel(color)}>{label}</div>
@@ -767,393 +817,491 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
         ))}
       </div>
 
-      {/* ══════════════════════════════════════════════
-          LEVEL 1 — SESSION CARDS GRID
-      ══════════════════════════════════════════════ */}
-      {viewMode === 'CARDS' && (
-        <>
-          <div style={{ marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '0.8rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.35rem' }}>
-              Upcoming Workshop Sessions
-            </h2>
-            <p style={{ fontSize: '0.76rem', color: '#64748b' }}>Click a session card to view and manage its registrations.</p>
-          </div>
-
-          {sessionCards.length === 0 ? (
-            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '4rem 2rem', textAlign: 'center', color: '#94a3b8' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>📅</div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#475569' }}>No upcoming sessions</div>
-              <div style={{ fontSize: '0.75rem', marginTop: '0.3rem' }}>Schedule a new event from the Events page</div>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-              {sessionCards.map(({ session: s, pendingCount, reservedCount, totalCount }) => {
-                const color = getModuleColor(s.module?.name)
-                const sessionDate = new Date(s.sessionDate)
-                const isPast = sessionDate < new Date()
-                const slotPct = s.capacity > 0 ? Math.round(((s.capacity - s.availableSlots) / s.capacity) * 100) : 0
-
-                return (
-                  <div
-                    key={s.id}
-                    onClick={() => {
-                      setSelectedSessionId(s.id)
-                      setViewMode('LIST')
-                      setActiveTab('ALL')
-                      clearFilters()
-                    }}
-                    style={{
-                      background: '#ffffff',
-                      border: `1px solid ${color.border}`,
-                      borderLeft: `4px solid ${color.primary}`,
-                      borderRadius: '16px',
-                      padding: '1.25rem',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                      opacity: isPast ? 0.7 : 1,
-                    }}
-                    onMouseEnter={e => {
-                      ;(e.currentTarget as HTMLDivElement).style.boxShadow = `0 8px 28px rgba(0,0,0,0.10)`
-                      ;(e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'
-                    }}
-                    onMouseLeave={e => {
-                      ;(e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)'
-                      ;(e.currentTarget as HTMLDivElement).style.transform = ''
-                    }}
-                  >
-                    {/* Card Header */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.85rem' }}>
-                      <div>
-                        <div style={{ fontSize: '0.65rem', fontWeight: 800, color: color.primary, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.2rem' }}>
-                          {s.module?.name || 'Workshop'}
-                        </div>
-                        <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
-                          {sessionDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                        </div>
-                        <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.2rem' }}>
-                          {s.startTime} – {s.endTime}
-                        </div>
-                      </div>
-                      <span style={{
-                        padding: '0.2rem 0.65rem',
-                        borderRadius: '99px',
-                        fontSize: '0.65rem',
-                        fontWeight: 700,
-                        background: isPast ? '#f1f5f9' : s.availableSlots === 0 ? '#fef2f2' : s.availableSlots <= 5 ? '#fffbeb' : '#f0fdf4',
-                        color: isPast ? '#94a3b8' : s.availableSlots === 0 ? '#dc2626' : s.availableSlots <= 5 ? '#d97706' : '#16a34a',
-                        border: isPast ? '1px solid #e2e8f0' : s.availableSlots === 0 ? '1px solid #fecaca' : s.availableSlots <= 5 ? '1px solid #fde68a' : '1px solid #bbf7d0',
-                        whiteSpace: 'nowrap' as const,
-                      }}>
-                        {isPast ? 'Past' : s.availableSlots === 0 ? 'Full' : `${s.availableSlots} slots`}
-                      </span>
-                    </div>
-
-                    {/* Slot Capacity Bar */}
-                    <div style={{ marginBottom: '1rem' }}>
-                      <div style={{ height: '6px', background: '#f1f5f9', borderRadius: '99px', overflow: 'hidden' }}>
-                        <div style={{
-                          height: '100%', borderRadius: '99px',
-                          width: `${slotPct}%`,
-                          background: slotPct >= 100 ? '#ef4444' : slotPct >= 75 ? '#f59e0b' : color.primary,
-                          transition: 'width 0.4s ease',
-                        }} />
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: '#94a3b8', marginTop: '0.25rem' }}>
-                        <span>{s.capacity - s.availableSlots} of {s.capacity} booked</span>
-                        <span>{slotPct}%</span>
-                      </div>
-                    </div>
-
-                    {/* Registration Stats Pills */}
-                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' as const, marginBottom: '1rem' }}>
-                      <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700, background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a' }}>
-                        🟡 {pendingCount} pending
-                      </span>
-                      <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
-                        ✅ {reservedCount} reserved
-                      </span>
-                      <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700, background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0' }}>
-                        👥 {totalCount} total
-                      </span>
-                    </div>
-
-                    {/* View button */}
-                    <div style={{ borderTop: `1px solid ${color.border}`, paddingTop: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                        {s.collaborator ? `🤝 ${s.collaborator}` : ''}
-                      </span>
-                      <span style={{ fontSize: '0.74rem', fontWeight: 700, color: color.primary, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        View Registrations →
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ══════════════════════════════════════════════
-          LEVEL 2 — REGISTRATION LIST FOR SELECTED SESSION
-      ══════════════════════════════════════════════ */}
-      {viewMode === 'LIST' && selectedSessionId && (() => {
-        const card = sessionCards.find(c => c.session.id === selectedSessionId)
-        const s = card?.session
-        const color = getModuleColor(s?.module?.name)
-
-        return (
-          <>
-            {/* Back + Session Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem', flexWrap: 'wrap' as const }}>
-              <button
-                onClick={() => { setViewMode('CARDS'); setSelectedSessionId(null); clearFilters() }}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.45rem 0.85rem', fontSize: '0.76rem', fontWeight: 700, color: '#475569', cursor: 'pointer', transition: 'all 0.15s ease' }}
-                onMouseEnter={e => { e.currentTarget.style.background = '#e2e8f0' }}
-                onMouseLeave={e => { e.currentTarget.style.background = '#f1f5f9' }}
-              >
-                ← Back to Events
-              </button>
-              <div style={{ flex: 1, background: color.light, border: `1px solid ${color.border}`, borderRadius: '12px', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' as const }}>
-                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: color.primary, flexShrink: 0 }} />
-                <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0f172a' }}>
-                  {s?.module?.name || 'Workshop'}
-                </div>
-                <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                  {s ? new Date(s.sessionDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : ''}
-                </div>
-                <div style={{ fontSize: '0.78rem', color: '#64748b' }}>{s?.startTime} – {s?.endTime}</div>
-                <span style={{ padding: '0.2rem 0.65rem', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700, background: '#ffffff', color: color.primary, border: `1px solid ${color.border}` }}>
-                  {s?.availableSlots} / {s?.capacity} slots available
-                </span>
-              </div>
-            </div>
-
-            {/* Tab Bar */}
-            <div style={S.tabBar}>
-              {([
-                ['VERIFICATION', `Pending Verification (${card?.pendingCount ?? 0})`],
-                ['RESERVED', `Reserved / Confirmed (${card?.reservedCount ?? 0})`],
-                ['ALL', `All Registrations (${card?.totalCount ?? 0})`],
-              ] as const).map(([tab, label]) => (
-                <button key={tab} onClick={() => setActiveTab(tab)} style={S.tab(activeTab === tab)}>{label}</button>
+      {/* ════════════════════════════════════════════════════════════════
+          MASTER-DETAIL LAYOUT: Left Event Directory + Right Registrations
+      ════════════════════════════════════════════════════════════════ */}
+      <div style={{ display: 'grid', gridTemplateColumns: mobileDetailOpen ? '1fr' : '360px 1fr', gap: '1.25rem', alignItems: 'start' }}>
+        
+        {/* ── LEFT SIDEBAR: Compact Event Directory ── */}
+        <div style={{ display: mobileDetailOpen ? 'none' : 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          
+          {/* Directory Tabs (Upcoming, Today, Past) */}
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', gap: '0.25rem' }}>
+              {(['UPCOMING', 'TODAY', 'PAST'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => { setDirTab(t); setDirPage(1) }}
+                  style={{
+                    flex: 1,
+                    padding: '0.45rem 0.5rem',
+                    borderRadius: '8px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: dirTab === t ? '#6366f1' : 'transparent',
+                    color: dirTab === t ? '#ffffff' : '#64748b',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {t === 'UPCOMING' ? 'Upcoming' : t === 'TODAY' ? 'Today' : 'Past'}
+                </button>
               ))}
             </div>
+          </div>
 
-            {/* Filter Bar */}
-            <div style={S.filterBar}>
-              <input
-                type="text"
-                placeholder="🔍  Search by customer, ref, email, phone, order #..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                style={S.filterInput}
-                onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')}
-                onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
-              />
+          {/* Directory Filters & Search Box */}
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '0.85rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            <input
+              type="text"
+              placeholder="🔍 Search events..."
+              value={dirSearch}
+              onChange={e => { setDirSearch(e.target.value); setDirPage(1) }}
+              style={S.filterInput}
+            />
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
               <select
-                value={channelFilter}
-                onChange={e => setChannelFilter(e.target.value)}
-                style={{ ...S.filterInput, color: channelFilter === 'ALL' ? '#94a3b8' : '#0f172a' }}
+                value={dirStatusFilter}
+                onChange={e => { setDirStatusFilter(e.target.value as any); setDirPage(1) }}
+                style={{ ...S.filterInput, fontSize: '0.7rem' }}
               >
-                <option value="ALL">All Channels</option>
-                <option value="SHOPIFY">Shopify Online</option>
-                <option value="STOREHUB">StoreHub POS</option>
-                <option value="WALK_IN">Manual Walk-in</option>
+                <option value="ALL">All Statuses</option>
+                <option value="PENDING">🟡 Has Pending</option>
+                <option value="AVAILABLE">🟢 Available</option>
+                <option value="FULL">🔴 Fully Booked</option>
               </select>
+
               <select
-                value={paymentStatusFilter}
-                onChange={e => setPaymentStatusFilter(e.target.value)}
-                style={{ ...S.filterInput, color: paymentStatusFilter === 'ALL' ? '#94a3b8' : '#0f172a' }}
+                value={dirSort}
+                onChange={e => setDirSort(e.target.value as any)}
+                style={{ ...S.filterInput, fontSize: '0.7rem' }}
               >
-                <option value="ALL">All Payment Statuses</option>
-                <option value="PAID">Verified / Paid</option>
-                <option value="PENDING">Awaiting Payment</option>
+                <option value="NEAREST">Nearest Date</option>
+                <option value="MOST_REGS">Most Regs</option>
+                <option value="REMAINING_SLOTS">Most Slots</option>
               </select>
-              <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} style={{ ...S.filterInput, color: dateFilter ? '#0f172a' : '#94a3b8' }} onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')} onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')} />
+            </div>
+          </div>
+
+          {/* Directory Rows List */}
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+            <div style={{ padding: '0.65rem 0.95rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.67rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Workshop Sessions ({filteredSessions.length})
+              </span>
+              <span style={{ fontSize: '0.67rem', color: '#64748b' }}>
+                Page {dirPage} of {totalPages}
+              </span>
             </div>
 
-            {(searchTerm || channelFilter !== 'ALL' || paymentStatusFilter !== 'ALL' || dateFilter) && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', fontSize: '0.74rem', color: '#64748b' }}>
-                <span>Showing <strong style={{ color: '#6366f1' }}>{filteredSessionRegs.length}</strong> filtered records</span>
-                <button onClick={clearFilters} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', fontWeight: 700, fontSize: '0.74rem', fontFamily: 'inherit' }}>✕ Clear Filters</button>
+            {paginatedSessions.length === 0 ? (
+              <div style={{ padding: '3rem 1rem', textAlign: 'center', color: '#94a3b8' }}>
+                <div style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>📅</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>No events found</div>
+                <div style={{ fontSize: '0.72rem', marginTop: '0.2rem' }}>Adjust search or directory filters</div>
+              </div>
+            ) : (
+              <div>
+                {paginatedSessions.map(({ session: s, pendingCount, reservedCount, totalCount }) => {
+                  const isSelected = selectedSessionId === s.id
+                  const color = getModuleColor(s.module?.name || s.module?.title)
+                  const sDate = new Date(s.sessionDate)
+                  const isPast = sDate < new Date(new Date().setHours(0,0,0,0))
+                  const slotPct = s.capacity > 0 ? Math.round(((s.capacity - s.availableSlots) / s.capacity) * 100) : 0
+
+                  return (
+                    <div
+                      key={s.id}
+                      onClick={() => {
+                        setSelectedSessionId(s.id)
+                        setMobileDetailOpen(true)
+                      }}
+                      style={{
+                        padding: '0.85rem 0.95rem',
+                        cursor: 'pointer',
+                        background: isSelected ? 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(139,92,246,0.04) 100%)' : '#ffffff',
+                        borderLeft: isSelected ? '4px solid #6366f1' : `4px solid ${color.primary}`,
+                        borderBottom: '1px solid #f1f5f9',
+                        transition: 'all 0.15s ease',
+                      }}
+                      onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = '#f8fafc' }}
+                      onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = '#ffffff' }}
+                    >
+                      {/* Top title & badge */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                        <div>
+                          <div style={{ fontSize: '0.62rem', fontWeight: 800, color: color.primary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            {s.module?.name || s.module?.title || 'Workshop'}
+                          </div>
+                          <div style={{ fontSize: '0.88rem', fontWeight: isSelected ? 800 : 700, color: isSelected ? '#4f46e5' : '#0f172a', lineHeight: 1.25 }}>
+                            {sDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                          </div>
+                        </div>
+                        <span style={{
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: '99px',
+                          fontSize: '0.62rem',
+                          fontWeight: 700,
+                          background: isPast ? '#f1f5f9' : s.availableSlots === 0 ? '#fef2f2' : s.availableSlots <= 5 ? '#fffbeb' : '#f0fdf4',
+                          color: isPast ? '#94a3b8' : s.availableSlots === 0 ? '#dc2626' : s.availableSlots <= 5 ? '#d97706' : '#16a34a',
+                          border: isPast ? '1px solid #e2e8f0' : s.availableSlots === 0 ? '1px solid #fecaca' : s.availableSlots <= 5 ? '1px solid #fde68a' : '1px solid #bbf7d0',
+                        }}>
+                          {isPast ? 'Past' : s.availableSlots === 0 ? 'Full' : `${s.availableSlots} left`}
+                        </span>
+                      </div>
+
+                      {/* Time & venue */}
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.5rem' }}>
+                        ⏰ {s.startTime} – {s.endTime}
+                      </div>
+
+                      {/* Mini Capacity Progress Bar */}
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <div style={{ height: '4px', background: '#f1f5f9', borderRadius: '99px', overflow: 'hidden' }}>
+                          <div style={{
+                            height: '100%', borderRadius: '99px',
+                            width: `${slotPct}%`,
+                            background: slotPct >= 100 ? '#ef4444' : slotPct >= 75 ? '#f59e0b' : color.primary,
+                          }} />
+                        </div>
+                      </div>
+
+                      {/* Slot breakdown counts */}
+                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' as const }}>
+                        {pendingCount > 0 && (
+                          <span style={{ padding: '0.1rem 0.45rem', borderRadius: '99px', fontSize: '0.62rem', fontWeight: 700, background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a' }}>
+                            ⏳ {pendingCount} pending
+                          </span>
+                        )}
+                        <span style={{ padding: '0.1rem 0.45rem', borderRadius: '99px', fontSize: '0.62rem', fontWeight: 700, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
+                          ✓ {reservedCount} reserved
+                        </span>
+                        <span style={{ padding: '0.1rem 0.45rem', borderRadius: '99px', fontSize: '0.62rem', fontWeight: 700, background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0' }}>
+                          👥 {totalCount} total
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
 
-            {/* Registrations Table */}
-            <div style={S.tableWrap}>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead style={S.thead}>
-                    <tr>
-                      {['Booking Reference', 'Customer', 'Booking Channel', 'Payment Status', 'Reservation Status', 'Actions'].map(h => (
-                        <th key={h} style={{ ...S.th, textAlign: h === 'Actions' ? 'right' : 'left' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredSessionRegs.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: '4rem 1rem' }}>
-                          <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🔍</div>
-                          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#475569' }}>No registrations found</div>
-                          <div style={{ fontSize: '0.75rem', color: '#334155', marginTop: '0.3rem' }}>Try adjusting your filters</div>
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredSessionRegs.map(r => {
-                        const isFull = s?.availableSlots === 0
-                        const isReservedOrConfirmed = ['RESERVED', 'CONFIRMED'].includes(r.status)
-                        const isPaid = ['PAID_FOR_ADMIN_VERIFICATION', 'RESERVED', 'CONFIRMED'].includes(r.status)
-                        const canReserve = isPaid && !isFull && !isReservedOrConfirmed
-                        const ch = S.channelTag(r.salesChannel)
-
-                        return (
-                          <tr
-                            key={r.id}
-                            style={{ ...S.tdRow, background: hoveredRow === r.id ? '#f8fafc' : 'transparent' }}
-                            onMouseEnter={() => setHoveredRow(r.id)}
-                            onMouseLeave={() => setHoveredRow(null)}
-                          >
-                            {/* 1. Booking Reference */}
-                            <td style={S.td}>
-                              <button
-                                onClick={() => setDrawerBooking(r)}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'monospace', fontWeight: 800, fontSize: '0.78rem', color: '#6366f1', textDecoration: 'underline', textDecorationColor: '#c7d2fe', textUnderlineOffset: '3px', display: 'block', marginBottom: '0.4rem', padding: 0 }}
-                              >
-                                {r.bookingReference}
-                              </button>
-                              <span style={S.chip(ch.bg, ch.text, ch.border)}>{r.salesChannel}</span>
-                            </td>
-
-                            {/* 2. Customer */}
-                            <td style={S.td}>
-                              <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.82rem' }}>{r.customerName}</div>
-                              <div style={{ color: '#64748b', fontSize: '0.72rem', marginTop: '0.15rem' }}>{r.customerEmail}</div>
-                              <div style={{ color: '#94a3b8', fontSize: '0.72rem' }}>{r.customerPhone}</div>
-                              <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                <span>👤</span> {r.participantsCount} participant(s)
-                              </div>
-                            </td>
-
-                            {/* 3. Booking Channel */}
-                            <td style={S.td}>
-                              {r.shopifyOrder ? (
-                                <>
-                                  <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.8rem' }}>#{r.shopifyOrder.shopifyOrderNumber}</div>
-                                  <div style={{ color: '#16a34a', fontSize: '0.72rem', fontWeight: 700, marginTop: '0.15rem' }}>₱{r.shopifyOrder.totalAmount?.toFixed(2)}</div>
-                                </>
-                              ) : r.salesChannel === 'SHOPIFY' ? (
-                                <div style={{ color: '#f59e0b', fontWeight: 600, fontSize: '0.78rem' }}>Shopify (Order Pending)</div>
-                              ) : r.salesChannel === 'STOREHUB' ? (
-                                <div style={{ color: '#8b5cf6', fontWeight: 600, fontSize: '0.78rem' }}>StoreHub POS</div>
-                              ) : (
-                                <div style={{ color: '#64748b', fontWeight: 600, fontSize: '0.78rem' }}>Walk-in / On-Site</div>
-                              )}
-                            </td>
-
-                            {/* 4. Payment Status */}
-                            <td style={S.td}>{renderPaymentChip(r.status)}</td>
-
-                            {/* 5. Reservation Status */}
-                            <td style={S.td}>{renderReservationChip(r.status)}</td>
-
-                            {/* 6. Actions */}
-                            <td style={{ ...S.td, textAlign: 'right' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                                <button
-                                  onClick={() => {
-                                    if (canReserve) { setSelectedReg(r); setIsOverride(false); setOverrideReason(''); setErrorMsg(''); setModalType('RESERVE') }
-                                  }}
-                                  disabled={!canReserve}
-                                  title={!isPaid ? 'Payment not verified' : isFull ? 'Session is full' : isReservedOrConfirmed ? 'Already reserved' : ''}
-                                  style={S.reserveBtn(canReserve)}
-                                  onMouseEnter={e => { if (canReserve) (e.currentTarget.style.transform = 'translateY(-1px)') }}
-                                  onMouseLeave={e => { if (canReserve) (e.currentTarget.style.transform = '') }}
-                                >
-                                  Reserve Slot
-                                </button>
-
-                                <div style={{ position: 'relative' }}>
-                                  <button
-                                    onClick={() => setActionMenuOpenId(actionMenuOpenId === r.id ? null : r.id)}
-                                    style={S.menuBtn}
-                                    onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#0f172a' }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#64748b' }}
-                                  >
-                                    ⋯
-                                  </button>
-                                  {actionMenuOpenId === r.id && (
-                                    <div style={S.dropdownMenu}>
-                                      {[
-                                        { icon: '👁️', label: 'View Details', onClick: () => { setDrawerBooking(r); setActionMenuOpenId(null) } },
-                                        { icon: '🔄', label: 'Reschedule', onClick: () => { setSelectedReg(r); setRescheduleSessionId(openSessions[0]?.id || ''); setRescheduleReason(''); setErrorMsg(''); setModalType('RESCHEDULE'); setActionMenuOpenId(null) } },
-                                        { icon: '⚙️', label: 'Update Status', onClick: () => { setSelectedReg(r); setNewStatus(r.status); setStatusNotes(''); setErrorMsg(''); setModalType('STATUS'); setActionMenuOpenId(null) } },
-                                        {
-                                          icon: sendingEmailId === r.id ? '⏳' : '📧',
-                                          label: sendingEmailId === r.id ? 'Sending...' : 'Send Email',
-                                          onClick: async () => {
-                                            setActionMenuOpenId(null)
-                                            setSendingEmailId(r.id)
-                                            try {
-                                              const res = await sendReservationConfirmationEmail(r.id)
-                                              setEmailToastId(r.id)
-                                              setEmailToastMsg(res.error
-                                                ? { type: 'error', text: res.error }
-                                                : { type: 'success', text: `Email sent to ${r.customerEmail}` }
-                                              )
-                                              setTimeout(() => { setEmailToastId(null); setEmailToastMsg(null) }, 4000)
-                                            } finally {
-                                              setSendingEmailId(null)
-                                            }
-                                          }
-                                        },
-                                        ...(!['PAID_FOR_ADMIN_VERIFICATION', 'RESERVED', 'CONFIRMED', 'RESCHEDULED', 'CANCELLED', 'REFUNDED'].includes(r.status) ? [{
-                                          icon: '✅',
-                                          label: 'Verify Payment',
-                                          onClick: () => { setSelectedReg(r); setManualOrderNumber(''); setManualAmount(''); setErrorMsg(''); setModalType('VERIFY_PAYMENT'); setActionMenuOpenId(null) }
-                                        }] : []),
-                                      ].map(item => (
-                                        <button
-                                          key={item.label}
-                                          onClick={item.onClick}
-                                          style={S.dropdownItem}
-                                          onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-                                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                                        >
-                                          <span>{item.icon}</span> {item.label}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        )
-                      })
-                    )}
-                  </tbody>
-                </table>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div style={{ padding: '0.6rem 0.85rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <button
+                  disabled={dirPage === 1}
+                  onClick={() => setDirPage(p => Math.max(1, p - 1))}
+                  style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.25rem 0.6rem', fontSize: '0.7rem', fontWeight: 700, color: dirPage === 1 ? '#cbd5e1' : '#475569', cursor: dirPage === 1 ? 'not-allowed' : 'pointer' }}
+                >
+                  ← Prev
+                </button>
+                <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b' }}>
+                  {dirPage} / {totalPages}
+                </span>
+                <button
+                  disabled={dirPage === totalPages}
+                  onClick={() => setDirPage(p => Math.min(totalPages, p + 1))}
+                  style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.25rem 0.6rem', fontSize: '0.7rem', fontWeight: 700, color: dirPage === totalPages ? '#cbd5e1' : '#475569', cursor: dirPage === totalPages ? 'not-allowed' : 'pointer' }}
+                >
+                  Next →
+                </button>
               </div>
-            </div>
-          </>
-        )
-      })()}
+            )}
+          </div>
+        </div>
 
-      {/* ── Email Toast Notification ── */}
+        {/* ── RIGHT PANEL: Selected Event Detail & Customer Registration Table ── */}
+        <div>
+          {!selectedSessionData ? (
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '4rem 2rem', textAlign: 'center', color: '#94a3b8' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>👈</div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#475569' }}>Select a Workshop Session</div>
+              <div style={{ fontSize: '0.75rem', marginTop: '0.3rem' }}>Click any event row from the directory to inspect registrations</div>
+            </div>
+          ) : (
+            <>
+              {/* Persistent Mobile Back Button */}
+              {mobileDetailOpen && (
+                <button
+                  onClick={() => setMobileDetailOpen(false)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.4rem 0.8rem', fontSize: '0.75rem', fontWeight: 700, color: '#6366f1', cursor: 'pointer', marginBottom: '0.85rem' }}
+                >
+                  ← Back to Event Directory
+                </button>
+              )}
+
+              {/* Selected Event Header Summary Banner */}
+              {(() => {
+                const s = selectedSessionData.session
+                const color = getModuleColor(s.module?.name || s.module?.title)
+                const sDate = new Date(s.sessionDate)
+
+                return (
+                  <div style={{ background: color.light, border: `1px solid ${color.border}`, borderRadius: '16px', padding: '1rem 1.25rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' as const, gap: '1rem' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color.primary }} />
+                        <span style={{ fontSize: '0.68rem', fontWeight: 800, color: color.primary, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                          {s.module?.name || s.module?.title || 'Workshop'}
+                        </span>
+                      </div>
+                      <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                        {sDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                      </h2>
+                      <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '0.15rem' }}>
+                        ⏰ {s.startTime} – {s.endTime} {s.collaborator ? `• Partner: ${s.collaborator}` : ''}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
+                      <div style={{ textAlign: 'right' as const }}>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Capacity</div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
+                          {s.capacity - s.availableSlots} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748b' }}>/ {s.capacity}</span>
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: s.availableSlots === 0 ? '#dc2626' : '#16a34a', fontWeight: 700 }}>
+                          {s.availableSlots === 0 ? 'Fully Booked' : `${s.availableSlots} slots left`}
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right' as const }}>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pending Staff Review</div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#d97706' }}>
+                          {selectedSessionData.pendingCount}
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: '#64748b' }}>Awaiting lock</div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* Tab Bar (Verification / Reserved / All) */}
+              <div style={S.tabBar}>
+                {([
+                  ['VERIFICATION', `Pending Verification (${selectedSessionData.pendingCount})`],
+                  ['RESERVED', `Reserved / Confirmed (${selectedSessionData.reservedCount})`],
+                  ['ALL', `All Session Records (${selectedSessionData.totalCount})`],
+                ] as const).map(([tab, label]) => (
+                  <button key={tab} onClick={() => setActiveTab(tab)} style={S.tab(activeTab === tab)}>{label}</button>
+                ))}
+              </div>
+
+              {/* Filter Bar inside Detail View */}
+              <div style={S.filterBar}>
+                <input
+                  type="text"
+                  placeholder="🔍 Search customer, ref #, email, order #..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  style={S.filterInput}
+                  onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')}
+                  onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
+                />
+                <select
+                  value={channelFilter}
+                  onChange={e => setChannelFilter(e.target.value)}
+                  style={{ ...S.filterInput, color: channelFilter === 'ALL' ? '#94a3b8' : '#0f172a' }}
+                >
+                  <option value="ALL">All Channels</option>
+                  <option value="SHOPIFY">Shopify Online</option>
+                  <option value="STOREHUB">StoreHub POS</option>
+                  <option value="WALK_IN">Manual Walk-in</option>
+                </select>
+                <select
+                  value={paymentStatusFilter}
+                  onChange={e => setPaymentStatusFilter(e.target.value)}
+                  style={{ ...S.filterInput, color: paymentStatusFilter === 'ALL' ? '#94a3b8' : '#0f172a' }}
+                >
+                  <option value="ALL">All Payment Statuses</option>
+                  <option value="PAID">Verified / Paid</option>
+                  <option value="PENDING">Awaiting Payment</option>
+                </select>
+              </div>
+
+              {(searchTerm || channelFilter !== 'ALL' || paymentStatusFilter !== 'ALL') && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem', fontSize: '0.72rem', color: '#64748b' }}>
+                  <span>Showing <strong style={{ color: '#6366f1' }}>{filteredSessionRegs.length}</strong> matching registrations</span>
+                  <button onClick={clearFilters} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', fontWeight: 700, fontSize: '0.72rem', fontFamily: 'inherit' }}>✕ Clear Filters</button>
+                </div>
+              )}
+
+              {/* Customer Registrations Table */}
+              <div style={S.tableWrap}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead style={S.thead}>
+                      <tr>
+                        {['Booking Reference', 'Customer', 'Booking Channel', 'Payment Status', 'Reservation Status', 'Actions'].map(h => (
+                          <th key={h} style={{ ...S.th, textAlign: h === 'Actions' ? 'right' : 'left' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredSessionRegs.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ textAlign: 'center', padding: '3.5rem 1rem' }}>
+                            <div style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>🔍</div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>No registrations found</div>
+                            <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.25rem' }}>Try switching tabs or clearing filters</div>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredSessionRegs.map(r => {
+                          const s = selectedSessionData.session
+                          const isFull = s?.availableSlots === 0
+                          const isReservedOrConfirmed = ['RESERVED', 'CONFIRMED'].includes(r.status)
+                          const isPaid = ['PAID_FOR_ADMIN_VERIFICATION', 'RESERVED', 'CONFIRMED'].includes(r.status)
+                          const canReserve = isPaid && !isFull && !isReservedOrConfirmed
+                          const ch = S.channelTag(r.salesChannel)
+
+                          return (
+                            <tr
+                              key={r.id}
+                              style={{ ...S.tdRow, background: hoveredRow === r.id ? '#f8fafc' : 'transparent' }}
+                              onMouseEnter={() => setHoveredRow(r.id)}
+                              onMouseLeave={() => setHoveredRow(null)}
+                            >
+                              {/* 1. Booking Reference */}
+                              <td style={S.td}>
+                                <button
+                                  onClick={() => setDrawerBooking(r)}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'monospace', fontWeight: 800, fontSize: '0.76rem', color: '#6366f1', textDecoration: 'underline', textDecorationColor: '#c7d2fe', textUnderlineOffset: '3px', display: 'block', marginBottom: '0.35rem', padding: 0 }}
+                                >
+                                  {r.bookingReference}
+                                </button>
+                                <span style={S.chip(ch.bg, ch.text, ch.border)}>{r.salesChannel}</span>
+                              </td>
+
+                              {/* 2. Customer */}
+                              <td style={S.td}>
+                                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.8rem' }}>{r.customerName}</div>
+                                <div style={{ color: '#64748b', fontSize: '0.7rem', marginTop: '0.1rem' }}>{r.customerEmail}</div>
+                                <div style={{ color: '#94a3b8', fontSize: '0.7rem' }}>{r.customerPhone}</div>
+                                <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                  <span>👤</span> {r.participantsCount} participant(s)
+                                </div>
+                              </td>
+
+                              {/* 3. Booking Channel */}
+                              <td style={S.td}>
+                                {r.shopifyOrder ? (
+                                  <>
+                                    <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.78rem' }}>#{r.shopifyOrder.shopifyOrderNumber}</div>
+                                    <div style={{ color: '#16a34a', fontSize: '0.7rem', fontWeight: 700, marginTop: '0.1rem' }}>₱{r.shopifyOrder.totalAmount?.toFixed(2)}</div>
+                                  </>
+                                ) : r.salesChannel === 'SHOPIFY' ? (
+                                  <div style={{ color: '#f59e0b', fontWeight: 600, fontSize: '0.76rem' }}>Shopify (Order Pending)</div>
+                                ) : r.salesChannel === 'STOREHUB' ? (
+                                  <div style={{ color: '#8b5cf6', fontWeight: 600, fontSize: '0.76rem' }}>StoreHub POS</div>
+                                ) : (
+                                  <div style={{ color: '#64748b', fontWeight: 600, fontSize: '0.76rem' }}>Walk-in / On-Site</div>
+                                )}
+                              </td>
+
+                              {/* 4. Payment Status */}
+                              <td style={S.td}>{renderPaymentChip(r.status)}</td>
+
+                              {/* 5. Reservation Status */}
+                              <td style={S.td}>{renderReservationChip(r.status)}</td>
+
+                              {/* 6. Actions */}
+                              <td style={{ ...S.td, textAlign: 'right' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
+                                  <button
+                                    onClick={() => {
+                                      if (canReserve) { setSelectedReg(r); setIsOverride(false); setOverrideReason(''); setErrorMsg(''); setModalType('RESERVE') }
+                                    }}
+                                    disabled={!canReserve}
+                                    title={!isPaid ? 'Payment not verified' : isFull ? 'Session is full' : isReservedOrConfirmed ? 'Already reserved' : ''}
+                                    style={S.reserveBtn(canReserve)}
+                                    onMouseEnter={e => { if (canReserve) (e.currentTarget.style.transform = 'translateY(-1px)') }}
+                                    onMouseLeave={e => { if (canReserve) (e.currentTarget.style.transform = '') }}
+                                  >
+                                    Reserve Slot
+                                  </button>
+
+                                  <div style={{ position: 'relative' }}>
+                                    <button
+                                      onClick={() => setActionMenuOpenId(actionMenuOpenId === r.id ? null : r.id)}
+                                      style={S.menuBtn}
+                                      onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#0f172a' }}
+                                      onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#64748b' }}
+                                    >
+                                      ⋯
+                                    </button>
+                                    {actionMenuOpenId === r.id && (
+                                      <div style={S.dropdownMenu}>
+                                        {[
+                                          { icon: '👁️', label: 'View Details', onClick: () => { setDrawerBooking(r); setActionMenuOpenId(null) } },
+                                          { icon: '🔄', label: 'Reschedule', onClick: () => { setSelectedReg(r); setRescheduleSessionId(openSessions[0]?.id || ''); setRescheduleReason(''); setErrorMsg(''); setModalType('RESCHEDULE'); setActionMenuOpenId(null) } },
+                                          { icon: '⚙️', label: 'Update Status', onClick: () => { setSelectedReg(r); setNewStatus(r.status); setStatusNotes(''); setErrorMsg(''); setModalType('STATUS'); setActionMenuOpenId(null) } },
+                                          {
+                                            icon: sendingEmailId === r.id ? '⏳' : '📧',
+                                            label: sendingEmailId === r.id ? 'Sending...' : 'Send Email',
+                                            onClick: async () => {
+                                              setActionMenuOpenId(null)
+                                              setSendingEmailId(r.id)
+                                              try {
+                                                const res = await sendReservationConfirmationEmail(r.id)
+                                                setEmailToastMsg(res.error
+                                                  ? { type: 'error', text: res.error }
+                                                  : { type: 'success', text: `Email sent to ${r.customerEmail}` }
+                                                )
+                                                setTimeout(() => { setEmailToastMsg(null) }, 4000)
+                                              } finally {
+                                                setSendingEmailId(null)
+                                              }
+                                            }
+                                          },
+                                          ...(!['PAID_FOR_ADMIN_VERIFICATION', 'RESERVED', 'CONFIRMED', 'RESCHEDULED', 'CANCELLED', 'REFUNDED'].includes(r.status) ? [{
+                                            icon: '✅',
+                                            label: 'Verify Payment',
+                                            onClick: () => { setSelectedReg(r); setManualOrderNumber(''); setManualAmount(''); setErrorMsg(''); setModalType('VERIFY_PAYMENT'); setActionMenuOpenId(null) }
+                                          }] : []),
+                                        ].map(item => (
+                                          <button
+                                            key={item.label}
+                                            onClick={item.onClick}
+                                            style={S.dropdownItem}
+                                            onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                          >
+                                            <span>{item.icon}</span> {item.label}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ── Toast Notification ── */}
       {emailToastMsg && (
         <div style={{
           position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999,
           background: emailToastMsg.type === 'success' ? '#f0fdf4' : '#fef2f2',
           border: `1px solid ${emailToastMsg.type === 'success' ? '#86efac' : '#fca5a5'}`,
           color: emailToastMsg.type === 'success' ? '#15803d' : '#dc2626',
-          borderRadius: '14px', padding: '14px 20px', fontSize: '0.85rem', fontWeight: 600,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.12)', display: 'flex', alignItems: 'center', gap: '10px',
-          maxWidth: '380px', animation: 'fadeInUp 0.3s ease',
+          borderRadius: '12px', padding: '12px 18px', fontSize: '0.82rem', fontWeight: 600,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.12)', display: 'flex', alignItems: 'center', gap: '8px',
         }}>
-          <span style={{ fontSize: '1.1rem' }}>{emailToastMsg.type === 'success' ? '✅' : '❌'}</span>
+          <span style={{ fontSize: '1rem' }}>{emailToastMsg.type === 'success' ? '✅' : '❌'}</span>
           {emailToastMsg.text}
         </div>
       )}
@@ -1162,30 +1310,27 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
       {drawerBooking && (
         <div style={S.drawerOverlay} onClick={e => { if (e.target === e.currentTarget) setDrawerBooking(null) }}>
           <div style={S.drawer}>
-            {/* Drawer Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem' }}>
               <div>
-                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.25rem' }}>Booking Reference</div>
-                <h3 style={{ fontSize: '1.3rem', fontFamily: 'monospace', fontWeight: 800, color: '#6366f1', letterSpacing: '-0.01em' }}>{drawerBooking.bookingReference}</h3>
+                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.2rem' }}>Booking Reference</div>
+                <h3 style={{ fontSize: '1.2rem', fontFamily: 'monospace', fontWeight: 800, color: '#6366f1', letterSpacing: '-0.01em' }}>{drawerBooking.bookingReference}</h3>
               </div>
               <button
                 onClick={() => setDrawerBooking(null)}
-                style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#64748b', cursor: 'pointer', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 700 }}
+                style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#64748b', cursor: 'pointer', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 700 }}
               >
                 ✕
               </button>
             </div>
 
-            {/* Status Banner */}
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '0.9rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '0.85rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.25rem' }}>Current Status</div>
-                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.82rem' }}>{drawerBooking.status.replace(/_/g, ' ')}</div>
+                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.2rem' }}>Current Status</div>
+                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.8rem' }}>{drawerBooking.status.replace(/_/g, ' ')}</div>
               </div>
               {renderReservationChip(drawerBooking.status)}
             </div>
 
-            {/* Customer Info */}
             <div>
               <SectionTitle>Customer Details</SectionTitle>
               <div style={S.infoBlock}>
@@ -1196,7 +1341,6 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
               </div>
             </div>
 
-            {/* Session Info */}
             <div>
               <SectionTitle>Workshop Session</SectionTitle>
               {drawerBooking.session ? (
@@ -1210,7 +1354,6 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
               )}
             </div>
 
-            {/* Order & Channel */}
             <div>
               <SectionTitle>Order & Channel</SectionTitle>
               <div style={S.infoBlock}>
@@ -1226,8 +1369,7 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
               </div>
             </div>
 
-            {/* Drawer Actions */}
-            <div style={{ marginTop: 'auto', borderTop: '1px solid #e2e8f0', paddingTop: '1.25rem', display: 'flex', gap: '0.75rem' }}>
+            <div style={{ marginTop: 'auto', borderTop: '1px solid #e2e8f0', paddingTop: '1rem', display: 'flex', gap: '0.75rem' }}>
               <PrimaryBtn color="#6366f1" onClick={() => { setSelectedReg(drawerBooking); setDrawerBooking(null); setModalType('RESERVE') }}>
                 Reserve Slot
               </PrimaryBtn>
@@ -1241,16 +1383,15 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
       {modalType === 'WALK_IN' && (
         <div style={S.modalOverlay}>
           <div style={S.modal}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '1.1rem', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem', marginBottom: '1.1rem' }}>
               <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>Manual Walk-in Booking</h3>
-                <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>Step {walkInStep} of 4</p>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>Manual Walk-in Booking</h3>
+                <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.15rem' }}>Step {walkInStep} of 4</p>
               </div>
-              <button onClick={() => setModalType(null)} style={{ ...S.menuBtn, width: '30px', height: '30px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem' }}>✕</button>
+              <button onClick={() => setModalType(null)} style={{ ...S.menuBtn, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem' }}>✕</button>
             </div>
 
-            {/* Step progress */}
-            <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.3rem', marginBottom: '1.25rem' }}>
               {[1, 2, 3, 4].map(s => (
                 <div key={s} style={{ flex: 1, height: '4px', borderRadius: '2px', background: s <= walkInStep ? 'linear-gradient(90deg, #6366f1, #8b5cf6)' : '#e2e8f0', transition: 'background 0.3s ease' }} />
               ))}
@@ -1258,13 +1399,12 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
 
             {errorMsg && <div style={{ ...S.errorBox, marginBottom: '1rem' }}>{errorMsg}</div>}
 
-            {/* Step 1 */}
             {walkInStep === 1 && (
               <div>
-                <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>Step 1: Select Workshop Session</h4>
-                <div style={{ marginBottom: '1rem' }}>
+                <h4 style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.85rem' }}>Step 1: Select Workshop Session</h4>
+                <div style={{ marginBottom: '0.85rem' }}>
                   <label style={S.modalLabel}>Filter Workshop Type</label>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
                     <button
                       type="button"
                       onClick={() => {
@@ -1272,16 +1412,8 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                         if (openSessions.length > 0) setWalkInSessionId(openSessions[0].id)
                       }}
                       style={{
-                        flex: 1,
-                        padding: '0.5rem',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0',
-                        background: walkInStep1Filter === 'ALL' ? '#6366f1' : '#f8fafc',
-                        color: walkInStep1Filter === 'ALL' ? '#fff' : '#64748b',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
+                        flex: 1, padding: '0.45rem', fontSize: '0.74rem', fontWeight: 700, borderRadius: '8px', border: '1px solid #e2e8f0',
+                        background: walkInStep1Filter === 'ALL' ? '#6366f1' : '#f8fafc', color: walkInStep1Filter === 'ALL' ? '#fff' : '#64748b', cursor: 'pointer'
                       }}
                     >
                       All Sessions
@@ -1295,16 +1427,8 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                         else setWalkInSessionId('')
                       }}
                       style={{
-                        flex: 1,
-                        padding: '0.5rem',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0',
-                        background: walkInStep1Filter === 'FREE' ? '#10b981' : '#f8fafc',
-                        color: walkInStep1Filter === 'FREE' ? '#fff' : '#64748b',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
+                        flex: 1, padding: '0.45rem', fontSize: '0.74rem', fontWeight: 700, borderRadius: '8px', border: '1px solid #e2e8f0',
+                        background: walkInStep1Filter === 'FREE' ? '#10b981' : '#f8fafc', color: walkInStep1Filter === 'FREE' ? '#fff' : '#64748b', cursor: 'pointer'
                       }}
                     >
                       🎁 Free Workshops
@@ -1318,16 +1442,8 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                         else setWalkInSessionId('')
                       }}
                       style={{
-                        flex: 1,
-                        padding: '0.5rem',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0',
-                        background: walkInStep1Filter === 'PAID' ? '#6366f1' : '#f8fafc',
-                        color: walkInStep1Filter === 'PAID' ? '#fff' : '#64748b',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
+                        flex: 1, padding: '0.45rem', fontSize: '0.74rem', fontWeight: 700, borderRadius: '8px', border: '1px solid #e2e8f0',
+                        background: walkInStep1Filter === 'PAID' ? '#6366f1' : '#f8fafc', color: walkInStep1Filter === 'PAID' ? '#fff' : '#64748b', cursor: 'pointer'
                       }}
                     >
                       💳 Paid Workshops
@@ -1339,7 +1455,7 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                 <select
                   value={walkInSessionId}
                   onChange={e => setWalkInSessionId(e.target.value)}
-                  style={{ ...S.modalInput, marginBottom: '1rem' }}
+                  style={{ ...S.modalInput, marginBottom: '0.85rem' }}
                 >
                   {filteredOpenSessions.length === 0 ? (
                     <option value="">No available sessions match this filter</option>
@@ -1356,12 +1472,12 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                   )}
                 </select>
                 {currentWalkInSession && (
-                  <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '10px', padding: '0.9rem', fontSize: '0.76rem', color: '#4f46e5' }}>
-                    <div style={{ fontWeight: 700, marginBottom: '0.3rem' }}>📍 Makerlab Experience Hub</div>
+                  <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '8px', padding: '0.8rem', fontSize: '0.75rem', color: '#4f46e5' }}>
+                    <div style={{ fontWeight: 700, marginBottom: '0.2rem' }}>📍 Makerlab Experience Hub</div>
                     <div style={{ color: '#64748b' }}>
                       Workshop: <strong>{currentWalkInSession.module?.title || currentWalkInSession.module?.name || '3D Printing Workshop'}</strong>
                     </div>
-                    <div style={{ color: '#64748b', marginTop: '0.2rem' }}>
+                    <div style={{ color: '#64748b', marginTop: '0.15rem' }}>
                       Remaining Capacity: <strong style={{ color: '#4f46e5' }}>{currentWalkInSession.availableSlots}</strong> of {currentWalkInSession.capacity} slots
                     </div>
                   </div>
@@ -1369,81 +1485,46 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
               </div>
             )}
 
-            {/* Step 2 */}
             {walkInStep === 2 && (
               <div>
-                <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>Step 2: Customer Information</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.85rem' }}>
+                <h4 style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.85rem' }}>Step 2: Customer Information</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginBottom: '0.75rem' }}>
                   <div>
                     <label style={S.modalLabel}>First Name *</label>
-                    <input
-                      type="text"
-                      placeholder="John"
-                      value={walkInFirstName}
-                      onChange={e => setWalkInFirstName(e.target.value)}
-                      style={S.modalInput}
-                      onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')}
-                      onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
-                    />
+                    <input type="text" placeholder="John" value={walkInFirstName} onChange={e => setWalkInFirstName(e.target.value)} style={S.modalInput} />
                   </div>
                   <div>
                     <label style={S.modalLabel}>Last Name *</label>
-                    <input
-                      type="text"
-                      placeholder="Doe"
-                      value={walkInLastName}
-                      onChange={e => setWalkInLastName(e.target.value)}
-                      style={S.modalInput}
-                      onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')}
-                      onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
-                    />
+                    <input type="text" placeholder="Doe" value={walkInLastName} onChange={e => setWalkInLastName(e.target.value)} style={S.modalInput} />
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
                   <div>
-                    <label style={S.modalLabel}>Mobile Phone (11 digits) *</label>
-                    <input
-                      type="tel"
-                      placeholder="09123456789"
-                      maxLength={11}
-                      value={walkInPhone}
-                      onChange={e => setWalkInPhone(e.target.value.replace(/\D/g, ''))}
-                      style={S.modalInput}
-                      onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')}
-                      onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
-                    />
+                    <label style={S.modalLabel}>Mobile Phone *</label>
+                    <input type="tel" placeholder="09123456789" maxLength={11} value={walkInPhone} onChange={e => setWalkInPhone(e.target.value.replace(/\D/g, ''))} style={S.modalInput} />
                   </div>
                   <div>
                     <label style={S.modalLabel}>Email *</label>
-                    <input
-                      type="email"
-                      placeholder="customer@email.com"
-                      value={walkInEmail}
-                      onChange={e => setWalkInEmail(e.target.value)}
-                      style={S.modalInput}
-                      onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')}
-                      onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
-                    />
+                    <input type="email" placeholder="customer@email.com" value={walkInEmail} onChange={e => setWalkInEmail(e.target.value)} style={S.modalInput} />
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Step 3 */}
             {walkInStep === 3 && (
               <div>
-                <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>Step 3: Payment & Workshop Type</h4>
-                <div style={{ marginBottom: '0.85rem' }}>
+                <h4 style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.85rem' }}>Step 3: Payment & Workshop Type</h4>
+                <div style={{ marginBottom: '0.75rem' }}>
                   <label style={S.modalLabel}>Workshop Classification *</label>
                   <select value={walkInWorkshopType} onChange={e => setWalkInWorkshopType(e.target.value as 'PAID' | 'FREE')} style={S.modalInput}>
                     <option value="PAID">Paid Workshop (Sends Paid Confirmation Email)</option>
                     <option value="FREE">Free Workshop (Sends Free Confirmation Email)</option>
                   </select>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.85rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginBottom: '0.75rem' }}>
                   <div>
                     <label style={S.modalLabel}>Number of Participants *</label>
-                    <input type="number" min={1} max={currentWalkInSession?.availableSlots || 10} value={walkInCount} onChange={e => setWalkInCount(parseInt(e.target.value, 10) || 1)} style={S.modalInput} onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')} onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')} />
+                    <input type="number" min={1} max={currentWalkInSession?.availableSlots || 10} value={walkInCount} onChange={e => setWalkInCount(parseInt(e.target.value, 10) || 1)} style={S.modalInput} />
                   </div>
                   <div>
                     <label style={S.modalLabel}>On-Site Payment Method *</label>
@@ -1456,16 +1537,15 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                   </div>
                 </div>
                 <div>
-                  <label style={S.modalLabel}>Notes / Internal Reference (Optional)</label>
-                  <textarea rows={2} placeholder="Receipt # or notes..." value={walkInNotes} onChange={e => setWalkInNotes(e.target.value)} style={{ ...S.modalInput, resize: 'none' }} onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')} onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')} />
+                  <label style={S.modalLabel}>Notes / Internal Reference</label>
+                  <textarea rows={2} placeholder="Receipt # or notes..." value={walkInNotes} onChange={e => setWalkInNotes(e.target.value)} style={{ ...S.modalInput, resize: 'none' }} />
                 </div>
               </div>
             )}
 
-            {/* Step 4 */}
             {walkInStep === 4 && (
               <div>
-                <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>Step 4: Review & Confirm</h4>
+                <h4 style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.85rem' }}>Step 4: Review & Confirm</h4>
                 <div style={S.infoBlock}>
                   <InfoRow label="Session">{new Date(currentWalkInSession?.sessionDate).toLocaleDateString()} ({currentWalkInSession?.startTime} - {currentWalkInSession?.endTime})</InfoRow>
                   <InfoRow label="Customer">{`${walkInFirstName.trim()} ${walkInLastName.trim()}`} ({walkInEmail})</InfoRow>
@@ -1477,28 +1557,17 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
               </div>
             )}
 
-            {/* Controls */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '1.1rem', marginTop: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '1rem', marginTop: '1.25rem' }}>
               <GhostBtn onClick={() => { if (walkInStep === 1) setModalType(null); else setWalkInStep(s => s - 1) }}>
                 {walkInStep === 1 ? 'Cancel' : '← Back'}
               </GhostBtn>
               {walkInStep < 4 ? (
                 <PrimaryBtn onClick={() => {
-                  if (walkInStep === 1) {
-                    if (!walkInSessionId) { setErrorMsg('Please select a valid workshop session.'); return }
-                  }
+                  if (walkInStep === 1 && !walkInSessionId) { setErrorMsg('Please select a valid workshop session.'); return }
                   if (walkInStep === 2) {
-                    if (!walkInFirstName.trim() || !walkInLastName.trim()) {
-                      setErrorMsg('Please enter both First Name and Last Name.'); return
-                    }
-                    const cleanPhone = walkInPhone.replace(/\D/g, '')
-                    if (cleanPhone.length !== 11) {
-                      setErrorMsg('Please enter a valid 11-digit mobile phone number (e.g. 09123456789).'); return
-                    }
-                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-                    if (!emailRegex.test(walkInEmail.trim())) {
-                      setErrorMsg('Please enter a valid email address.'); return
-                    }
+                    if (!walkInFirstName.trim() || !walkInLastName.trim()) { setErrorMsg('Please enter both First Name and Last Name.'); return }
+                    if (walkInPhone.replace(/\D/g, '').length !== 11) { setErrorMsg('Please enter a valid 11-digit mobile phone number.'); return }
+                    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(walkInEmail.trim())) { setErrorMsg('Please enter a valid email address.'); return }
                   }
                   setErrorMsg(''); setWalkInStep(s => s + 1)
                 }}>Continue →</PrimaryBtn>
@@ -1515,11 +1584,11 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
       {/* ── SUCCESS MODAL ── */}
       {successBooking && (
         <div style={S.modalOverlay}>
-          <div style={{ ...S.modal, textAlign: 'center', maxWidth: '400px' }}>
+          <div style={{ ...S.modal, textAlign: 'center', maxWidth: '380px' }}>
             <div style={S.successCheck}>✓</div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.4rem' }}>Booking Confirmed!</h3>
-            <p style={{ fontSize: '0.76rem', color: '#64748b', marginBottom: '1.5rem' }}>Slot reservation completed successfully.</p>
-            <div style={{ ...S.infoBlock, textAlign: 'left', marginBottom: '1.5rem' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.35rem' }}>Booking Confirmed!</h3>
+            <p style={{ fontSize: '0.74rem', color: '#64748b', marginBottom: '1.25rem' }}>Slot reservation completed successfully.</p>
+            <div style={{ ...S.infoBlock, textAlign: 'left', marginBottom: '1.25rem' }}>
               <InfoRow label="Booking Ref">{successBooking.bookingReference}</InfoRow>
               <InfoRow label="Customer">{successBooking.customerName}</InfoRow>
               <InfoRow label="Participants">{successBooking.participantsCount}</InfoRow>
@@ -1533,16 +1602,16 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
       {/* ── RESERVE MODAL ── */}
       {modalType === 'RESERVE' && selectedReg && (
         <div style={S.modalOverlay}>
-          <div style={S.modal}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.35rem' }}>Verify & Reserve Workshop Slot</h3>
-            <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '1.25rem' }}>Confirming will deduct {selectedReg.participantsCount} slot(s) from the session.</p>
+          <div style={{ ...S.modal, maxWidth: '440px' }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.3rem' }}>Verify & Reserve Workshop Slot</h3>
+            <p style={{ fontSize: '0.74rem', color: '#64748b', marginBottom: '1rem' }}>Confirming will deduct {selectedReg.participantsCount} slot(s) from the session.</p>
             <div style={{ ...S.infoBlock, marginBottom: '1rem' }}>
               <InfoRow label="Customer">{selectedReg.customerName}</InfoRow>
               <InfoRow label="Ref #">{selectedReg.bookingReference}</InfoRow>
               <InfoRow label="Available Slots">{selectedReg.session?.availableSlots ?? 0}</InfoRow>
             </div>
             {errorMsg && <div style={{ ...S.errorBox, marginBottom: '1rem' }}>{errorMsg}</div>}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem' }}>
               <GhostBtn onClick={() => setModalType(null)}>Cancel</GhostBtn>
               <PrimaryBtn onClick={handleReserve} disabled={loading} color="#10b981">{loading ? 'Confirming...' : 'Confirm Reservation'}</PrimaryBtn>
             </div>
@@ -1554,20 +1623,19 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
       {modalType === 'RESCHEDULE' && selectedReg && (
         <div style={S.modalOverlay}>
           <div style={S.modal}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem', marginBottom: '1rem' }}>
               <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>Reschedule Workshop Booking</h3>
-                <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>Move this booking to a different session.</p>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>Reschedule Workshop Booking</h3>
+                <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.15rem' }}>Move this booking to a different session.</p>
               </div>
-              <button onClick={() => setModalType(null)} style={{ ...S.menuBtn, width: '30px', height: '30px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              <button onClick={() => setModalType(null)} style={{ ...S.menuBtn, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             </div>
-            <div style={{ ...S.infoBlock, marginBottom: '1.25rem' }}>
+            <div style={{ ...S.infoBlock, marginBottom: '1rem' }}>
               <InfoRow label="Customer">{selectedReg.customerName}</InfoRow>
               <InfoRow label="Ref #">{selectedReg.bookingReference}</InfoRow>
               <InfoRow label="Participants">{selectedReg.participantsCount}</InfoRow>
-              {selectedReg.session && <InfoRow label="Current Session">{new Date(selectedReg.session.sessionDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} ({selectedReg.session.startTime} – {selectedReg.session.endTime})</InfoRow>}
             </div>
-            <div style={{ marginBottom: '0.85rem' }}>
+            <div style={{ marginBottom: '0.75rem' }}>
               <label style={S.modalLabel}>New Workshop Session *</label>
               <select value={rescheduleSessionId} onChange={e => setRescheduleSessionId(e.target.value)} style={S.modalInput}>
                 <option value="">-- Select a session --</option>
@@ -1578,10 +1646,10 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
             </div>
             <div style={{ marginBottom: '1rem' }}>
               <label style={S.modalLabel}>Reason for Rescheduling *</label>
-              <textarea rows={3} placeholder="e.g. Customer requested date change..." value={rescheduleReason} onChange={e => setRescheduleReason(e.target.value)} style={{ ...S.modalInput, resize: 'none' }} onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')} onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')} />
+              <textarea rows={2} placeholder="Reason..." value={rescheduleReason} onChange={e => setRescheduleReason(e.target.value)} style={{ ...S.modalInput, resize: 'none' }} />
             </div>
             {errorMsg && <div style={{ ...S.errorBox, marginBottom: '1rem' }}>{errorMsg}</div>}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.85rem' }}>
               <GhostBtn onClick={() => { setModalType(null); setSelectedReg(null); setErrorMsg('') }}>Cancel</GhostBtn>
               <PrimaryBtn onClick={handleReschedule} disabled={loading || !rescheduleSessionId || !rescheduleReason} color="#3b82f6">{loading ? 'Rescheduling...' : 'Confirm Reschedule'}</PrimaryBtn>
             </div>
@@ -1593,22 +1661,18 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
       {modalType === 'STATUS' && selectedReg && (
         <div style={S.modalOverlay}>
           <div style={S.modal}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem', marginBottom: '1rem' }}>
               <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>Update Booking Status</h3>
-                <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>Manually override or update the registration status.</p>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>Update Booking Status</h3>
+                <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.15rem' }}>Manually override or update registration status.</p>
               </div>
-              <button onClick={() => setModalType(null)} style={{ ...S.menuBtn, width: '30px', height: '30px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              <button onClick={() => setModalType(null)} style={{ ...S.menuBtn, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             </div>
-            <div style={{ ...S.infoBlock, marginBottom: '1.25rem' }}>
+            <div style={{ ...S.infoBlock, marginBottom: '1rem' }}>
               <InfoRow label="Customer">{selectedReg.customerName}</InfoRow>
               <InfoRow label="Ref #">{selectedReg.bookingReference}</InfoRow>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
-                <span style={S.infoKey}>Current Status:</span>
-                {renderReservationChip(selectedReg.status)}
-              </div>
             </div>
-            <div style={{ marginBottom: '0.85rem' }}>
+            <div style={{ marginBottom: '0.75rem' }}>
               <label style={S.modalLabel}>New Status *</label>
               <select value={newStatus} onChange={e => setNewStatus(e.target.value)} style={S.modalInput}>
                 <option value="">-- Select new status --</option>
@@ -1625,10 +1689,10 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
             </div>
             <div style={{ marginBottom: '1rem' }}>
               <label style={S.modalLabel}>Internal Notes (Optional)</label>
-              <textarea rows={3} placeholder="Reason for status change, admin note..." value={statusNotes} onChange={e => setStatusNotes(e.target.value)} style={{ ...S.modalInput, resize: 'none' }} onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')} onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')} />
+              <textarea rows={2} placeholder="Reason..." value={statusNotes} onChange={e => setStatusNotes(e.target.value)} style={{ ...S.modalInput, resize: 'none' }} />
             </div>
             {errorMsg && <div style={{ ...S.errorBox, marginBottom: '1rem' }}>{errorMsg}</div>}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.85rem' }}>
               <GhostBtn onClick={() => { setModalType(null); setSelectedReg(null); setErrorMsg('') }}>Cancel</GhostBtn>
               <PrimaryBtn onClick={handleStatusUpdate} disabled={loading || !newStatus}>{loading ? 'Updating...' : 'Update Status'}</PrimaryBtn>
             </div>
@@ -1640,89 +1704,54 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
       {modalType === 'VERIFY_PAYMENT' && selectedReg && (
         <div style={S.modalOverlay}>
           <div style={S.modal}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem', marginBottom: '1rem' }}>
               <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>✅ Manually Verify Payment</h3>
-                <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>Use this when Shopify webhook didn't fire. Marks the booking as paid and optionally links the order.</p>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>✅ Manually Verify Payment</h3>
+                <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.15rem' }}>Verify payment when online webhook was bypassed.</p>
               </div>
-              <button onClick={() => setModalType(null)} style={{ ...S.menuBtn, width: '30px', height: '30px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              <button onClick={() => setModalType(null)} style={{ ...S.menuBtn, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             </div>
-
-            {/* Info */}
-            <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '10px', padding: '0.85rem 1rem', marginBottom: '1.25rem', fontSize: '0.78rem', color: '#92400e', lineHeight: 1.5 }}>
-              ⚠️ Only use this if the customer shows a confirmed Shopify order and the webhook did not automatically update the status.
-            </div>
-
-            <div style={{ ...S.infoBlock, marginBottom: '1.25rem' }}>
+            <div style={{ ...S.infoBlock, marginBottom: '1rem' }}>
               <InfoRow label="Customer">{selectedReg.customerName}</InfoRow>
-              <InfoRow label="Email">{selectedReg.customerEmail}</InfoRow>
               <InfoRow label="Ref #">{selectedReg.bookingReference}</InfoRow>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
-                <span style={S.infoKey}>Current Status:</span>
-                {renderReservationChip(selectedReg.status)}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginBottom: '1rem' }}>
+              <div>
+                <label style={S.modalLabel}>Shopify Order Number (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 1042"
+                  value={manualOrderNumber}
+                  onChange={e => setManualOrderNumber(e.target.value)}
+                  style={S.modalInput}
+                />
+              </div>
+              <div>
+                <label style={S.modalLabel}>Amount Paid (Optional)</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 1500"
+                  value={manualAmount}
+                  onChange={e => setManualAmount(e.target.value)}
+                  style={S.modalInput}
+                />
               </div>
             </div>
-
-            <div style={{ marginBottom: '0.85rem' }}>
-              <label style={S.modalLabel}>Shopify Order # (Optional but recommended)</label>
-              <input
-                type="text"
-                placeholder="e.g. #68944 or JTWXWCFHH6"
-                value={manualOrderNumber}
-                onChange={e => setManualOrderNumber(e.target.value)}
-                style={S.modalInput}
-                onFocus={e => (e.currentTarget.style.borderColor = '#16a34a')}
-                onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
-              />
-            </div>
-
-            <div style={{ marginBottom: '1.25rem' }}>
-              <label style={S.modalLabel}>Amount Paid (₱) — Optional</label>
-              <input
-                type="number"
-                placeholder="e.g. 1.00"
-                min="0"
-                step="0.01"
-                value={manualAmount}
-                onChange={e => setManualAmount(e.target.value)}
-                style={S.modalInput}
-                onFocus={e => (e.currentTarget.style.borderColor = '#16a34a')}
-                onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
-              />
-            </div>
-
             {errorMsg && <div style={{ ...S.errorBox, marginBottom: '1rem' }}>{errorMsg}</div>}
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
-              <GhostBtn onClick={() => { setModalType(null); setSelectedReg(null); setErrorMsg('') }}>Cancel</GhostBtn>
-              <button
-                disabled={loading}
-                onClick={async () => {
-                  setLoading(true)
-                  setErrorMsg('')
-                  try {
-                    const res = await adminManualVerifyPayment(
-                      selectedReg.id,
-                      manualOrderNumber.trim() || undefined,
-                      manualAmount ? parseFloat(manualAmount) : undefined
-                    )
-                    if (res.error) { setErrorMsg(res.error) }
-                    else { setModalType(null); setSelectedReg(null) }
-                  } catch (e: any) { setErrorMsg(e.message || 'Failed.') }
-                  finally { setLoading(false) }
-                }}
-                style={{
-                  background: loading ? '#86efac' : '#16a34a', color: '#fff', border: 'none', borderRadius: '8px',
-                  padding: '0.6rem 1.4rem', fontSize: '0.82rem', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {loading ? 'Verifying...' : '✅ Confirm Payment Received'}
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.85rem' }}>
+              <GhostBtn onClick={() => setModalType(null)}>Cancel</GhostBtn>
+              <PrimaryBtn onClick={async () => {
+                setLoading(true); setErrorMsg('')
+                try {
+                  const res = await adminManualVerifyPayment(selectedReg.id, manualOrderNumber || undefined, manualAmount ? parseFloat(manualAmount) : undefined)
+                  if (res.error) { setErrorMsg(res.error) } else { setModalType(null); setSelectedReg(null) }
+                } catch (e: any) { setErrorMsg(e.message || 'Failed to verify.') }
+                finally { setLoading(false) }
+              }} disabled={loading} color="#10b981">{loading ? 'Verifying...' : 'Mark as Paid & Verified'}</PrimaryBtn>
             </div>
           </div>
         </div>
       )}
-
     </div>
   )
 }
