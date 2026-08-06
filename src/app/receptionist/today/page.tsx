@@ -9,11 +9,23 @@ export default async function ReceptionistRosterPage() {
     redirect('/receptionist/login')
   }
 
-  // Load all sessions with their module and bookings
+  // Load all sessions with their module, bookings, and registrations
   const sessions = await prisma.workshopSession.findMany({
     include: {
       module: true,
+      registrations: {
+        where: {
+          NOT: {
+            status: { in: ['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED', 'DUPLICATE_ORDER'] }
+          }
+        }
+      },
       bookings: {
+        where: {
+          NOT: {
+            status: { in: ['CANCELLED_BY_CUSTOMER', 'RELEASED_TO_WALKIN', 'CANCELLED'] }
+          }
+        },
         include: {
           voucher: true
         }
@@ -43,6 +55,16 @@ export default async function ReceptionistRosterPage() {
       description: s.module.description,
       units: s.module.units
     },
+    registrations: s.registrations.map(r => ({
+      id: r.id,
+      bookingReference: r.bookingReference,
+      customerName: r.customerName,
+      customerEmail: r.customerEmail,
+      customerPhone: r.customerPhone,
+      status: r.status,
+      participantsCount: r.participantsCount || 1,
+      salesChannel: r.salesChannel
+    })),
     bookings: s.bookings.map(b => ({
       id: b.id,
       bookingReference: b.bookingReference,
@@ -55,7 +77,7 @@ export default async function ReceptionistRosterPage() {
       unitsToDeduct: b.unitsToDeduct,
       balanceDueAmount: b.balanceDueAmount,
       balanceDuePaid: b.balanceDuePaid,
-      voucherCode: b.voucher.voucherCode
+      voucherCode: b.voucher?.voucherCode || 'N/A'
     }))
   }))
 
@@ -64,7 +86,7 @@ export default async function ReceptionistRosterPage() {
       <div>
         <h1 className="text-3xl font-bold mb-1" style={{ fontSize: '2rem', fontWeight: 800 }}>Calendar Roster</h1>
         <p style={{ color: 'var(--secondary-foreground)', fontSize: '0.95rem' }}>
-          Browse workshops by date, see participants list, check voucher details, and verify registration statuses.
+          Browse workshops by date, see attendee headcount, and check in participants directly.
         </p>
       </div>
 
@@ -72,3 +94,4 @@ export default async function ReceptionistRosterPage() {
     </div>
   )
 }
+

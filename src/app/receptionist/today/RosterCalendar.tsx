@@ -18,6 +18,17 @@ interface Booking {
   voucherCode: string
 }
 
+interface Registration {
+  id: string
+  bookingReference: string
+  customerName: string
+  customerEmail: string
+  customerPhone: string
+  status: string
+  participantsCount: number
+  salesChannel: string
+}
+
 interface Session {
   id: string
   category: string
@@ -36,6 +47,7 @@ interface Session {
     units: number
   }
   bookings: Booking[]
+  registrations?: Registration[]
 }
 
 export default function RosterCalendar({ sessions }: { sessions: Session[] }) {
@@ -87,58 +99,51 @@ export default function RosterCalendar({ sessions }: { sessions: Session[] }) {
     })
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'CHECKED_IN':
-      case 'COMPLETED_CONSUMED':
-      case 'WALKIN_CONFIRMED':
-        return 'badge-green'
-      case 'RESERVED':
-        return 'badge-blue'
-      case 'BALANCE_DUE':
-        return 'badge-yellow'
-      case 'CANCELLED_BY_CUSTOMER':
-      case 'NO_SHOW':
-        return 'badge-red'
-      default:
-        return 'badge-gray'
+  const renderStatusBadge = (status: string) => {
+    if (['CHECKED_IN', 'ATTENDED', 'COMPLETED', 'WALKIN_CONFIRMED'].includes(status)) {
+      return <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.7rem', fontWeight: 800, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>✓ Checked In</span>
     }
+    if (['RESERVED', 'CONFIRMED'].includes(status)) {
+      return <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.7rem', fontWeight: 800, background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe' }}>Confirmed</span>
+    }
+    if (status === 'BALANCE_DUE') {
+      return <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.7rem', fontWeight: 800, background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a' }}>Balance Due</span>
+    }
+    return <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.7rem', fontWeight: 800, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>{status.replace(/_/g, ' ')}</span>
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '2rem' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '2rem', fontFamily: "'Inter', sans-serif" }}>
       
       {/* ── LEFT COLUMN: Calendar Picker ── */}
-      <div className="glass-card" style={{ borderRadius: '1.5rem', padding: '2rem', height: 'fit-content' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: 'var(--primary)' }}>
+      <div className="glass-card" style={{ borderRadius: '1.5rem', padding: '1.75rem', height: 'fit-content', background: '#fff', border: '1px solid #e2e8f0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
             {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
           </h2>
           <div style={{ display: 'flex', gap: '0.4rem' }}>
             <button 
               type="button" 
               onClick={() => changeMonth(-1)} 
-              className="calendar-nav-btn"
-              style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--admin-border)', borderRadius: '0.5rem', background: '#fff', cursor: 'pointer', fontWeight: 'bold' }}
+              style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc', cursor: 'pointer', fontWeight: 'bold' }}
             >
-              &lt;
+              ‹
             </button>
             <button 
               type="button" 
               onClick={() => changeMonth(1)} 
-              className="calendar-nav-btn"
-              style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--admin-border)', borderRadius: '0.5rem', background: '#fff', cursor: 'pointer', fontWeight: 'bold' }}
+              style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc', cursor: 'pointer', fontWeight: 'bold' }}
             >
-              &gt;
+              ›
             </button>
           </div>
         </div>
 
-        <div className="calendar-weekdays" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--secondary-foreground)', marginBottom: '0.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '0.5rem' }}>
           <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
         </div>
 
-        <div className="calendar-days-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.35rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.35rem' }}>
           {calendarDays.map((day, idx) => {
             if (!day) return <div key={`empty-${idx}`} />
 
@@ -154,16 +159,16 @@ export default function RosterCalendar({ sessions }: { sessions: Session[] }) {
                 style={{
                   aspectRatio: '1',
                   borderRadius: '0.75rem',
-                  border: isSelected ? '2px solid var(--accent)' : 'none',
-                  background: isSelected ? 'rgba(249,115,22,0.06)' : (isToday ? '#f1f5f9' : 'transparent'),
-                  color: isSelected ? 'var(--accent)' : 'var(--primary)',
-                  fontWeight: isSelected || isToday ? '700' : '500',
+                  border: isSelected ? '2px solid #6366f1' : 'none',
+                  background: isSelected ? '#eef2ff' : (isToday ? '#f1f5f9' : 'transparent'),
+                  color: isSelected ? '#4f46e5' : '#0f172a',
+                  fontWeight: isSelected || isToday ? '800' : '600',
                   cursor: 'pointer',
                   position: 'relative',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '0.9rem',
+                  fontSize: '0.88rem',
                   transition: 'all 0.15s'
                 }}
               >
@@ -176,7 +181,7 @@ export default function RosterCalendar({ sessions }: { sessions: Session[] }) {
                       width: '5px', 
                       height: '5px', 
                       borderRadius: '50%', 
-                      background: 'var(--accent)' 
+                      background: '#6366f1' 
                     }} 
                   />
                 )}
@@ -186,147 +191,139 @@ export default function RosterCalendar({ sessions }: { sessions: Session[] }) {
         </div>
       </div>
 
-      {/* ── RIGHT COLUMN: Sessions & Bookings Roster ── */}
+      {/* ── RIGHT COLUMN: Sessions & Attendees Roster ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        <div className="glass-card" style={{ borderRadius: '1.5rem', padding: '2rem' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', margin: '0 0 1rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '1.5rem', padding: '1.75rem' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: '0 0 1.25rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>Roster for {selectedDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, background: '#f1f5f9', padding: '0.2rem 0.6rem', borderRadius: '0.5rem', color: 'var(--primary)' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, background: '#f1f5f9', padding: '0.25rem 0.65rem', borderRadius: '99px', color: '#475569' }}>
               {selectedSessions.length} session{selectedSessions.length !== 1 ? 's' : ''}
             </span>
           </h2>
 
           {selectedSessions.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--secondary-foreground)' }}>
-              <div style={{ fontSize: '3rem', opacity: 0.25, marginBottom: '0.75rem' }}>📅</div>
-              <p style={{ fontWeight: 600, margin: 0, color: 'var(--primary)' }}>No Workshops Scheduled</p>
-              <p style={{ fontSize: '0.85rem', margin: '4px 0 0 0' }}>There are no sessions set up for this date.</p>
+            <div style={{ textAlign: 'center', padding: '3.5rem 1rem', color: '#94a3b8' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📅</div>
+              <p style={{ fontWeight: 700, margin: 0, color: '#475569' }}>No Workshops Scheduled</p>
+              <p style={{ fontSize: '0.8rem', margin: '4px 0 0 0' }}>There are no sessions set up for this date.</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {selectedSessions.map(session => (
-                <div 
-                  key={session.id} 
-                  style={{ 
-                    border: '1px solid var(--admin-border)', 
-                    borderRadius: '1.25rem', 
-                    padding: '1.25rem', 
-                    background: '#f8fafc' 
-                  }}
-                >
-                  {/* Session Header */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        <span className="badge badge-orange" style={{ fontSize: '0.7rem' }}>
-                          🎯 Print 2 Profit
-                        </span>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--secondary-foreground)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {selectedSessions.map(session => {
+                const allAttendees = [
+                  ...(session.registrations || []).map(r => ({
+                    id: r.id,
+                    ref: r.bookingReference,
+                    name: r.customerName,
+                    email: r.customerEmail,
+                    phone: r.customerPhone,
+                    status: r.status,
+                    pax: r.participantsCount || 1,
+                    channel: r.salesChannel
+                  })),
+                  ...session.bookings.map(b => ({
+                    id: b.id,
+                    ref: b.bookingReference,
+                    name: b.customerName,
+                    email: b.customerEmail,
+                    phone: b.customerPhone,
+                    status: b.status,
+                    pax: 1,
+                    channel: 'BOOKING_SYSTEM'
+                  }))
+                ]
+
+                return (
+                  <div 
+                    key={session.id} 
+                    style={{ 
+                      border: '1px solid #e2e8f0', 
+                      borderRadius: '1.25rem', 
+                      padding: '1.25rem', 
+                      background: '#f8fafc' 
+                    }}
+                  >
+                    {/* Session Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
+                      <div>
+                        <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          🎯 {session.module.name}
+                        </div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', marginTop: '0.1rem' }}>
                           ⏰ {session.startTime} - {session.endTime}
-                        </span>
+                        </div>
                       </div>
-                      <h3 style={{ margin: '6px 0 0 0', fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary)' }}>
-                        {session.module.name}
-                      </h3>
-                      {session.notes && (
-                        <p style={{ fontSize: '0.8rem', fontStyle: 'italic', margin: '4px 0 0 0', color: 'var(--secondary-foreground)' }}>
-                          Note: {session.notes}
-                        </p>
+                      <div style={{ textAlign: 'right', fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>
+                        Attendees: {allAttendees.length} / {session.capacity}
+                      </div>
+                    </div>
+
+                    {/* Attendees List */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                      {allAttendees.length === 0 ? (
+                        <div style={{ color: '#94a3b8', fontSize: '0.8rem', fontStyle: 'italic', padding: '0.5rem 0' }}>
+                          No reservations for this session.
+                        </div>
+                      ) : (
+                        allAttendees.map(att => {
+                          const isCheckedIn = ['CHECKED_IN', 'ATTENDED', 'COMPLETED'].includes(att.status)
+
+                          return (
+                            <div 
+                              key={att.id}
+                              style={{ 
+                                padding: '0.85rem 1rem', 
+                                borderRadius: '12px', 
+                                border: '1px solid #e2e8f0', 
+                                background: '#ffffff',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: '0.75rem'
+                              }}
+                            >
+                              <div>
+                                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>
+                                  {att.name} <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#6366f1' }}>({att.pax} pax)</span>
+                                </div>
+                                <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                                  {att.email} {att.phone ? `• ${att.phone}` : ''}
+                                </div>
+                                <div style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.75rem', color: '#4f46e5', marginTop: '0.15rem' }}>
+                                  Ref: {att.ref}
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                {renderStatusBadge(att.status)}
+
+                                {!isCheckedIn && (
+                                  <Link 
+                                    href={`/receptionist?bookingReference=${att.ref}`}
+                                    style={{ 
+                                      padding: '0.4rem 0.85rem', 
+                                      borderRadius: '8px', 
+                                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+                                      color: '#fff', 
+                                      textDecoration: 'none', 
+                                      fontSize: '0.76rem', 
+                                      fontWeight: 800,
+                                      boxShadow: '0 2px 6px rgba(16,185,129,0.2)'
+                                    }}
+                                  >
+                                    Check In →
+                                  </Link>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })
                       )}
                     </div>
-                    <div style={{ textAlign: 'right', fontSize: '0.85rem', fontWeight: 600, color: 'var(--secondary-foreground)' }}>
-                      Slots: {session.capacity - session.availableSlots} / {session.capacity} Booked
-                    </div>
                   </div>
-
-                  {/* Bookings List */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {session.bookings.length === 0 ? (
-                      <div style={{ textTransform: 'none', color: 'var(--secondary-foreground)', fontSize: '0.85rem', fontStyle: 'italic', padding: '0.5rem 0' }}>
-                        No bookings made for this session slot.
-                      </div>
-                    ) : (
-                      session.bookings.map(booking => {
-                        const isPendingBalance = booking.status === 'BALANCE_DUE' && !booking.balanceDuePaid
-                        return (
-                          <div 
-                            key={booking.id}
-                            style={{ 
-                              padding: '1rem', 
-                              borderRadius: '0.85rem', 
-                              border: '1.5px solid #e2e8f0', 
-                              background: '#ffffff',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              flexWrap: 'wrap',
-                              gap: '0.75rem'
-                            }}
-                          >
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                {booking.kidName ? (
-                                  <>
-                                    <span style={{ fontWeight: 700, color: '#15803d' }}>👦 {booking.kidName}</span>
-                                    <span style={{ fontSize: '0.75rem', color: 'var(--secondary-foreground)' }}>
-                                      (Guardian: {booking.companionName || booking.customerName})
-                                    </span>
-                                  </>
-                                ) : (
-                                  <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{booking.customerName}</span>
-                                )}
-                              </div>
-                              <span style={{ fontSize: '0.8rem', color: 'var(--secondary-foreground)' }}>
-                                {booking.customerEmail} · {booking.customerPhone}
-                              </span>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '4px' }}>
-                                <span style={{ fontSize: '0.78rem', background: '#f1f5f9', padding: '0.1rem 0.4rem', borderRadius: '0.3rem', fontWeight: 600, color: 'var(--primary)' }}>
-                                  Ref: {booking.bookingReference}
-                                </span>
-                                <span style={{ fontSize: '0.78rem', color: 'var(--accent)', fontWeight: 600 }}>
-                                  Voucher: {booking.voucherCode}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                              <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-                                <span className={`badge ${getStatusBadge(booking.status)}`} style={{ fontSize: '0.75rem', fontWeight: 700 }}>
-                                  {booking.status.replace(/_/g, ' ')}
-                                </span>
-                                {isPendingBalance && (
-                                  <span style={{ fontSize: '0.78rem', color: '#dc2626', fontWeight: 700 }}>
-                                    ₱{booking.balanceDueAmount} Due
-                                  </span>
-                                )}
-                              </div>
-                              
-                              {/* Quick check-in link */}
-                              {(booking.status === 'RESERVED' || booking.status === 'BALANCE_DUE') && (
-                                <Link 
-                                  href={`/receptionist?voucherCode=${booking.voucherCode}&bookingReference=${booking.bookingReference}`}
-                                  style={{ 
-                                    padding: '0.45rem 0.85rem', 
-                                    borderRadius: '0.5rem', 
-                                    background: 'var(--accent)', 
-                                    color: '#fff', 
-                                    textDecoration: 'none', 
-                                    fontSize: '0.8rem', 
-                                    fontWeight: 700,
-                                    boxShadow: '0 2px 4px rgba(249,115,22,0.15)'
-                                  }}
-                                >
-                                  Check-in &rarr;
-                                </Link>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })
-                    )}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
@@ -335,3 +332,4 @@ export default function RosterCalendar({ sessions }: { sessions: Session[] }) {
     </div>
   )
 }
+

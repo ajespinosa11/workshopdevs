@@ -1499,7 +1499,7 @@ a {
 .hero-bg-image {
   position: absolute;
   inset: 0;
-  background-image: url('/hero-bg.png');
+  background-image: url('/workshop-collage-bg.png');
   background-size: cover;
   background-position: center;
   z-index: 0;
