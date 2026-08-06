@@ -233,6 +233,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
   const [editCapacity, setEditCapacity] = useState(20)
   const [editNotes, setEditNotes] = useState('')
   const [editCollaborator, setEditCollaborator] = useState('')
+  const [editDesc, setEditDesc] = useState('')
   const [editError, setEditError] = useState('')
   const [editLoading, setEditLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -369,6 +370,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     setEditCapacity(s.capacity)
     setEditNotes(s.notes || '')
     setEditCollaborator(s.collaborator || '')
+    setEditDesc(s.module?.description || '')
     setEditError('')
   }
 
@@ -391,6 +393,17 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     if (res.error) {
       setEditError(res.error)
     } else {
+      // Also save the module description if it changed
+      if (editSession.module?.id) {
+        const modData = new FormData()
+        const existing = modules.find(m => m.id === editSession.module!.id)
+        modData.append('moduleId', editSession.module.id)
+        modData.append('name', editSession.module.name)
+        modData.append('description', editDesc)
+        modData.append('category', existing?.category || 'BEGINNER')
+        modData.append('units', (existing?.units ?? 2).toString())
+        await updateModule(modData)
+      }
       setEditSession(null)
       router.refresh()
     }
@@ -692,60 +705,14 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
 
                   {/* Module Details */}
                   <div style={{ margin: '2px 0 6px 0', borderLeft: '3px solid var(--accent)', paddingLeft: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--admin-text-primary)' }}>
-                        {s.module?.name || 'Prints 2 Profit Event'}
-                      </div>
-                      {s.module?.id && editingDescModuleId !== s.module.id && (
-                        <button
-                          onClick={() => {
-                            setEditingDescModuleId(s.module!.id)
-                            setInlineDescText(s.module?.description || '')
-                          }}
-                          style={{
-                            background: 'none', border: 'none', color: 'var(--accent)',
-                            fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: '2px 6px'
-                          }}
-                        >
-                          ✏️ Edit Description
-                        </button>
-                      )}
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--admin-text-primary)' }}>
+                      {s.module?.name || 'Prints 2 Profit Event'}
                     </div>
 
-                    {/* Inline Description Editor or Display */}
-                    {s.module?.id && editingDescModuleId === s.module.id ? (
-                      <div style={{ marginTop: '6px', background: '#ffffff', border: '1px solid #fdba74', borderRadius: '8px', padding: '8px' }}>
-                        <textarea
-                          rows={3}
-                          value={inlineDescText}
-                          onChange={(e) => setInlineDescText(e.target.value)}
-                          placeholder="Edit workshop description..."
-                          style={{ width: '100%', fontSize: '0.8rem', padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0', resize: 'vertical' }}
-                        />
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', marginTop: '6px' }}>
-                          <button
-                            type="button"
-                            onClick={() => setEditingDescModuleId(null)}
-                            style={{ padding: '2px 8px', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            disabled={inlineLoading}
-                            onClick={() => saveInlineDescription({ id: s.module!.id, name: s.module?.name || '', units: s.module?.units || 2 })}
-                            style={{ padding: '2px 10px', fontSize: '0.75rem', borderRadius: '4px', border: 'none', background: 'var(--accent)', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
-                          >
-                            {inlineLoading ? 'Saving...' : 'Save'}
-                          </button>
-                        </div>
+                    {s.module?.description && (
+                      <div style={{ fontSize: '0.78rem', color: 'var(--admin-text-secondary)', marginTop: '4px', fontStyle: 'italic', lineHeight: 1.4 }}>
+                        {renderFormattedText(s.module.description)}
                       </div>
-                    ) : (
-                      s.module?.description && (
-                        <div style={{ fontSize: '0.78rem', color: 'var(--admin-text-secondary)', marginTop: '4px', fontStyle: 'italic', lineHeight: 1.4 }}>
-                          {renderFormattedText(s.module.description)}
-                        </div>
-                      )
                     )}
 
                     {/* Inline Note Editor or Display */}
@@ -1050,6 +1017,16 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                 )}
               </div>
 
+              {/* Formatted Textarea for Event Description */}
+              <FormattedTextarea
+                label="Event Description"
+                optionalHint="optional"
+                value={editDesc}
+                onChange={setEditDesc}
+                placeholder="Describe the workshop — what participants will learn, requirements, objectives..."
+                minHeight="160px"
+              />
+
               {/* Formatted Textarea for Event Note */}
               <FormattedTextarea
                 label="Event Note"
@@ -1057,7 +1034,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                 value={editNotes}
                 onChange={setEditNotes}
                 placeholder="e.g. Bring your laptop, limited seats, parking info..."
-                minHeight="160px"
+                minHeight="100px"
               />
 
               {/* Collaboration field */}
