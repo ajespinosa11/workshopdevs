@@ -9,10 +9,10 @@ interface GalleryImage {
 }
 
 const IMAGES: GalleryImage[] = [
-  { src: '/first_workshop.jpg', title: 'FDM Printing Area', desc: 'Equipped with multiple high-precision FDM 3D printers.' },
-  { src: '/second_workshop.jpg', title: 'SLA Resin Printing Station', desc: 'Detailed, high-resolution liquid resin prints post-curing.' },
-  { src: '/third_workshop.jpg', title: 'Student Learning Hub', desc: 'Collaborative workspaces for design iteration and modeling.' },
-  { src: '/fourth_workshop.jpg', title: 'Filament & Materials Showcase', desc: 'A wide range of PLA, ABS, PETG, and specialty filaments.' },
+  { src: '/first_workshop.jpg', title: 'Start your 3D Printing Journey', desc: 'Learn the fundamentals, explore different materials, and get hands-on with 3D Printing at Makerlab.' },
+  { src: '/second_workshop.jpg', title: 'Inside the 3D Printing Workshop', desc: 'From learning the basics to creating their first prints, participants experienced the world of 3D Printing.' },
+  { src: '/third_workshop.jpg', title: 'Make Ideas Comes to Life', desc: 'Bringing makers together to learn, experiment, and experienced 3D Printing firsthand.' },
+  { src: '/fourth_workshop.jpg', title: 'Learn. Create. Make', desc: 'A closer look at our hands-on 3D Printing Workshop at Makerlab Experience Hub' },
   { src: '/fifth_workshop.jpg', title: 'Post-Processing Station', desc: 'Tools for sanding, painting, and cleaning completed prints.' },
   { src: '/sixth_workshop.jpg', title: 'Active Mentorship Session', desc: 'Instructors guiding students through calibration steps.' }
 ]
@@ -73,8 +73,8 @@ export default function Gallery() {
         <div className="gallery-header-left">
           <div className="trial-badge">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M23 7a2 2 0 0 0-2-2h-4.22l-1.09-1.63A2 2 0 0 0 14 2.5H10a2 2 0 0 0-1.72.87L7.22 5H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2z"/>
-              <circle cx="12" cy="13" r="4"/>
+              <path d="M23 7a2 2 0 0 0-2-2h-4.22l-1.09-1.63A2 2 0 0 0 14 2.5H10a2 2 0 0 0-1.72.87L7.22 5H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2z" />
+              <circle cx="12" cy="13" r="4" />
             </svg>
             Explore Our Space
           </div>
@@ -111,22 +111,22 @@ export default function Gallery() {
                 <button onClick={togglePlay} className="video-control-btn" aria-label={isPlaying ? 'Pause' : 'Play'}>
                   {isPlaying ? (
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/>
+                      <rect x="14" y="4" width="4" height="16" rx="1" /><rect x="6" y="4" width="4" height="16" rx="1" />
                     </svg>
                   ) : (
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <polygon points="5 3 19 12 5 21 5 3"/>
+                      <polygon points="5 3 19 12 5 21 5 3" />
                     </svg>
                   )}
                 </button>
                 <button onClick={toggleMute} className="video-control-btn" aria-label={isMuted ? 'Unmute' : 'Mute'}>
                   {isMuted ? (
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+                      <path d="M11 5L6 9H2v6h4l5 4V5z" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" />
                     </svg>
                   ) : (
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                      <path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
                     </svg>
                   )}
                 </button>
@@ -158,18 +158,18 @@ export default function Gallery() {
           <div className="lightbox-container" onClick={(e) => e.stopPropagation()}>
             <button className="lightbox-close" onClick={() => setActivePhotoIdx(null)} aria-label="Close Lightbox">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
 
-            <button 
-              className="lightbox-nav lightbox-prev" 
+            <button
+              className="lightbox-nav lightbox-prev"
               onClick={() => setActivePhotoIdx((prev) => (prev !== null ? (prev - 1 + IMAGES.length) % IMAGES.length : null))}
               aria-label="Previous Image"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6"/>
+                <polyline points="15 18 9 12 15 6" />
               </svg>
             </button>
 
@@ -182,13 +182,13 @@ export default function Gallery() {
               </div>
             </div>
 
-            <button 
-              className="lightbox-nav lightbox-next" 
+            <button
+              className="lightbox-nav lightbox-next"
               onClick={() => setActivePhotoIdx((prev) => (prev !== null ? (prev + 1) % IMAGES.length : null))}
               aria-label="Next Image"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6"/>
+                <polyline points="9 18 15 12 9 6" />
               </svg>
             </button>
           </div>
