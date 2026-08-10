@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { adminReserveSlot, adminRescheduleRegistration, adminManualBookSlot, sendReservationConfirmationEmail, adminManualVerifyPayment } from './actions'
 import { updateRegistrationStatus } from './status-actions'
+import { exportToCSV, exportToExcel } from '@/utils/exportUtils'
 
 interface RegistrationsClientProps {
   registrations: any[]
@@ -510,6 +511,106 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false)
 
+  // ── Data Export Handlers ──
+  const handleExportSessionRecords = (format: 'excel' | 'csv') => {
+    if (!selectedSessionData) return
+    const s = selectedSessionData.session
+    const moduleName = s.module?.name || s.module?.title || 'Workshop'
+    const dateStr = new Date(s.sessionDate).toISOString().slice(0, 10)
+    const filename = `Session_Records_${moduleName.replace(/[^a-zA-Z0-9]/g, '_')}_${dateStr}`
+
+    const headers = [
+      { label: 'Booking Reference', key: 'bookingReference' },
+      { label: 'Customer Name', key: 'customerName' },
+      { label: 'Customer Email', key: 'customerEmail' },
+      { label: 'Customer Phone', key: 'customerPhone' },
+      { label: 'Booking Channel', key: 'salesChannel' },
+      { label: 'Payment Status', key: 'paymentStatus' },
+      { label: 'Reservation Status', key: 'status' },
+      { label: 'Participants', key: 'participantsCount' },
+      { label: 'Workshop Session', key: 'workshop' },
+      { label: 'Session Date', key: 'sessionDate' },
+      { label: 'Session Time', key: 'sessionTime' },
+      { label: 'Amount (PHP)', key: 'amount' },
+      { label: 'Shopify / Order #', key: 'orderNumber' },
+      { label: 'Booked Date', key: 'createdAt' },
+      { label: 'Notes', key: 'notes' },
+    ]
+
+    const data = filteredSessionRegs.map(r => {
+      const custName = r.customerName || `${r.customerFirstName || ''} ${r.customerLastName || ''}`.trim() || 'N/A'
+      const sDate = s?.sessionDate ? new Date(s.sessionDate).toLocaleDateString('en-US') : 'N/A'
+      const sTime = s?.startTime && s?.endTime ? `${s.startTime} - ${s.endTime}` : 'N/A'
+      const amt = r.shopifyOrder?.totalAmount ? `PHP ${r.shopifyOrder.totalAmount}` : 'N/A'
+      const orderNum = r.shopifyOrder?.shopifyOrderNumber || 'N/A'
+      const created = r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-US') : ''
+
+      return {
+        bookingReference: r.bookingReference || r.id,
+        customerName: custName,
+        customerEmail: r.customerEmail || 'N/A',
+        customerPhone: r.customerPhone || 'N/A',
+        salesChannel: r.salesChannel || 'N/A',
+        paymentStatus: r.shopifyOrder?.financialStatus || (['PAID_FOR_ADMIN_VERIFICATION', 'RESERVED', 'CONFIRMED'].includes(r.status) ? 'PAID' : 'PENDING'),
+        status: r.status,
+        participantsCount: r.participantsCount || 1,
+        workshop: moduleName,
+        sessionDate: sDate,
+        sessionTime: sTime,
+        amount: amt,
+        orderNumber: orderNum,
+        createdAt: created,
+        notes: r.notes || '',
+      }
+    })
+
+    if (format === 'excel') {
+      exportToExcel(filename, 'Session Records', headers, data)
+    } else {
+      exportToCSV(filename, headers, data)
+    }
+  }
+
+  const handleExportEventDirectory = (format: 'excel' | 'csv') => {
+    const filename = `Event_Directory_Sessions_${new Date().toISOString().slice(0, 10)}`
+    const headers = [
+      { label: 'Workshop Module', key: 'module' },
+      { label: 'Session Date', key: 'date' },
+      { label: 'Start Time', key: 'startTime' },
+      { label: 'End Time', key: 'endTime' },
+      { label: 'Partner / Collaborator', key: 'collaborator' },
+      { label: 'Capacity', key: 'capacity' },
+      { label: 'Reserved Slots', key: 'reserved' },
+      { label: 'Pending Review Slots', key: 'pending' },
+      { label: 'Total Bookings', key: 'total' },
+      { label: 'Slots Available', key: 'available' },
+      { label: 'Status', key: 'status' },
+    ]
+
+    const data = filteredSessions.map(({ session: s, pendingCount, reservedCount, totalCount }) => {
+      const liveLeft = Math.max(0, s.capacity - reservedCount)
+      return {
+        module: s.module?.name || s.module?.title || 'Workshop',
+        date: new Date(s.sessionDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
+        startTime: s.startTime,
+        endTime: s.endTime,
+        collaborator: s.collaborator || 'None',
+        capacity: s.capacity,
+        reserved: reservedCount,
+        pending: pendingCount,
+        total: totalCount,
+        available: liveLeft,
+        status: liveLeft === 0 ? 'Fully Booked' : 'Available',
+      }
+    })
+
+    if (format === 'excel') {
+      exportToExcel(filename, 'Event Directory', headers, data)
+    } else {
+      exportToCSV(filename, headers, data)
+    }
+  }
+
   // ── Summary metrics top ──
   const summaryCounts = useMemo(() => {
     const pendingVerification = registrations.filter(r =>
@@ -887,13 +988,26 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
 
           {/* Directory Rows List */}
           <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-            <div style={{ padding: '0.65rem 0.95rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '0.65rem 0.95rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
               <span style={{ fontSize: '0.67rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 Workshop Sessions ({filteredSessions.length})
               </span>
-              <span style={{ fontSize: '0.67rem', color: '#64748b' }}>
-                Page {dirPage} of {totalPages}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <button
+                  onClick={() => handleExportEventDirectory('excel')}
+                  title="Export Event Directory to Excel"
+                  style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0.2rem 0.45rem', fontSize: '0.65rem', fontWeight: 700, color: '#15803d', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                >
+                  📊 Excel
+                </button>
+                <button
+                  onClick={() => handleExportEventDirectory('csv')}
+                  title="Export Event Directory to CSV"
+                  style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0.2rem 0.45rem', fontSize: '0.65rem', fontWeight: 700, color: '#475569', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                >
+                  📄 CSV
+                </button>
+              </div>
             </div>
 
             {paginatedSessions.length === 0 ? (
@@ -1097,21 +1211,21 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                 ))}
               </div>
 
-              {/* Filter Bar inside Detail View */}
-              <div style={S.filterBar}>
+              {/* Filter & Export Bar inside Detail View */}
+              <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', alignItems: 'center', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '0.75rem', marginBottom: '0.85rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
                 <input
                   type="text"
                   placeholder="🔍 Search customer, ref #, email, order #..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  style={S.filterInput}
+                  style={{ ...S.filterInput, flex: '2 1 200px' }}
                   onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')}
                   onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
                 />
                 <select
                   value={channelFilter}
                   onChange={e => setChannelFilter(e.target.value)}
-                  style={{ ...S.filterInput, color: channelFilter === 'ALL' ? '#94a3b8' : '#0f172a' }}
+                  style={{ ...S.filterInput, flex: '1 1 130px', color: channelFilter === 'ALL' ? '#94a3b8' : '#0f172a' }}
                 >
                   <option value="ALL">All Channels</option>
                   <option value="SHOPIFY">Shopify Online</option>
@@ -1121,12 +1235,29 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                 <select
                   value={paymentStatusFilter}
                   onChange={e => setPaymentStatusFilter(e.target.value)}
-                  style={{ ...S.filterInput, color: paymentStatusFilter === 'ALL' ? '#94a3b8' : '#0f172a' }}
+                  style={{ ...S.filterInput, flex: '1 1 140px', color: paymentStatusFilter === 'ALL' ? '#94a3b8' : '#0f172a' }}
                 >
                   <option value="ALL">All Payment Statuses</option>
                   <option value="PAID">Verified / Paid</option>
                   <option value="PENDING">Awaiting Payment</option>
                 </select>
+                
+                <div style={{ display: 'flex', gap: '0.35rem', marginLeft: 'auto' }}>
+                  <button
+                    onClick={() => handleExportSessionRecords('excel')}
+                    title="Export Session Records to Excel"
+                    style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '0.45rem 0.75rem', fontSize: '0.73rem', fontWeight: 700, color: '#15803d', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
+                  >
+                    📊 Export Excel
+                  </button>
+                  <button
+                    onClick={() => handleExportSessionRecords('csv')}
+                    title="Export Session Records to CSV"
+                    style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.45rem 0.75rem', fontSize: '0.73rem', fontWeight: 700, color: '#475569', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
+                  >
+                    📄 Export CSV
+                  </button>
+                </div>
               </div>
 
               {(searchTerm || channelFilter !== 'ALL' || paymentStatusFilter !== 'ALL') && (
