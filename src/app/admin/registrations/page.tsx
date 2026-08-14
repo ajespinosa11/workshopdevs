@@ -25,7 +25,9 @@ export default async function AdminRegistrationsPage() {
   const openSessions = await prisma.workshopSession.findMany({
     where: {
       status: { not: 'CANCELLED' },
-      sessionDate: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+      sessionDate: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+      category: { notIn: ['FREE', 'FREE_KID'] },
+      module: { name: { not: 'Free Workshop' } }
     },
     include: { module: true },
     orderBy: { sessionDate: 'asc' }

@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Makerlab Workshop Management System — User Documentation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary: #0f172a; --accent: #6366f1; --accent2: #f97316;
+      --green: #10b981; --yellow: #f59e0b; --red: #ef4444;
+      --blue: #3b82f6; --purple: #8b5cf6; --border: #e2e8f0;
+      --muted: #64748b; --bg: #f8fafc; --card: #ffffff; --radius: 12px;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--primary); line-height: 1.65; font-size: 14px; }
+    .cover {
+      min-height: 100vh; background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      text-align: center; padding: 3rem; page-break-after: always;
+    }
+    .cover-logo { width: 90px; height: 90px; background: linear-gradient(135deg, #f97316, #fb923c);
+      border-radius: 24px; display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem; font-weight: 900; color: #fff; margin-bottom: 2rem;
+      box-shadow: 0 20px 60px rgba(249,115,22,0.4); }
+    .cover h1 { font-size: 3rem; font-weight: 900; color: #fff; letter-spacing: -0.04em; line-height: 1.1; margin-bottom: 1rem; }
+    .cover h1 span { color: #fb923c; }
+    .cover p { font-size: 1.1rem; color: rgba(255,255,255,0.7); max-width: 600px; }
+    .cover-meta { margin-top: 3rem; display: flex; gap: 3rem; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 2rem; }
+    .cover-meta-item { text-align: center; }
+    .cover-meta-item .label { font-size: 0.65rem; font-weight: 700; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.1em; }
+    .cover-meta-item .value { font-size: 0.9rem; font-weight: 700; color: rgba(255,255,255,0.85); margin-top: 0.2rem; }
+    .toc { padding: 4rem 5rem; page-break-after: always; background: white; }
+    .toc h2 { font-size: 1.75rem; font-weight: 800; color: var(--primary); margin-bottom: 0.5rem; }
+    .toc-line { width: 48px; height: 4px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 2px; margin-bottom: 2rem; }
+    .toc-group { margin-bottom: 1.5rem; }
+    .toc-group-title { font-size: 0.65rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.6rem; }
+    .toc-item { display: flex; justify-content: space-between; align-items: center; padding: 0.45rem 0; border-bottom: 1px dotted #e2e8f0; font-size: 0.88rem; }
+    .toc-item a { color: var(--primary); text-decoration: none; font-weight: 500; }
+    .page { padding: 3rem 5rem; background: white; page-break-after: always; min-height: 100vh; }
+    .page-last { page-break-after: auto; }
+    .section-badge { display: inline-flex; align-items: center; gap: 0.4rem; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; padding: 0.25rem 0.75rem; border-radius: 99px; margin-bottom: 0.75rem; }
+    .page-title { font-size: 2.2rem; font-weight: 900; color: var(--primary); letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 0.5rem; }
+    .page-title span { color: var(--accent); }
+    .page-subtitle { font-size: 0.9rem; color: var(--muted); max-width: 640px; margin-bottom: 1.5rem; line-height: 1.6; }
+    .divider { height: 2px; background: linear-gradient(90deg, var(--accent), transparent); margin-bottom: 2rem; border-radius: 1px; }
+    .info-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
+    .info-card h3 { font-size: 1rem; font-weight: 800; color: var(--primary); margin-bottom: 0.5rem; }
+    .info-card p { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+    .steps { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem; }
+    .step { display: flex; gap: 1rem; align-items: flex-start; background: #fafafa; border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; }
+    .step-num { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; font-weight: 900; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .step-content { flex: 1; }
+    .step-title { font-weight: 700; font-size: 0.9rem; color: var(--primary); margin-bottom: 0.2rem; }
+    .step-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+    .step-code { display: inline-block; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; font-family: monospace; font-size: 0.78rem; padding: 0.15rem 0.5rem; color: #6366f1; margin-top: 0.3rem; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+    .four-col { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.85rem; margin-bottom: 1.25rem; }
+    .two-col-alt { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 1.25rem; }
+    .feature-card { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem; }
+    .feature-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 0.65rem; }
+    .feature-card h4 { font-size: 0.88rem; font-weight: 700; color: var(--primary); margin-bottom: 0.3rem; }
+    .feature-card p { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+    .badge { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.03em; }
+    .badge-green  { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+    .badge-yellow { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+    .badge-red    { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .badge-blue   { background: #eff6ff; color: #1d4ed8; border: 1px solid #93c5fd; }
+    .badge-purple { background: #f5f3ff; color: #7c3aed; border: 1px solid #c4b5fd; }
+    .badge-gray   { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+    .badge-orange { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+    .alert { border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1rem; font-size: 0.82rem; line-height: 1.5; display: flex; gap: 0.6rem; align-items: flex-start; }
+    .alert-info { background: #eff6ff; border: 1px solid #93c5fd; color: #1e40af; }
+    .alert-warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+    .alert-success { background: #f0fdf4; border: 1px solid #86efac; color: #14532d; }
+    .doc-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-bottom: 1.5rem; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+    .doc-table thead tr { background: #f8fafc; }
+    .doc-table th { padding: 0.75rem 1rem; text-align: left; font-weight: 700; font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--border); }
+    .doc-table td { padding: 0.7rem 1rem; border-bottom: 1px solid #f1f5f9; color: var(--primary); vertical-align: top; }
+    .doc-table tr:last-child td { border-bottom: none; }
+    .doc-table code { font-family: monospace; background: #f1f5f9; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.78rem; color: #6366f1; }
+    .subsection { font-size: 1.1rem; font-weight: 800; color: var(--primary); margin: 1.75rem 0 0.75rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--border); display: flex; align-items: center; gap: 0.5rem; }
+    .subsection .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+    .url-chip { display: inline-flex; align-items: center; gap: 0.4rem; background: #0f172a; color: #94a3b8; font-family: monospace; font-size: 0.75rem; padding: 0.3rem 0.75rem; border-radius: 8px; margin-bottom: 1rem; }
+    .url-chip span { color: #6366f1; }
+    .flow { display: flex; align-items: center; gap: 0.25rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .flow-step { flex: 1; min-width: 90px; text-align: center; background: white; border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 0.5rem; }
+    .flow-step .f-icon { font-size: 1.3rem; margin-bottom: 0.3rem; }
+    .flow-step .f-title { font-size: 0.68rem; font-weight: 700; color: var(--primary); }
+    .flow-step .f-sub { font-size: 0.58rem; color: var(--muted); margin-top: 0.1rem; }
+    .flow-arrow { color: var(--muted); font-size: 1rem; padding: 0 0.1rem; }
+    .db-model { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1.1rem; }
+    .db-model-header { background: #1e293b; color: white; padding: 0.55rem 1rem; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem; }
+    .db-field { display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 1rem; border-bottom: 1px solid #f1f5f9; font-size: 0.78rem; }
+    .db-field:last-child { border-bottom: none; }
+    .db-field-name { font-family: monospace; color: #6366f1; font-size: 0.75rem; }
+    .db-field-type { font-size: 0.68rem; color: var(--muted); font-family: monospace; }
+    .db-field-desc { font-size: 0.7rem; color: var(--primary); text-align: right; max-width: 200px; }
+    .role-badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.65rem; border-radius: 99px; font-size: 0.68rem; font-weight: 700; }
+    .role-admin { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+    .role-receptionist { background: #ecfdf5; color: #065f46; border: 1px solid #6ee7b7; }
+    .role-customer { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+    .screen-box { background: #f8fafc; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 1.25rem; }
+    .screen-bar { background: #f1f5f9; border-bottom: 1px solid var(--border); padding: 0.5rem 0.85rem; display: flex; align-items: center; gap: 0.4rem; }
+    .dot-r { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; }
+    .dot-y { width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; }
+    .dot-g { width: 10px; height: 10px; border-radius: 50%; background: #10b981; }
+    .screen-url { flex: 1; background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.2rem 0.6rem; font-family: monospace; font-size: 0.68rem; color: var(--muted); margin: 0 0.75rem; }
+    .kpi-row { display: flex; gap: 0.6rem; margin-bottom: 0.75rem; }
+    .kpi { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 0.65rem 0.85rem; flex: 1; }
+    .kpi .kl { font-size: 0.55rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .kpi .kv { font-size: 1.15rem; font-weight: 900; color: var(--primary); }
+    .sidebar-layout { display: flex; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; height: 300px; margin-bottom: 1.25rem; }
+    .sidebar-nav { width: 195px; background: #1e293b; padding: 1rem 0; flex-shrink: 0; }
+    .snl { padding: 0.4rem 1rem 0.7rem; display: flex; align-items: center; gap: 0.5rem; }
+    .snl-mark { background: #f97316; color: white; font-weight: 900; font-size: 0.7rem; padding: 0.3rem 0.45rem; border-radius: 6px; }
+    .snl-txt { color: white; font-weight: 700; font-size: 0.85rem; }
+    .sn-lbl { font-size: 0.58rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.1em; padding: 0.4rem 1rem 0.2rem; }
+    .sn-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 1rem; font-size: 0.78rem; color: #94a3b8; }
+    .sn-item.active { background: rgba(99,102,241,0.15); color: white; border-right: 2px solid #6366f1; }
+    .sidebar-content { flex: 1; background: #f8fafc; padding: 1rem; overflow: hidden; }
+    .sc-hdr { font-size: 0.62rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.25rem; }
+    .sc-title { font-size: 1.05rem; font-weight: 800; color: var(--primary); margin-bottom: 0.65rem; }
+    .mini-gantt { height: 70px; background: white; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem; display: flex; align-items: flex-end; gap: 0.3rem; }
+    .gc { flex: 1; border-radius: 3px; opacity: 0.8; background: linear-gradient(180deg, #6366f1, #8b5cf6); }
+    .print-hint { position: fixed; bottom: 1rem; right: 1rem; background: #0f172a; color: white; padding: 0.75rem 1.25rem; border-radius: 12px; font-size: 0.78rem; font-weight: 600; box-shadow: 0 8px 32px rgba(0,0,0,0.3); z-index: 9999; }
+    .print-hint kbd { background: rgba(255,255,255,0.15); padding: 0.15rem 0.4rem; border-radius: 4px; }
+    @media print {
+      body { background: white; font-size: 11px; }
+      .page { padding: 2rem 3.5rem; }
+      .cover { min-height: auto; height: 100vh; }
+      .print-hint { display: none !important; }
+      @page { margin: 0.5in; size: A4; }
+    }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="cover-logo">3D</div>
+  <h1>Makerlab<br><span>Workshop System</span></h1>
+  <p>Complete User &amp; System Documentation &mdash; Admin Portal, Receptionist Tools, and Customer Booking Platform</p>
+  <div class="cover-meta">
+    <div class="cover-meta-item"><div class="label">Version</div><div class="value">1.0.0</div></div>
+    <div class="cover-meta-item"><div class="label">Date</div><div class="value">August 2026</div></div>
+    <div class="cover-meta-item"><div class="label">Platform</div><div class="value">Next.js 16</div></div>
+    <div class="cover-meta-item"><div class="label">Database</div><div class="value">PostgreSQL</div></div>
+  </div>
+</div>
+<div class="toc">
+  <h2>Table of Contents</h2>
+  <div class="toc-line"></div>
+  <div class="toc-group"><div class="toc-group-title">Introduction</div><div class="toc-item"><a href="#overview">1. System Overview</a></div><div class="toc-item"><a href="#architecture">2. Architecture &amp; Technology</a></div><div class="toc-item"><a href="#user-roles">3. User Roles &amp; Access Levels</a></div><div class="toc-item"><a href="#navigation">4. Navigation &amp; URL Structure</a></div></div><div class="toc-group"><div class="toc-group-title">Customer-Facing Modules</div><div class="toc-item"><a href="#public-landing">5. Public Landing Page</a></div><div class="toc-item"><a href="#booking-page">6. Workshop Booking (Print 2 Profit)</a></div><div class="toc-item"><a href="#booking-flow">7. Booking Flow &amp; Soft-Lock System</a></div></div><div class="toc-group"><div class="toc-group-title">Admin Portal Modules</div><div class="toc-item"><a href="#admin-login">8. Admin Login</a></div><div class="toc-item"><a href="#admin-dashboard">9. Admin Dashboard (Command Center)</a></div><div class="toc-item"><a href="#registrations">10. Registrations Management</a></div><div class="toc-item"><a href="#sessions">11. Events &amp; Sessions Calendar</a></div><div class="toc-item"><a href="#modules-mgmt">12. Workshop Modules Management</a></div><div class="toc-item"><a href="#customers">13. Customer Directory &amp; Intelligence</a></div><div class="toc-item"><a href="#vouchers">14. Vouchers</a></div><div class="toc-item"><a href="#discounts">15. Discount Codes</a></div><div class="toc-item"><a href="#free-workshops">16. Free Workshops</a></div><div class="toc-item"><a href="#plan-requests">17. Plan Requests</a></div></div><div class="toc-group"><div class="toc-group-title">Receptionist Portal</div><div class="toc-item"><a href="#checkin">18. Check-In Station</a></div><div class="toc-item"><a href="#roster">19. Calendar Roster</a></div></div><div class="toc-group"><div class="toc-group-title">Backend &amp; Reference</div><div class="toc-item"><a href="#db-schema">20. Database Schema Reference</a></div><div class="toc-item"><a href="#integrations">21. External Integrations</a></div><div class="toc-item"><a href="#api-routes">22. API Routes Reference</a></div><div class="toc-item"><a href="#status-ref">23. Registration Status Reference</a></div></div>
+</div>
+<div class="page" id="overview">
+  <div class="section-badge">Chapter 1</div>
+  <h1 class="page-title">System <span>Overview</span></h1>
+  <p class="page-subtitle">The Makerlab Workshop Management System is a full-stack web application built with Next.js 16 that streamlines the end-to-end process of managing workshop registrations, sessions, check-ins, and customer data for a state-of-the-art 3D printing and maker experience hub.</p>
+  <div class="divider"></div>
+  <div class="two-col">
+    <div>
+      <div class="subsection"><div class="dot"></div>What the System Does</div>
+      <div class="info-card"><h3>&#127981; Workshop Operations Platform</h3><p>Manages the complete lifecycle of a workshop — from public customer discovery and booking, through staff session management and customer check-in, to post-session analytics and reporting.</p></div>
+      <div class="info-card"><h3>&#128260; Multi-Channel Booking</h3><p>Accepts reservations from three distinct channels: <strong>Shopify Online Store</strong> (e-commerce), <strong>StoreHub POS</strong> (in-store payments), and <strong>Manual Walk-In</strong> registration by admin staff.</p></div>
+      <div class="info-card"><h3>&#9889; Real-Time Capacity Management</h3><p>Uses a 15-minute soft-lock mechanism to temporarily hold a customer's seat during checkout, preventing overbooking on popular sessions. Auto-cancels expired soft-locks.</p></div>
+    </div>
+    <div>
+      <div class="subsection"><div class="dot"></div>System Actors</div>
+      <table class="doc-table">
+        <thead><tr><th>Actor</th><th>Portal</th><th>Primary Goal</th></tr></thead>
+        <tbody>
+          <tr><td><span class="role-badge role-customer">Customer</span></td><td><code>/</code></td><td>Discover and book a workshop session</td></tr>
+          <tr><td><span class="role-badge role-receptionist">Receptionist</span></td><td><code>/receptionist</code></td><td>Check in customers at the venue</td></tr>
+          <tr><td><span class="role-badge role-admin">Admin</span></td><td><code>/admin</code></td><td>Manage all operations end-to-end</td></tr>
+          <tr><td><span class="badge badge-gray">System</span></td><td><code>/api</code></td><td>Process webhooks and sync external data</td></tr>
+        </tbody>
+      </table>
+      <div class="subsection"><div class="dot"></div>Key System Features</div>
+      <div class="two-col-alt">
+        <div class="feature-card"><div class="feature-icon" style="background:#eef2ff">&#128202;</div><h4>Command Center Dashboard</h4><p>Real-time KPIs, Gantt timeline, high-demand alerts</p></div>
+        <div class="feature-card"><div class="feature-icon" style="background:#f0fdf4">&#128197;</div><h4>Session Calendar</h4><p>Visual schedule, roster management, full CRUD</p></div>
+        <div class="feature-card"><div class="feature-icon" style="background:#fff7ed">&#9989;</div><h4>Check-In Station</h4><p>3-step verification for receptionist staff</p></div>
+        <div class="feature-card"><div class="feature-icon" style="background:#faf5ff">&#127991;</div><h4>Voucher System</h4><p>Credit-unit packages with QR codes</p></div>
+        <div class="feature-card"><div class="feature-icon" style="background:#fef2f2">&#127915;</div><h4>Discount Codes</h4><p>Event-linked promo codes for free workshops</p></div>
+        <div class="feature-card"><div class="feature-icon" style="background:#eff6ff">&#128100;</div><h4>Customer CRM</h4><p>Lifetime value, booking history, analytics</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="page" id="architecture">
+  <div class="section-badge">Chapter 2</div>
+  <h1 class="page-title">Architecture &amp; <span>Technology</span></h1>
+  <p class="page-subtitle">A full-stack Next.js application with server-side rendering, server actions, and a PostgreSQL database managed by Prisma ORM. Authentication uses JWT tokens stored as HttpOnly cookies.</p>
+  <div class="divider"></div>
+  <div class="two-col">
+    <div>
+      <div class="subsection"><div class="dot"></div>Technology Stack</div>
+      <table class="doc-table">
+        <thead><tr><th>Layer</th><th>Technology</th><th>Version</th></tr></thead>
+        <tbody>
+          <tr><td>Framework</td><td>Next.js (App Router)</td><td>16.2.9</td></tr><tr><td>Runtime</td><td>React</td><td>19.2.4</td></tr><tr><td>Database</td><td>PostgreSQL (Supabase)</td><td>via @supabase</td></tr><tr><td>ORM</td><td>Prisma</td><td>6.19.3</td></tr><tr><td>Auth</td><td>Jose (JWT)</td><td>6.2.3</td></tr><tr><td>Email</td><td>Nodemailer</td><td>8.0.10</td></tr><tr><td>QR Code</td><td>qrcode + html5-qrcode</td><td>1.5.4</td></tr><tr><td>PDF Export</td><td>jsPDF</td><td>4.2.1</td></tr><tr><td>Spreadsheet</td><td>xlsx</td><td>0.18.5</td></tr><tr><td>Language</td><td>TypeScript</td><td>5.x</td></tr><tr><td>Styling</td><td>Vanilla CSS (globals.css)</td><td>&mdash;</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <div class="subsection"><div class="dot"></div>Project File Structure</div>
+      <div class="info-card" style="font-family:monospace;font-size:0.75rem;line-height:2;background:#f8fafc;color:#334155;">
+        <div style="color:#6366f1;font-weight:700;">src/</div>
+        <div style="padding-left:1rem;color:#64748b;">app/</div>
+        <div style="padding-left:2rem;">(public)/  <span style="color:#94a3b8;">&larr; all customer-facing pages</span></div>
+        <div style="padding-left:3rem;color:#64748b;">page.tsx &nbsp; print-2-profit/ &nbsp; book-session/</div>
+        <div style="padding-left:2rem;">admin/ <span style="color:#94a3b8;">&larr; admin portal</span></div>
+        <div style="padding-left:3rem;color:#64748b;">page.tsx &nbsp; registrations/ &nbsp; sessions/</div>
+        <div style="padding-left:3rem;color:#64748b;">modules/ &nbsp; customers/ &nbsp; vouchers/</div>
+        <div style="padding-left:3rem;color:#64748b;">discounts/ &nbsp; free-workshops/ &nbsp; requests/</div>
+        <div style="padding-left:2rem;">receptionist/ <span style="color:#94a3b8;">&larr; staff portal</span></div>
+        <div style="padding-left:3rem;color:#64748b;">client.tsx &nbsp; actions.ts &nbsp; today/ &nbsp; walk-in/</div>
+        <div style="padding-left:2rem;">api/ <span style="color:#94a3b8;">&larr; backend API routes</span></div>
+        <div style="padding-left:3rem;color:#64748b;">auth/ &nbsp; storehub/ &nbsp; webhooks/</div>
+        <div style="padding-left:1rem;color:#64748b;">components/ &nbsp; lib/ &nbsp; utils/</div>
+        <div style="color:#6366f1;font-weight:700;margin-top:0.5rem;">prisma/schema.prisma</div>
+      </div>
+    </div>
+  </div>
+  <div class="subsection"><div class="dot"></div>Authentication Flow</div>
+  <div class="flow">
+    <div class="flow-step"><div class="f-icon">&#128273;</div><div class="f-title">Login Form</div><div class="f-sub">Email + Password</div></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step"><div class="f-icon">&#128269;</div><div class="f-title">Verify Staff</div><div class="f-sub">Prisma lookup StaffUser</div></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step"><div class="f-icon">&#128737;</div><div class="f-title">Hash Check</div><div class="f-sub">bcrypt verifies hash</div></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step"><div class="f-icon">&#127915;</div><div class="f-title">JWT Token</div><div class="f-sub">Jose signs with role</div></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step"><div class="f-icon">&#127850;</div><div class="f-title">HttpOnly Cookie</div><div class="f-sub">Stored; checked by middleware</div></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step"><div class="f-icon">&#128202;</div><div class="f-title">Dashboard</div><div class="f-sub">Redirect by role</div></div>
+  </div>
+  <div class="alert alert-info"><span style="font-size:1rem;flex-shrink:0;">&#8505;</span><div><strong>Role-Based Access:</strong> Admin layout checks <code>session?.role === 'ADMIN'</code>. Receptionist layout accepts both <code>'ADMIN'</code> and <code>'RECEPTIONIST'</code>. Unauthorized access redirects to the login page automatically.</div></div>
+</div>
+<div class="page" id="user-roles">
+  <div class="section-badge">Chapter 3</div>
+  <h1 class="page-title">User Roles &amp; <span>Access Levels</span></h1>
+  <div class="divider"></div>
+  <div class="three-col">
+    <div class="info-card" style="border-top:3px solid #6366f1;">
+      <h3 style="color:#6366f1;">Admin</h3>
+      <p style="margin-bottom:0.75rem;">Full access to all system features. Typically the workshop manager or owner.</p>
+      <div style="font-size:0.78rem;line-height:2;">&#9989; Dashboard KPIs &amp; Gantt<br>&#9989; Approve/reject registrations<br>&#9989; Manage workshop sessions<br>&#9989; Add manual walk-in registrations<br>&#9989; Create/manage vouchers<br>&#9989; Generate discount codes<br>&#9989; View customer directory<br>&#9989; Export reports (CSV/Excel)<br>&#9989; Process plan requests<br>&#9989; Reschedule bookings<br>&#9989; Access receptionist portal</div>
+      <div style="margin-top:0.75rem;"><span class="url-chip"><span>/admin</span></span></div>
+    </div>
+    <div class="info-card" style="border-top:3px solid #10b981;">
+      <h3 style="color:#10b981;">Receptionist</h3>
+      <p style="margin-bottom:0.75rem;">Limited to front-desk operations for day-of check-in duties.</p>
+      <div style="font-size:0.78rem;line-height:2;">&#9989; Search customer by booking ref<br>&#9989; Verify reservation details<br>&#9989; Confirm customer check-in<br>&#9989; View today's session roster<br>&#9989; View all upcoming sessions<br>&#10060; Cannot modify sessions<br>&#10060; Cannot approve payments<br>&#10060; Cannot create registrations<br>&#10060; No access to admin portal<br>&#10060; No financial data access</div>
+      <div style="margin-top:0.75rem;"><span class="url-chip"><span>/receptionist</span></span></div>
+    </div>
+    <div class="info-card" style="border-top:3px solid #3b82f6;">
+      <h3 style="color:#3b82f6;">Customer (Public)</h3>
+      <p style="margin-bottom:0.75rem;">Public users with no login required. Access the public-facing website.</p>
+      <div style="font-size:0.78rem;line-height:2;">&#9989; View public landing page<br>&#9989; Browse available sessions<br>&#9989; Select session date/time<br>&#9989; Submit booking form<br>&#9989; Receive email confirmation<br>&#9989; Check booking status<br>&#10060; No account/login needed<br>&#10060; Cannot cancel own booking<br>&#10060; No admin or receptionist access</div>
+      <div style="margin-top:0.75rem;"><span class="url-chip"><span>/</span> (public)</span></div>
+    </div>
+  </div>
+  <div class="alert alert-warn"><span style="font-size:1rem;flex-shrink:0;">&#9888;</span><div><strong>Staff Account Management:</strong> Staff accounts are created directly in the database via Prisma seed or direct DB manipulation. There is no self-registration flow — all accounts are provisioned by a system administrator.</div></div>
+  <div class="subsection"><div class="dot"></div>How to Create a Staff Account</div>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Access the Database</div><div class="step-desc">Use Prisma Studio, Supabase dashboard, or the seed script to create accounts directly in the <code>StaffUser</code> table.</div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-title">Hash the Password</div><div class="step-desc">Passwords must be bcrypt-hashed before storing in <code>password_hash</code>. Use the seed script at <code>prisma/seed.ts</code> as a template.</div><div class="step-code">npx tsx prisma/seed.ts</div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Set Role and Status</div><div class="step-desc">Set the <code>role</code> field to either <code>"ADMIN"</code> or <code>"RECEPTIONIST"</code>. Set <code>status</code> to <code>"ACTIVE"</code>.</div></div></div>
+  </div>
+</div>
+<div class="page" id="navigation">
+  <div class="section-badge">Chapter 4</div>
+  <h1 class="page-title">Navigation &amp; <span>URL Structure</span></h1>
+  <div class="divider"></div>
+  <table class="doc-table">
+    <thead><tr><th>URL Path</th><th>Page / Component</th><th>Access</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>/</code></td><td>Landing Page</td><td><span class="badge badge-green">Public</span></td><td>Hero section, features strip, photo gallery</td></tr><tr><td><code>/print-2-profit</code></td><td>Workshop Booking</td><td><span class="badge badge-green">Public</span></td><td>Calendar view, session picker, booking form, soft-lock timer</td></tr><tr><td><code>/book-session</code></td><td>Booking Entry</td><td><span class="badge badge-green">Public</span></td><td>Direct session booking with customer form</td></tr><tr><td><code>/booking-status</code></td><td>Booking Status</td><td><span class="badge badge-green">Public</span></td><td>Look up reservation by reference number</td></tr><tr><td><code>/cancel-booking</code></td><td>Cancellation</td><td><span class="badge badge-green">Public</span></td><td>Customer self-cancellation flow</td></tr><tr><td><code>/voucher</code></td><td>Voucher Page</td><td><span class="badge badge-green">Public</span></td><td>View or use a voucher code</td></tr><tr><td><code>/request-plan</code></td><td>Plan Request</td><td><span class="badge badge-green">Public</span></td><td>Submit a subscription plan request</td></tr><tr style="background:#fafafa;"><td colspan="4" style="font-size:0.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;">Admin Portal</td></tr><tr><td><code>/admin/login</code></td><td>Admin Login</td><td><span class="badge badge-purple">Admin Only</span></td><td>Staff authentication form</td></tr><tr><td><code>/admin</code></td><td>Dashboard</td><td><span class="badge badge-purple">Admin Only</span></td><td>KPI cards, Gantt chart, live booking feed</td></tr><tr><td><code>/admin/registrations</code></td><td>Registrations</td><td><span class="badge badge-purple">Admin Only</span></td><td>Full registration management — verify, assign, reschedule</td></tr><tr><td><code>/admin/sessions</code></td><td>Events/Sessions</td><td><span class="badge badge-purple">Admin Only</span></td><td>Workshop session calendar — create, edit, view roster</td></tr><tr><td><code>/admin/modules</code></td><td>Workshop Modules</td><td><span class="badge badge-purple">Admin Only</span></td><td>Module library — CRUD operations</td></tr><tr><td><code>/admin/customers</code></td><td>Customer Directory</td><td><span class="badge badge-purple">Admin Only</span></td><td>Customer CRM with lifetime value analytics</td></tr><tr><td><code>/admin/vouchers</code></td><td>Vouchers</td><td><span class="badge badge-purple">Admin Only</span></td><td>View and track all generated vouchers</td></tr><tr><td><code>/admin/discounts</code></td><td>Discount Codes</td><td><span class="badge badge-purple">Admin Only</span></td><td>Event discount code generation and tracking</td></tr><tr><td><code>/admin/free-workshops</code></td><td>Free Workshops</td><td><span class="badge badge-purple">Admin Only</span></td><td>Complimentary/free workshop tracking dashboard</td></tr><tr><td><code>/admin/requests</code></td><td>Plan Requests</td><td><span class="badge badge-purple">Admin Only</span></td><td>Subscription plan requests — approve, generate voucher</td></tr><tr style="background:#fafafa;"><td colspan="4" style="font-size:0.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;">Receptionist Portal</td></tr><tr><td><code>/receptionist</code></td><td>Check-In Station</td><td><span class="badge badge-blue">Staff</span></td><td>Booking reference lookup and 3-step check-in</td></tr><tr><td><code>/receptionist/today</code></td><td>Calendar Roster</td><td><span class="badge badge-blue">Staff</span></td><td>Today's and upcoming session attendee lists</td></tr><tr style="background:#fafafa;"><td colspan="4" style="font-size:0.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;">API Routes</td></tr><tr><td><code>/api/auth/login</code></td><td>Login API</td><td><span class="badge badge-gray">Internal</span></td><td>Authenticate staff credentials, set JWT cookie</td></tr><tr><td><code>/api/auth/logout</code></td><td>Logout API</td><td><span class="badge badge-gray">Internal</span></td><td>Clear session cookie and redirect to login</td></tr><tr><td><code>/api/storehub/sync</code></td><td>StoreHub Sync</td><td><span class="badge badge-gray">Internal</span></td><td>Pull StoreHub POS transactions</td></tr><tr><td><code>/api/webhooks</code></td><td>Shopify Webhooks</td><td><span class="badge badge-gray">External</span></td><td>Receive Shopify order paid/cancelled events (HMAC verified)</td></tr>
+    </tbody>
+  </table>
+</div>
+<div class="page" id="public-landing">
+  <div class="section-badge">Chapter 5</div>
+  <h1 class="page-title">Public <span>Landing Page</span></h1>
+  <div class="url-chip">&#128279; <span>localhost:3000</span> &rarr; <code>src/app/(public)/page.tsx</code></div>
+  <p class="page-subtitle">The first impression for all customers. Showcases the Makerlab brand and provides a clear call-to-action to explore and book workshops. No login required.</p>
+  <div class="divider"></div>
+  <div class="three-col">
+    <div class="info-card"><h3>&#128444; Hero Section</h3><p>Full-screen hero with a 3D printing background image, dark overlay, and the headline: <strong>"Makerlab Experience Hub: Maker Workshops"</strong>. Features a primary CTA button <em>"Explore Workshops &amp; Events"</em> linking to <code>/print-2-profit</code>. Shows stat chips: Curated Workshop Sessions, Beginner to Advance Levels, and Expert Instructors.</p></div>
+    <div class="info-card"><h3>&#9889; Features Strip</h3><p>A horizontal strip below the hero with four key value propositions: <strong>Pro-Grade Equipment</strong>, <strong>Expert Mentors</strong>, <strong>Hands-On Learning</strong>, and <strong>Family Bonding Experiences</strong>. Each with an icon and short description.</p></div>
+    <div class="info-card"><h3>&#128444; Gallery Section</h3><p>An interactive photo gallery showcasing the lab environment, equipment, and past workshop moments. Powered by the <code>Gallery.tsx</code> component with a lightbox click-to-expand experience.</p></div>
+  </div>
+  <div class="subsection"><div class="dot"></div>How to Access</div>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Open a Browser</div><div class="step-desc">Navigate to the application URL. No login required.</div><div class="step-code">http://localhost:3000</div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-title">Scroll to Explore</div><div class="step-desc">Scroll down to view the features strip and photo gallery. The hero section occupies the full viewport height.</div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Proceed to Booking</div><div class="step-desc">Click the orange <strong>"Explore Workshops &amp; Events"</strong> button to navigate to the booking calendar at <code>/print-2-profit</code>.</div></div></div>
+  </div>
+</div>
+<div class="page" id="booking-page">
+  <div class="section-badge">Chapter 6</div>
+  <h1 class="page-title">Workshop Booking <span>(Print 2 Profit)</span></h1>
+  <div class="url-chip">&#128279; <span>localhost:3000/print-2-profit</span> &rarr; <code>src/app/(public)/print-2-profit/</code></div>
+  <p class="page-subtitle">The main booking page where customers select a workshop session and submit their registration. Features an interactive calendar with color-coded availability and a 15-minute seat soft-lock system.</p>
+  <div class="divider"></div>
+  <div class="two-col">
+    <div>
+      <div class="info-card"><h3>&#128197; Month Calendar Picker</h3><p>An interactive calendar displays all upcoming sessions. Each day with sessions shows a colored dot: <ul style="margin-top:0.5rem;padding-left:1.25rem;font-size:0.78rem;color:var(--muted);line-height:1.9;"><li>Green = Available seats</li><li>Orange = Almost full (&le;5 seats)</li><li>Red = Fully booked / Sold out</li><li>Gray = No session scheduled</li></ul></p></div>
+      <div class="info-card"><h3>&#8987; Time Slot Selection</h3><p>After clicking a date, available time slots appear. Each slot shows workshop name, start time, end time, and remaining seats. Sold-out sessions display a "SOLD OUT" badge and are non-selectable.</p></div>
+    </div>
+    <div>
+      <div class="info-card"><h3>&#128221; Booking Registration Form</h3><p>After selecting a session, a modal form opens: <ul style="margin-top:0.5rem;padding-left:1.25rem;font-size:0.78rem;color:var(--muted);line-height:1.9;"><li><strong>Full Name</strong> &mdash; Customer name</li><li><strong>Email Address</strong> &mdash; For confirmation email</li><li><strong>Phone Number</strong> &mdash; Contact number</li><li><strong>Number of Participants</strong> &mdash; Pax count</li><li><strong>Branch Location</strong> &mdash; Venue selection</li><li><strong>Special Notes</strong> (optional)</li></ul></p></div>
+      <div class="info-card"><h3>&#9201; 15-Minute Soft-Lock Timer</h3><p>Once the form is submitted, a visible countdown timer appears. This soft-lock holds the seat while the customer completes payment. If the timer expires, the lock is released and the seat becomes available again.</p></div>
+    </div>
+  </div>
+  <div class="alert alert-warn"><span style="font-size:1rem;flex-shrink:0;">&#9888;</span><div><strong>Capacity Note:</strong> Bookings create a <code>WorkshopRegistration</code> with status <code>AWAITING_PAYMENT</code>. The soft-lock decrements <code>availableSlots</code>. If payment is not received within 15 minutes, the system auto-cancels the registration and restores the slot.</div></div>
+</div>
+<div class="page" id="booking-flow">
+  <div class="section-badge">Chapter 7</div>
+  <h1 class="page-title">Customer Booking <span>Flow</span></h1>
+  <div class="divider"></div>
+  <div class="subsection"><div class="dot"></div>End-to-End Customer Journey</div>
+  <div class="flow">
+    <div class="flow-step"><div class="f-icon">&#127758;</div><div class="f-title">Visit Website</div><div class="f-sub">localhost:3000</div></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step"><div class="f-icon">&#128197;</div><div class="f-title">Browse Sessions</div><div class="f-sub">/print-2-profit</div></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step"><div class="f-icon">&#9989;</div><div class="f-title">Select Slot</div><div class="f-sub">Pick date + time</div></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step"><div class="f-icon">&#128221;</div><div class="f-title">Fill Form</div><div class="f-sub">Name, email, pax</div></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step"><div class="f-icon">&#128274;</div><div class="f-title">Soft Lock</div><div class="f-sub">15-min seat hold</div></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step"><div class="f-icon">&#128179;</div><div class="f-title">Pay Online</div><div class="f-sub">Shopify checkout</div></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step"><div class="f-icon">&#128276;</div><div class="f-title">Webhook</div><div class="f-sub">Shopify notifies system</div></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step"><div class="f-icon">&#9203;</div><div class="f-title">Admin Verifies</div><div class="f-sub">Approve payment</div></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step"><div class="f-icon">&#9989;</div><div class="f-title">RESERVED</div><div class="f-sub">Seat confirmed</div></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step"><div class="f-icon">&#127939;</div><div class="f-title">Check-In</div><div class="f-sub">Day of workshop</div></div>
+  </div>
+  <div class="subsection"><div class="dot"></div>Sales Channel Types</div>
+  <table class="doc-table">
+    <thead><tr><th>Channel Code</th><th>Badge</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>SHOPIFY</code></td><td><span class="badge badge-green">Shopify Online</span></td><td>Customer booked via Shopify online store; payment via Shopify checkout</td></tr><tr><td><code>STOREHUB</code></td><td><span class="badge badge-blue">StoreHub POS</span></td><td>Payment processed via StoreHub point-of-sale terminal in the venue</td></tr><tr><td><code>MANUAL_REGISTRATION</code></td><td><span class="badge badge-yellow">Walk-in</span></td><td>Staff manually added the registration via the admin portal</td></tr><tr><td><code>WALK_IN_FREE</code></td><td><span class="badge badge-gray">Free</span></td><td>Complimentary walk-in; no payment required</td></tr><tr><td><code>COMPLIMENTARY</code></td><td><span class="badge badge-gray">Comp</span></td><td>Gifted or promotional registration; no payment</td></tr>
+    </tbody>
+  </table>
+</div>
+<div class="page" id="admin-login">
+  <div class="section-badge">Chapter 8</div>
+  <h1 class="page-title">Admin <span>Login</span></h1>
+  <div class="url-chip">&#128279; <span>/admin/login</span> &rarr; <code>src/app/admin/login/</code></div>
+  <div class="divider"></div>
+  <div class="two-col">
+    <div>
+      <div class="subsection"><div class="dot"></div>How to Log In</div>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Navigate to Admin Login</div><div class="step-desc">Open your browser and go to the admin login URL.</div><div class="step-code">localhost:3000/admin/login</div></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-title">Enter Credentials</div><div class="step-desc">Enter your staff email address and password. Both fields are required. Passwords are case-sensitive.</div></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Submit and Redirect</div><div class="step-desc">On success, you are redirected to the Admin Dashboard at <code>/admin</code>. On failure, an error message displays under the form.</div></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-content"><div class="step-title">Session Persistence</div><div class="step-desc">Your login session is stored in an HttpOnly cookie. Closing and reopening the browser keeps you logged in until you explicitly log out.</div></div></div>
+      </div>
+      <div class="alert alert-info"><span style="font-size:1rem;flex-shrink:0;">&#8505;</span><div>If you accidentally have a receptionist session active and need admin access, navigate to <code>/api/auth/logout</code> directly to clear the session, then log in again at <code>/admin/login</code>.</div></div>
+      <div class="subsection"><div class="dot"></div>Logging Out</div>
+      <p style="font-size:0.85rem;color:var(--muted);">Both portals have a <strong>Logout</strong> button. In the Admin sidebar it appears at the bottom. In the Receptionist navbar it appears in the top right. Clicking it calls <code>/api/auth/logout</code> which clears the session cookie and redirects to the login page.</p>
+    </div>
+    <div>
+      <div class="subsection"><div class="dot"></div>Login Page Appearance</div>
+      <div class="screen-box">
+        <div class="screen-bar"><div class="dot-r"></div><div class="dot-y"></div><div class="dot-g"></div><div class="screen-url">localhost:3000/admin/login</div></div>
+        <div style="background:linear-gradient(135deg,#0f172a,#1e1b4b);padding:2rem;text-align:center;">
+          <div style="width:50px;height:50px;background:linear-gradient(135deg,#f97316,#fb923c);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:900;color:white;margin:0 auto 0.75rem;">3D</div>
+          <div style="color:white;font-weight:800;font-size:1rem;margin-bottom:0.25rem;">Admin Portal</div>
+          <div style="color:rgba(255,255,255,0.5);font-size:0.75rem;margin-bottom:1.5rem;">Workshop Management System</div>
+          <div style="background:rgba(255,255,255,0.08);border-radius:12px;padding:1.25rem;text-align:left;">
+            <div style="font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;margin-bottom:0.3rem;">Email Address</div>
+            <div style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:0.55rem 0.75rem;color:rgba(255,255,255,0.4);font-size:0.8rem;margin-bottom:0.75rem;">admin@workshop.com</div>
+            <div style="font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;margin-bottom:0.3rem;">Password</div>
+            <div style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:0.55rem 0.75rem;color:rgba(255,255,255,0.4);font-size:0.8rem;margin-bottom:1rem;">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</div>
+            <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;text-align:center;border-radius:8px;padding:0.65rem;font-size:0.82rem;font-weight:700;">Sign In to Admin Portal</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="page" id="admin-dashboard">
+  <div class="section-badge">Chapter 9</div>
+  <h1 class="page-title">Admin Dashboard <span>Command Center</span></h1>
+  <div class="url-chip">&#128279; <span>/admin</span> &rarr; <code>src/app/admin/page.tsx + DashboardGantt.tsx</code></div>
+  <p class="page-subtitle">Central command hub with real-time operational visibility. Auto-cancels expired bookings on each load and displays KPIs, an interactive Gantt timeline, priority alerts, and a live registration feed.</p>
+  <div class="divider"></div>
+  <div class="subsection"><div class="dot"></div>Dashboard Layout Preview</div>
+  <div class="sidebar-layout">
+    <div class="sidebar-nav">
+      <div class="snl"><div class="snl-mark">3D</div><div class="snl-txt">Workshop</div></div>
+      <div class="sn-lbl">Admin</div>
+      <div class="sn-item active">&#128202; Dashboard</div>
+      <div class="sn-item">&#128230; Registrations</div>
+      <div class="sn-item">&#128197; Events</div>
+      <div class="sn-item">&#127991; Discounts</div>
+      <div class="sn-item">&#128101; Customers</div>
+      <div class="sn-item">&#128176; Free Workshops</div>
+    </div>
+    <div class="sidebar-content">
+      <div class="sc-hdr">Admin Command Center &bull; Overview</div>
+      <div class="sc-title">Workshop Management Dashboard</div>
+      <div class="kpi-row">
+        <div class="kpi"><div class="kl">Total Paid Sales</div><div class="kv">&#8369;84,500</div></div>
+        <div class="kpi"><div class="kl">Registrations</div><div class="kv">142</div></div>
+        <div class="kpi"><div class="kl">Pending Reviews</div><div class="kv">7</div></div>
+        <div class="kpi"><div class="kl">Active Vouchers</div><div class="kv">23</div></div>
+      </div>
+      <div style="font-size:0.62rem;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:0.35rem;">Workshop Gantt Timeline (Today)</div>
+      <div class="mini-gantt">
+        <div class="gc" style="height:40%"></div><div class="gc" style="height:65%"></div>
+        <div class="gc" style="height:55%"></div><div class="gc" style="height:80%"></div>
+        <div class="gc" style="height:45%"></div><div class="gc" style="height:90%"></div>
+        <div class="gc" style="height:70%"></div><div class="gc" style="height:35%"></div>
+      </div>
+    </div>
+  </div>
+  <div class="two-col">
+    <div>
+      <div class="subsection"><div class="dot"></div>KPI Cards (Section 1)</div>
+      <table class="doc-table">
+        <thead><tr><th>Card</th><th>Data Source</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Total Paid Sales</td><td>ShopifyOrder.totalAmount (SUM)</td><td>Sum of all verified Shopify order revenue</td></tr><tr><td>Total Registrations</td><td>WorkshopRegistration (COUNT)</td><td>All registrations across all channels</td></tr><tr><td>Pending Reviews</td><td>Registrations with active statuses</td><td>Awaiting staff attention or action</td></tr><tr><td>Active Vouchers</td><td>Voucher WHERE status = ACTIVE</td><td>Live vouchers not yet fully used</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <div class="subsection"><div class="dot"></div>Dashboard Sections Overview</div>
+      <div class="info-card"><h3>&#9889; Quick Action Bar</h3><p>Four shortcut buttons at the top right: <ul style="margin-top:0.5rem;padding-left:1.25rem;font-size:0.78rem;color:var(--muted);line-height:1.9;"><li><strong>+ Manual Walk-In</strong> &rarr; opens add registration form</li><li><strong>Schedule Session</strong> &rarr; /admin/sessions</li><li><strong>Create Voucher</strong> &rarr; /admin/vouchers</li><li><strong>Export Reports</strong> &rarr; /admin/registrations export tools</li></ul></p></div>
+      <div class="info-card"><h3>&#128680; Priority Action Center</h3><p>If there are registrations with statuses <code>PAID_FOR_ADMIN_VERIFICATION</code> or <code>PENDING_SCHEDULE_CONFIRMATION</code>, this card turns yellow with a count and direct link to the verification queue. Shows green check when all clear.</p></div>
+      <div class="info-card"><h3>&#128293; High Demand Sessions Alert</h3><p>Lists upcoming sessions with 75%+ capacity. Shows progress bar, remaining seats, and "SOLD OUT" label. Helps admins proactively manage overflow.</p></div>
+    </div>
+  </div>
+  <div class="info-card"><h3>&#9889; Real-Time Registration Feed (Bottom Table)</h3><p>The most recent 8 registrations in a live feed table. Columns: Booking Reference (+ date), Customer Details, Workshop Session, Sales Channel badge, Pax count, Status badge, Amount, and a "Manage &rarr;" action link to the full registrations page.</p></div>
+</div>
+<div class="page" id="registrations">
+  <div class="section-badge">Chapter 10</div>
+  <h1 class="page-title">Registrations <span>Management</span></h1>
+  <div class="url-chip">&#128279; <span>/admin/registrations</span> &rarr; <code>src/app/admin/registrations/RegistrationsClient.tsx</code></div>
+  <p class="page-subtitle">The most feature-rich section of the admin portal. Handles the complete lifecycle of every workshop booking — from initial registration through payment verification, session assignment, rescheduling, and status updates.</p>
+  <div class="divider"></div>
+  <div class="two-col">
+    <div>
+      <div class="info-card"><h3>&#128202; KPI Filter Cards (Top)</h3><p>Four clickable stat cards act as status filter buttons: Total, Pending (awaiting action), Reserved (confirmed), and Cancelled. Clicking a card filters the registration table instantly.</p></div>
+      <div class="info-card"><h3>&#128269; Search &amp; Filter Bar</h3><p><ul style="padding-left:1.25rem;font-size:0.78rem;color:var(--muted);line-height:1.9;"><li><strong>Search:</strong> Name, email, booking reference, or phone</li><li><strong>Status Filter:</strong> Dropdown by specific status</li><li><strong>Sales Channel:</strong> Shopify, StoreHub, Manual</li><li><strong>Date Range:</strong> Filter by registration date</li></ul></p></div>
+      <table class="doc-table">
+        <thead><tr><th>Column</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Booking Ref</td><td>Unique code (e.g. P2P-LOCK-853656-4812) + date</td></tr><tr><td>Customer</td><td>Full name + email address</td></tr><tr><td>Workshop / Session</td><td>Module name + scheduled date and time</td></tr><tr><td>Channel</td><td>Sales channel badge (Shopify / StoreHub / Walk-in)</td></tr><tr><td>Pax</td><td>Number of participants</td></tr><tr><td>Status</td><td>Color-coded status badge</td></tr><tr><td>Amount</td><td>Total paid from Shopify order</td></tr><tr><td>Actions</td><td>Expand row for full action panel</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <div class="subsection"><div class="dot"></div>Admin Actions Per Registration</div>
+      <div class="info-card"><h3>&#9989; Verify Payment</h3><p>For <code>PAID_FOR_ADMIN_VERIFICATION</code> registrations: click <strong>"Verify Payment"</strong> to confirm payment and assign a session. Status changes to <code>RESERVED</code> and a confirmation email is sent.</p></div>
+      <div class="info-card"><h3>&#128197; Assign / Change Session</h3><p>Admin can assign a session to a registration with no session, or reschedule an existing booking to a different date/time slot.</p></div>
+      <div class="info-card"><h3>&#9993; Send Confirmation Email</h3><p>Manually trigger a reservation confirmation email to the customer. Useful for follow-ups or resending lost emails.</p></div>
+      <div class="info-card"><h3>&#128260; Update Status</h3><p>Change the registration status manually. Common transitions: Pending &rarr; Reserved, Reserved &rarr; Attended, Reserved &rarr; No-Show, Reserved &rarr; Cancelled.</p></div>
+      <div class="info-card"><h3>&#10133; Add Walk-In Registration</h3><p>Click <strong>"+ Add Walk-In"</strong> at the top to open the manual registration form. Fills customer details, selects a session, sets status to <code>RESERVED</code> directly. Used for in-person customers paying on-site.</p></div>
+      <div class="info-card"><h3>&#128228; Export Data</h3><p>Export the current filtered view to <strong>CSV</strong> or <strong>Excel (.xlsx)</strong>. The export respects the current search and filter state.</p></div>
+    </div>
+  </div>
+  <div class="subsection"><div class="dot"></div>How to Verify a Payment (Step-by-Step)</div>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Navigate to Registrations</div><div class="step-desc">Go to <code>/admin/registrations</code> or click "Registrations" in the sidebar.</div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-title">Find Pending Registrations</div><div class="step-desc">Click the <strong>Pending</strong> stat card to filter, or look for the yellow "PAID FOR ADMIN VERIFICATION" badge.</div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Expand the Row</div><div class="step-desc">Click on the registration row to expand its detail panel. Review customer info, payment amount, and Shopify order number.</div></div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-content"><div class="step-title">Verify and Assign Session</div><div class="step-desc">Select an available session from the dropdown and click <strong>"Verify Payment &amp; Reserve Slot"</strong>. Status changes to <code>RESERVED</code> and email is sent to the customer.</div></div></div>
+  </div>
+</div>
+<div class="page" id="sessions">
+  <div class="section-badge">Chapter 11</div>
+  <h1 class="page-title">Events &amp; Sessions <span>Calendar</span></h1>
+  <div class="url-chip">&#128279; <span>/admin/sessions</span> &rarr; <code>src/app/admin/sessions/calendar.tsx</code></div>
+  <p class="page-subtitle">A full-featured calendar for creating, viewing, and managing all upcoming workshop sessions. Combines session scheduling with a live attendance roster.</p>
+  <div class="divider"></div>
+  <div class="two-col">
+    <div>
+      <div class="info-card"><h3>&#128197; Monthly Calendar View</h3><p>A month calendar displays all upcoming sessions. Days with scheduled sessions show colored event indicators. Clicking a day opens a detail panel with all sessions for that day and their current occupancy.</p></div>
+      <div class="info-card"><h3>&#128203; Session Detail Panel</h3><p>Shows the session's module name, category, time, capacity, current bookings, notes, and collaborator. Action buttons for editing, cancelling, and viewing the attendee roster.</p></div>
+      <div class="info-card"><h3>&#128101; Attendee Roster</h3><p>Each session shows all booked customers from both <code>Booking</code> (voucher) and <code>WorkshopRegistration</code> tables in a unified list. Shows name, email, booking reference, and status. Staff can initiate check-in directly from here.</p></div>
+    </div>
+    <div>
+      <div class="subsection"><div class="dot"></div>Session Data Fields</div>
+      <table class="doc-table">
+        <thead><tr><th>Field</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Module</td><td>Workshop module (links to Module record)</td></tr><tr><td>Category</td><td>BEGINNER / INTERMEDIATE / ADVANCED / KIDS</td></tr><tr><td>Session Date</td><td>The date the session takes place</td></tr><tr><td>Start / End Time</td><td>Time strings (e.g. "09:00" / "12:00")</td></tr><tr><td>Capacity</td><td>Maximum participants (default 20)</td></tr><tr><td>Available Slots</td><td>Remaining open seats</td></tr><tr><td>Status</td><td>OPEN / FULL / CANCELLED / COMPLETED</td></tr><tr><td>Notes</td><td>Internal notes visible to admin only</td></tr><tr><td>Collaborator</td><td>Guest instructor or partner name</td></tr>
+        </tbody>
+      </table>
+      <div class="subsection"><div class="dot"></div>How to Create a Session</div>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Go to Events &amp; Sessions</div><div class="step-desc">Click "Events" in the admin sidebar.</div></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-title">Click "Add Session"</div><div class="step-desc">Find and click the "+ Add Session" button to open the creation form.</div></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Fill in Session Details</div><div class="step-desc">Select the workshop module, set the date, start time, end time, and capacity. Optionally add notes and a collaborator name.</div></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-content"><div class="step-title">Save the Session</div><div class="step-desc">Click "Create Session". The session immediately appears on the calendar and becomes bookable on the public booking page.</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="page" id="modules-mgmt">
+  <div class="section-badge">Chapter 12</div>
+  <h1 class="page-title">Workshop Modules <span>Management</span></h1>
+  <div class="url-chip">&#128279; <span>/admin/modules</span> &rarr; <code>src/app/admin/modules/ModulesManager.tsx</code></div>
+  <p class="page-subtitle">Workshop Modules define the types of workshops offered. Each module has a name, description, skill level category, and a credit unit cost. Modules link to sessions and the voucher booking system.</p>
+  <div class="divider"></div>
+  <div class="two-col">
+    <div>
+      <table class="doc-table">
+        <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Module Name</td><td>String (required)</td><td>Display name (e.g. "Prints 2 Profit")</td></tr><tr><td>Description</td><td>Text (optional)</td><td>Brief description shown to customers</td></tr><tr><td>Category</td><td>Enum (required)</td><td>BEGINNER / INTERMEDIATE / ADVANCED / KIDS</td></tr><tr><td>Units Cost</td><td>Integer (required)</td><td>Credit units deducted per session booking</td></tr>
+        </tbody>
+      </table>
+      <div class="subsection"><div class="dot"></div>Category Color Coding</div>
+      <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.82rem;padding:0.5rem 0.75rem;background:#eff6ff;border-radius:8px;border:1px solid #93c5fd;margin-bottom:0.4rem;"><div style="width:12px;height:12px;border-radius:50%;background:#3b82f6;flex-shrink:0;"></div><strong>BEGINNER</strong></div><div style="display:flex;align-items:center;gap:0.75rem;font-size:0.82rem;padding:0.5rem 0.75rem;background:#fffbeb;border-radius:8px;border:1px solid #fde68a;margin-bottom:0.4rem;"><div style="width:12px;height:12px;border-radius:50%;background:#f59e0b;flex-shrink:0;"></div><strong>INTERMEDIATE</strong></div><div style="display:flex;align-items:center;gap:0.75rem;font-size:0.82rem;padding:0.5rem 0.75rem;background:#f0fdf4;border-radius:8px;border:1px solid #86efac;margin-bottom:0.4rem;"><div style="width:12px;height:12px;border-radius:50%;background:#22c55e;flex-shrink:0;"></div><strong>KIDS</strong></div><div style="display:flex;align-items:center;gap:0.75rem;font-size:0.82rem;padding:0.5rem 0.75rem;background:#fef2f2;border-radius:8px;border:1px solid #fecaca;margin-bottom:0.4rem;"><div style="width:12px;height:12px;border-radius:50%;background:#ef4444;flex-shrink:0;"></div><strong>ADVANCED</strong></div>
+    </div>
+    <div>
+      <div class="subsection"><div class="dot"></div>CRUD Operations</div>
+      <div class="info-card"><h3>&#10133; Create Module</h3><p>Click <strong>"+ New Module"</strong>. A modal form opens. Name is required. Click "Create Module" to save.</p></div>
+      <div class="info-card"><h3>&#9999; Edit Module</h3><p>Click the <strong>"Edit"</strong> button on any module row. A warning appears if the module has existing sessions. Change fields and click "Save Changes".</p></div>
+      <div class="info-card"><h3>&#128465; Delete Module</h3><p>Click <strong>"Delete"</strong>. A confirmation modal appears. <em>Cannot delete a module that has active sessions linked to it.</em></p></div>
+      <div class="alert alert-warn"><span style="font-size:1rem;flex-shrink:0;">&#9888;</span><div><strong>Units Cost vs. Price:</strong> The "Units Cost" represents credit units deducted from a voucher — it is NOT a monetary price. Pricing is handled separately through Shopify and StoreHub.</div></div>
+    </div>
+  </div>
+</div>
+<div class="page" id="customers">
+  <div class="section-badge">Chapter 13</div>
+  <h1 class="page-title">Customer Directory <span>&amp; Intelligence</span></h1>
+  <div class="url-chip">&#128279; <span>/admin/customers</span> &rarr; <code>src/app/admin/customers/client.tsx</code></div>
+  <p class="page-subtitle">Aggregates all workshop registrations by email address to build unified customer profiles with lifetime value tracking, repeat customer analytics, and full booking history.</p>
+  <div class="divider"></div>
+  <div class="four-col">
+    <div class="feature-card"><div class="feature-icon" style="background:#eef2ff">&#128101;</div><h4>Total Customers</h4><p>Unique customer count grouped by email</p></div>
+    <div class="feature-card"><div class="feature-icon" style="background:#f0fdf4">&#128260;</div><h4>Repeat Customers</h4><p>Customers with more than 1 registration</p></div>
+    <div class="feature-card"><div class="feature-icon" style="background:#fffbeb">&#128203;</div><h4>Active Reservations</h4><p>Sum of all currently active bookings</p></div>
+    <div class="feature-card"><div class="feature-icon" style="background:#f0fdf4">&#128176;</div><h4>Total Revenue</h4><p>Sum of all verified Shopify order amounts</p></div>
+  </div>
+  <div class="two-col">
+    <div class="info-card"><h3>&#128203; Customer List Table</h3><p>Each row: customer name, email, phone, total spent, number of active bookings, number of completed workshops, and last booking date. Customers grouped by email — multiple registrations with the same email appear as one customer with a booking count.</p></div>
+    <div class="info-card"><h3>&#128196; Customer Detail Drawer</h3><p>Click any customer row to open a detail panel showing their full booking history: booking reference, workshop module, session date/time, status badge, sales channel, and payment amount. Navigation links to the specific registration.</p></div>
+  </div>
+</div>
+<div class="page" id="vouchers">
+  <div class="section-badge">Chapter 14</div>
+  <h1 class="page-title"><span>Vouchers</span></h1>
+  <div class="url-chip">&#128279; <span>/admin/vouchers</span> &rarr; <code>src/app/admin/vouchers/page.tsx</code></div>
+  <p class="page-subtitle">Pre-paid subscription packages giving customers a credit unit balance to spend on workshop bookings. Each voucher has a unique code, QR data, and a remaining unit balance that decrements with each booking.</p>
+  <div class="divider"></div>
+  <div class="two-col">
+    <div>
+      <table class="doc-table">
+        <thead><tr><th>Field</th><th>Description</th></tr></thead>
+        <tbody><tr><td>Voucher Code</td><td>Unique alphanumeric code (e.g. MLW-ABC-2024)</td></tr><tr><td>Customer Name</td><td>Owner of the voucher</td></tr><tr><td>Customer Email</td><td>Contact email for delivery</td></tr><tr><td>Plan</td><td>Subscription plan this voucher belongs to</td></tr><tr><td>Total Units</td><td>Total credit units when issued</td></tr><tr><td>Remaining Units</td><td>Units not yet spent on bookings</td></tr><tr><td>Status</td><td>ACTIVE / FULLY_USED / SUSPENDED / CANCELLED</td></tr><tr><td>Created At</td><td>Date the voucher was generated</td></tr></tbody>
+      </table>
+    </div>
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.75rem;border-radius:8px;border:1px solid var(--border);margin-bottom:0.4rem;"><span class="badge badge-green">ACTIVE</span><span style="font-size:0.78rem;color:var(--muted);">Units available for booking sessions</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.75rem;border-radius:8px;border:1px solid var(--border);margin-bottom:0.4rem;"><span class="badge badge-gray">FULLY_USED</span><span style="font-size:0.78rem;color:var(--muted);">All credit units have been consumed</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.75rem;border-radius:8px;border:1px solid var(--border);margin-bottom:0.4rem;"><span class="badge badge-red">SUSPENDED</span><span style="font-size:0.78rem;color:var(--muted);">Temporarily blocked from use by admin</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.75rem;border-radius:8px;border:1px solid var(--border);margin-bottom:0.4rem;"><span class="badge badge-red">CANCELLED</span><span style="font-size:0.78rem;color:var(--muted);">Permanently revoked by admin</span></div>
+      <div class="info-card"><h3>&#128279; Voucher Generation Flow</h3><p>Vouchers are auto-generated when a Plan Request is approved. The system creates a <code>Voucher</code> record, generates a unique code and QR code data, then emails the voucher to the customer. Cannot be manually created from this page.</p></div>
+    </div>
+  </div>
+</div>
+<div class="page" id="discounts">
+  <div class="section-badge">Chapter 15</div>
+  <h1 class="page-title">Discount <span>Codes</span></h1>
+  <div class="url-chip">&#128279; <span>/admin/discounts</span> &rarr; <code>src/app/admin/discounts/DiscountsManager.tsx</code></div>
+  <p class="page-subtitle">Generate one-time-use alphanumeric discount codes tied to specific events (trade shows, partner promotions). Customers use these codes during checkout to access free or discounted workshops.</p>
+  <div class="divider"></div>
+  <div class="two-col">
+    <div>
+      <div class="subsection"><div class="dot"></div>How Discount Codes Work</div>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Admin Creates a Batch</div><div class="step-desc">Enter an event name and a quantity (1&ndash;50). The system generates unique random codes all tied to that event.</div></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-title">Distribute to Attendees</div><div class="step-desc">Copy codes and share them with event attendees, partners, or sponsors. Each code is single-use.</div></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Customer Redeems Code</div><div class="step-desc">Customer enters the code on the booking page. System validates and applies the discount.</div></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-content"><div class="step-title">Code Marked as Used</div><div class="step-desc">Upon redemption, <code>isUsed = true</code> and <code>usedAt</code> is timestamped. Cannot be reused.</div></div></div>
+      </div>
+    </div>
+    <div>
+      <div class="info-card"><h3>&#128203; Events Panel (Left)</h3><p>All events listed on the left, grouped by event name, showing total codes, used count, and unused count. Clicking an event shows its codes on the right.</p></div>
+      <div class="info-card"><h3>&#128273; Codes Table (Right)</h3><p>Shows all codes for the selected event. Each row: code string, used/unused status badge, and the date used. Codes can be copied to clipboard with a single click.</p></div>
+      <div class="info-card"><h3>&#10133; Generate Form (Top)</h3><p>Enter an Event Name, set a Quantity (1&ndash;50), and click "Generate". Codes are auto-generated with unique random suffixes. Max 50 per generation batch.</p></div>
+    </div>
+  </div>
+</div>
+<div class="page" id="free-workshops">
+  <div class="section-badge">Chapter 16</div>
+  <h1 class="page-title">Free <span>Workshops</span></h1>
+  <div class="url-chip">&#128279; <span>/admin/free-workshops</span> &rarr; <code>src/app/admin/free-workshops/client.tsx</code></div>
+  <p class="page-subtitle">A dedicated dashboard for tracking all complimentary and free-entry workshop reservations. Aggregates records from multiple sources into a unified view with an interactive calendar.</p>
+  <div class="divider"></div>
+  <div class="subsection"><div class="dot"></div>Data Sources — How Records Are Identified as "Free"</div>
+  <div class="three-col">
+    <div class="info-card"><h3>&#128230; Booking System</h3><p>Free bookings from the voucher system where the voucher code starts with <code>MLWS-FREE</code>. These come from the <code>Booking</code> table.</p></div>
+    <div class="info-card"><h3>&#128203; Registration System</h3><p>Registrations with <code>salesChannel = 'WALK_IN_FREE'</code> or <code>'COMPLIMENTARY'</code>, or those with a SKU containing "FREE". These come from <code>WorkshopRegistration</code>.</p></div>
+    <div class="info-card"><h3>&#128197; Free Sessions</h3><p>Workshop sessions where the module name, description, or notes contain the word "Free" (case-insensitive) are shown in the sessions calendar panel.</p></div>
+  </div>
+  <div class="two-col">
+    <div class="info-card"><h3>&#128197; Calendar View</h3><p>An interactive calendar shows all sessions designated as free workshops. Clicking a session date reveals the session details and attendee list including reservation source, status, and participant count.</p></div>
+    <div class="info-card"><h3>&#128203; Reservation List</h3><p>Unified table from both sources. Columns: Booking Reference, Customer Name/Email/Phone, Session (date, time, module), Status, Source (BOOKING_SYSTEM vs REGISTRATION_SYSTEM), Participants, and Date Created.</p></div>
+  </div>
+</div>
+<div class="page" id="plan-requests">
+  <div class="section-badge">Chapter 17</div>
+  <h1 class="page-title">Plan <span>Requests</span></h1>
+  <div class="url-chip">&#128279; <span>/admin/requests</span> &rarr; <code>src/app/admin/requests/page.tsx</code></div>
+  <p class="page-subtitle">Plan Requests are customer submissions for subscription packages (e.g., a 10-session voucher bundle). Admins review and approve, triggering voucher generation and delivery via email.</p>
+  <div class="divider"></div>
+  <div class="two-col">
+    <div>
+      <table class="doc-table">
+        <thead><tr><th>Field</th><th>Description</th></tr></thead>
+        <tbody><tr><td>Customer Name</td><td>Full name of the requester</td></tr><tr><td>Email</td><td>Contact and voucher delivery email</td></tr><tr><td>Phone</td><td>Contact phone number</td></tr><tr><td>Selected Plan</td><td>The subscription plan chosen</td></tr><tr><td>Status</td><td>PENDING_PAYMENT / PAID / REJECTED</td></tr><tr><td>Admin Notes</td><td>Internal notes from admin review</td></tr><tr><td>StoreHub Transaction ID</td><td>If paid via StoreHub POS</td></tr><tr><td>emailSentAt</td><td>Timestamp of last voucher email sent</td></tr></tbody>
+      </table>
+    </div>
+    <div>
+      <div class="info-card"><h3>&#9989; Mark as Paid</h3><p>Click "Mark as Paid" to approve the request. The system generates a <code>Voucher</code> record with the plan's credit units and sends it to the customer's email. Creates a permanent Voucher record.</p></div>
+      <div class="info-card"><h3>&#9993; Send Voucher Email</h3><p>The <strong>"Send Email"</strong> button re-sends the voucher email to the customer. Records the send timestamp in <code>emailSentAt</code>.</p></div>
+      <div class="info-card"><h3>&#128260; StoreHub Sync</h3><p>The <strong>"Sync"</strong> button triggers a manual sync with StoreHub to pull new transactions and automatically approve matching pending requests.</p></div>
+    </div>
+  </div>
+  <div class="info-card"><h3>&#127991; Plan Filter Pills (URL-based Filter)</h3><p>At the top of the table, filter pills appear for each active plan. Clicking a pill filters the table. The URL updates with <code>?planId=</code> for bookmarking or sharing filtered views.</p></div>
+</div>
+<div class="page" id="checkin">
+  <div class="section-badge">Chapter 18</div>
+  <h1 class="page-title">Receptionist <span>Check-In Station</span></h1>
+  <div class="url-chip">&#128279; <span>/receptionist</span> &rarr; <code>src/app/receptionist/client.tsx</code></div>
+  <p class="page-subtitle">A streamlined 3-step process for verifying and checking in customers on the day of their workshop. Designed for speed — staff can check in a customer in under 30 seconds.</p>
+  <div class="divider"></div>
+  <div class="info-card"><h3>&#128279; Receptionist Navigation Bar</h3><p>Three links: <ul style="margin-top:0.5rem;padding-left:1.25rem;font-size:0.78rem;color:var(--muted);line-height:1.9;"><li><strong>Check-in</strong> &rarr; /receptionist (the check-in station)</li><li><strong>Walk-ins</strong> &rarr; /receptionist/walk-in (walk-in processing)</li><li><strong>Calendar Roster</strong> &rarr; /receptionist/today (session roster view)</li></ul></p></div>
+  <div class="subsection"><div class="dot"></div>3-Step Check-In Flow</div>
+  <div class="three-col">
+    <div class="feature-card" style="border-top:3px solid #6366f1;">
+      <div class="feature-icon" style="background:#eef2ff;font-size:1.4rem;">&#128269;</div>
+      <h4>Step 1: Search</h4>
+      <p>Receptionist enters the customer's <strong>Booking Reference Number</strong> (e.g. <code>P2P-LOCK-853656-4812</code>). The system searches both <code>WorkshopRegistration</code> and <code>Booking</code> tables simultaneously.</p>
+    </div>
+    <div class="feature-card" style="border-top:3px solid #f59e0b;">
+      <div class="feature-icon" style="background:#fffbeb;font-size:1.4rem;">&#128203;</div>
+      <h4>Step 2: Verify</h4>
+      <p>The system displays full reservation details: customer name, email, phone, participants, payment status, reservation status, session date/time. Any validation issues are highlighted in a warning block with specific guidance.</p>
+    </div>
+    <div class="feature-card" style="border-top:3px solid #10b981;">
+      <div class="feature-icon" style="background:#f0fdf4;font-size:1.4rem;">&#9989;</div>
+      <h4>Step 3: Confirm</h4>
+      <p>If all validations pass (paid + reserved + today's date), the green <strong>"Confirm Check-In"</strong> button activates. Clicking it marks the registration as <code>ATTENDED</code>, records the check-in time, and shows a success screen.</p>
+    </div>
+  </div>
+  <div class="subsection"><div class="dot"></div>Validation Rules</div>
+  <table class="doc-table">
+    <thead><tr><th>Check</th><th>Condition Required</th><th>Error If Failed</th></tr></thead>
+    <tbody>
+      <tr><td>Payment Verified</td><td>Status must be PAID_FOR_ADMIN_VERIFICATION, RESERVED, CONFIRMED, CHECKED_IN, or ATTENDED</td><td>"Payment status is NOT VERIFIED"</td></tr><tr><td>Not Cancelled</td><td>Status must not be CANCELLED, CANCELLED_BY_CUSTOMER, REFUNDED, or DUPLICATE_ORDER</td><td>"This reservation is currently CANCELLED"</td></tr><tr><td>Not Already Checked In</td><td>Status must not be CHECKED_IN, ATTENDED, or COMPLETED</td><td>"Customer is ALREADY CHECKED IN"</td></tr><tr><td>Reserved Status</td><td>Status must be RESERVED, CONFIRMED, or PAID_FOR_ADMIN_VERIFICATION</td><td>"Reservation status is X (Must be Reserved)"</td></tr><tr><td>Today's Session</td><td>The session date must match today's date</td><td>"Schedule date is [date], which does not match today"</td></tr>
+    </tbody>
+  </table>
+  <div class="alert alert-success"><span style="font-size:1rem;flex-shrink:0;">&#9989;</span><div><strong>Auto-fill from URL:</strong> When staff clicks "Check In &rarr;" from the Calendar Roster, the system navigates to <code>/receptionist?bookingReference=XXXX</code> which automatically populates and initiates the lookup — no manual typing required.</div></div>
+</div>
+<div class="page" id="roster">
+  <div class="section-badge">Chapter 19</div>
+  <h1 class="page-title">Receptionist <span>Calendar Roster</span></h1>
+  <div class="url-chip">&#128279; <span>/receptionist/today</span> &rarr; <code>src/app/receptionist/today/RosterCalendar.tsx</code></div>
+  <p class="page-subtitle">Gives receptionists a comprehensive view of all scheduled workshop sessions and their booked customers. Allows direct navigation to the check-in station for individual customers.</p>
+  <div class="divider"></div>
+  <div class="two-col">
+    <div class="info-card"><h3>&#128197; Session Calendar</h3><p>An interactive calendar showing all upcoming sessions. Days with sessions are highlighted. Clicking a day reveals all sessions for that day with workshop name, time, capacity, and booking count.</p></div>
+    <div class="info-card"><h3>&#128101; Attendee List Per Session</h3><p>For each selected session, all booked customers are displayed: customer name, booking reference, session time, and check-in status badge (Reserved / Checked In / No Show / Attended).</p></div>
+  </div>
+  <div class="two-col">
+    <div class="info-card"><h3>&#9889; Quick Check-In Button</h3><p>Next to each customer, a <strong>"Check In &rarr;"</strong> button navigates to <code>/receptionist?bookingReference=XXXX</code> which pre-fills the check-in station for instant lookup and check-in.</p></div>
+    <div class="info-card"><h3>&#128202; Session Summary Bar</h3><p>Each session card shows: total capacity, booked count, checked-in count, and remaining open seats. A visual progress bar shows occupancy percentage.</p></div>
+  </div>
+  <div class="alert alert-info"><span style="font-size:1rem;flex-shrink:0;">&#8505;</span><div><strong>Combined Data:</strong> The roster combines both <code>Booking</code> records (from the voucher system) and <code>WorkshopRegistration</code> records (from Shopify/StoreHub/manual) into a unified attendee list for each session.</div></div>
+</div>
+<div class="page" id="db-schema">
+  <div class="section-badge">Chapter 20</div>
+  <h1 class="page-title">Database Schema <span>Reference</span></h1>
+  <div class="url-chip">&#128279; <span>prisma/schema.prisma</span> &rarr; <code>PostgreSQL via Supabase</code></div>
+  <div class="divider"></div>
+  <div class="two-col">
+    <div>
+      <div class="db-model"><div class="db-model-header">&#128100; StaffUser</div><div class="db-field"><span class="db-field-name">id</span><span class="db-field-type">String (UUID)</span><div class="db-field-desc">Primary key, auto-generated</div></div><div class="db-field"><span class="db-field-name">name</span><span class="db-field-type">String</span><div class="db-field-desc">Display name for the staff member</div></div><div class="db-field"><span class="db-field-name">email</span><span class="db-field-type">String @unique</span><div class="db-field-desc">Login email address</div></div><div class="db-field"><span class="db-field-name">password_hash</span><span class="db-field-type">String</span><div class="db-field-desc">bcrypt-hashed password</div></div><div class="db-field"><span class="db-field-name">role</span><span class="db-field-type">String</span><div class="db-field-desc">"ADMIN" or "RECEPTIONIST"</div></div><div class="db-field"><span class="db-field-name">status</span><span class="db-field-type">String</span><div class="db-field-desc">ACTIVE (default)</div></div></div>
+      <div class="db-model"><div class="db-model-header">&#128218; Module</div><div class="db-field"><span class="db-field-name">id</span><span class="db-field-type">String (UUID)</span><div class="db-field-desc">Primary key</div></div><div class="db-field"><span class="db-field-name">name</span><span class="db-field-type">String</span><div class="db-field-desc">Workshop module display name</div></div><div class="db-field"><span class="db-field-name">description</span><span class="db-field-type">String?</span><div class="db-field-desc">Optional description text</div></div><div class="db-field"><span class="db-field-name">category</span><span class="db-field-type">String</span><div class="db-field-desc">BEGINNER/INTERMEDIATE/ADVANCED/KIDS</div></div><div class="db-field"><span class="db-field-name">units</span><span class="db-field-type">Int</span><div class="db-field-desc">Credit units cost per session</div></div></div>
+      <div class="db-model"><div class="db-model-header">&#128197; WorkshopSession</div><div class="db-field"><span class="db-field-name">id</span><span class="db-field-type">String (UUID)</span><div class="db-field-desc">Primary key</div></div><div class="db-field"><span class="db-field-name">moduleId</span><span class="db-field-type">String (FK)</span><div class="db-field-desc">Links to Module record</div></div><div class="db-field"><span class="db-field-name">sessionDate</span><span class="db-field-type">DateTime</span><div class="db-field-desc">Date of the workshop session</div></div><div class="db-field"><span class="db-field-name">startTime / endTime</span><span class="db-field-type">String</span><div class="db-field-desc">Time strings e.g. "09:00" / "12:00"</div></div><div class="db-field"><span class="db-field-name">capacity</span><span class="db-field-type">Int (default 20)</span><div class="db-field-desc">Maximum number of participants</div></div><div class="db-field"><span class="db-field-name">availableSlots</span><span class="db-field-type">Int</span><div class="db-field-desc">Remaining open seats</div></div><div class="db-field"><span class="db-field-name">status</span><span class="db-field-type">String</span><div class="db-field-desc">OPEN / FULL / CANCELLED / COMPLETED</div></div><div class="db-field"><span class="db-field-name">notes</span><span class="db-field-type">String?</span><div class="db-field-desc">Internal admin notes</div></div><div class="db-field"><span class="db-field-name">collaborator</span><span class="db-field-type">String?</span><div class="db-field-desc">Guest instructor or partner name</div></div></div>
+      <div class="db-model"><div class="db-model-header">&#127991; Plan</div><div class="db-field"><span class="db-field-name">id</span><span class="db-field-type">String (UUID)</span><div class="db-field-desc">Primary key</div></div><div class="db-field"><span class="db-field-name">name</span><span class="db-field-type">String</span><div class="db-field-desc">Plan display name</div></div><div class="db-field"><span class="db-field-name">price</span><span class="db-field-type">Float</span><div class="db-field-desc">Plan price in PHP</div></div><div class="db-field"><span class="db-field-name">creditUnits</span><span class="db-field-type">Int</span><div class="db-field-desc">Credit units included in the plan</div></div><div class="db-field"><span class="db-field-name">isActive</span><span class="db-field-type">Boolean</span><div class="db-field-desc">Whether plan is available for purchase</div></div><div class="db-field"><span class="db-field-name">storehubSku</span><span class="db-field-type">String? @unique</span><div class="db-field-desc">SKU for StoreHub POS matching</div></div></div>
+    </div>
+    <div>
+      <div class="db-model"><div class="db-model-header">&#128230; WorkshopRegistration</div><div class="db-field"><span class="db-field-name">id / bookingReference</span><span class="db-field-type">String / String @unique</span><div class="db-field-desc">Internal ID and customer-facing booking ref</div></div><div class="db-field"><span class="db-field-name">salesChannel</span><span class="db-field-type">String</span><div class="db-field-desc">SHOPIFY / STOREHUB / MANUAL_REGISTRATION etc.</div></div><div class="db-field"><span class="db-field-name">sku</span><span class="db-field-type">String</span><div class="db-field-desc">Product SKU (default "BW001")</div></div><div class="db-field"><span class="db-field-name">customerName / Email / Phone</span><span class="db-field-type">String</span><div class="db-field-desc">Customer contact information</div></div><div class="db-field"><span class="db-field-name">participantsCount</span><span class="db-field-type">Int (default 1)</span><div class="db-field-desc">Number of participants</div></div><div class="db-field"><span class="db-field-name">sessionId</span><span class="db-field-type">String? (FK)</span><div class="db-field-desc">Assigned session (nullable until confirmed)</div></div><div class="db-field"><span class="db-field-name">status</span><span class="db-field-type">String</span><div class="db-field-desc">Full lifecycle status (16 possible values)</div></div><div class="db-field"><span class="db-field-name">reservedAt / reservedUntil</span><span class="db-field-type">DateTime?</span><div class="db-field-desc">Soft lock start and expiry timestamps</div></div><div class="db-field"><span class="db-field-name">approvedByStaffId</span><span class="db-field-type">String? (FK)</span><div class="db-field-desc">Staff who verified the booking</div></div></div>
+      <div class="db-model"><div class="db-model-header">&#127717; ShopifyOrder</div><div class="db-field"><span class="db-field-name">shopifyOrderId</span><span class="db-field-type">String @unique</span><div class="db-field-desc">Shopify's internal order ID</div></div><div class="db-field"><span class="db-field-name">shopifyOrderNumber</span><span class="db-field-type">String</span><div class="db-field-desc">Human-readable order number</div></div><div class="db-field"><span class="db-field-name">registrationId</span><span class="db-field-type">String @unique (FK)</span><div class="db-field-desc">Links to WorkshopRegistration</div></div><div class="db-field"><span class="db-field-name">financialStatus</span><span class="db-field-type">String</span><div class="db-field-desc">paid / pending / refunded</div></div><div class="db-field"><span class="db-field-name">totalAmount</span><span class="db-field-type">Float</span><div class="db-field-desc">Order total in PHP</div></div><div class="db-field"><span class="db-field-name">sku</span><span class="db-field-type">String</span><div class="db-field-desc">Product SKU</div></div><div class="db-field"><span class="db-field-name">rawPayload</span><span class="db-field-type">String</span><div class="db-field-desc">Full Shopify webhook JSON payload</div></div></div>
+      <div class="db-model"><div class="db-model-header">&#127991; Voucher</div><div class="db-field"><span class="db-field-name">voucherCode</span><span class="db-field-type">String @unique</span><div class="db-field-desc">Unique code (e.g. MLW-ABC)</div></div><div class="db-field"><span class="db-field-name">planId</span><span class="db-field-type">String (FK)</span><div class="db-field-desc">Links to Plan</div></div><div class="db-field"><span class="db-field-name">totalUnits</span><span class="db-field-type">Int</span><div class="db-field-desc">Total credit units issued</div></div><div class="db-field"><span class="db-field-name">remainingUnits</span><span class="db-field-type">Int</span><div class="db-field-desc">Units not yet used</div></div><div class="db-field"><span class="db-field-name">status</span><span class="db-field-type">String</span><div class="db-field-desc">ACTIVE / FULLY_USED / SUSPENDED / CANCELLED</div></div></div>
+      <div class="db-model"><div class="db-model-header">&#127915; DiscountCode</div><div class="db-field"><span class="db-field-name">code</span><span class="db-field-type">String @unique</span><div class="db-field-desc">The discount code string</div></div><div class="db-field"><span class="db-field-name">eventName</span><span class="db-field-type">String</span><div class="db-field-desc">Event this code belongs to</div></div><div class="db-field"><span class="db-field-name">isUsed</span><span class="db-field-type">Boolean</span><div class="db-field-desc">Whether it has been redeemed</div></div><div class="db-field"><span class="db-field-name">usedAt</span><span class="db-field-type">DateTime?</span><div class="db-field-desc">When it was used</div></div></div>
+      <div class="db-model"><div class="db-model-header">&#128202; AuditTrail</div><div class="db-field"><span class="db-field-name">registrationId</span><span class="db-field-type">String? (FK)</span><div class="db-field-desc">Linked registration (nullable)</div></div><div class="db-field"><span class="db-field-name">action</span><span class="db-field-type">String</span><div class="db-field-desc">Action performed (e.g. VERIFIED, RESCHEDULED)</div></div><div class="db-field"><span class="db-field-name">details</span><span class="db-field-type">String?</span><div class="db-field-desc">Additional context or JSON details</div></div><div class="db-field"><span class="db-field-name">performedByStaffId</span><span class="db-field-type">String? (FK)</span><div class="db-field-desc">Staff who performed the action</div></div><div class="db-field"><span class="db-field-name">createdAt</span><span class="db-field-type">DateTime</span><div class="db-field-desc">Timestamp of action</div></div></div>
+    </div>
+  </div>
+</div>
+<div class="page" id="integrations">
+  <div class="section-badge">Chapter 21</div>
+  <h1 class="page-title">External <span>Integrations</span></h1>
+  <div class="divider"></div>
+  <div class="two-col">
+    <div>
+      <div class="subsection"><div class="dot"></div>Shopify Integration</div>
+      <div class="info-card"><h3>&#127717; Shopify Webhooks (/api/webhooks)</h3><p>When a customer completes a purchase on Shopify, a webhook event is sent. The system: <ol style="margin-top:0.5rem;padding-left:1.25rem;font-size:0.78rem;color:var(--muted);line-height:2;"><li>Extracts customer info, order number, SKU, and amount</li><li>Creates or updates a <code>ShopifyOrder</code> record</li><li>Matches to the existing <code>WorkshopRegistration</code></li><li>Updates status to <code>PAID_FOR_ADMIN_VERIFICATION</code></li><li>Triggers admin notification for review</li></ol></p></div>
+      <div class="info-card"><h3>&#128230; SKU Mapping</h3><p>The system uses product SKU <code>BW001</code> as the default workshop booking SKU. All registrations in the admin page are filtered by this SKU. Different workshop types can use different SKUs.</p></div>
+    </div>
+    <div>
+      <div class="subsection"><div class="dot"></div>StoreHub POS Integration</div>
+      <div class="info-card"><h3>&#127978; StoreHub Sync (/api/storehub/sync)</h3><p>Pulls transactions from the StoreHub POS system. Triggered <strong>manually</strong> by clicking "Sync" in the Plan Requests page, or <strong>automatically</strong> via scheduled background jobs. Matching transactions auto-approve pending requests and generate vouchers.</p></div>
+      <div class="info-card"><h3>&#128140; Email Notifications (Nodemailer)</h3><p>Transactional emails configured via environment variables (SMTP credentials in <code>.env</code>). Emails sent for: booking confirmation, voucher delivery, and admin-triggered resends.</p></div>
+    </div>
+  </div>
+  <div class="subsection"><div class="dot"></div>API Routes Reference</div> <span id="api-routes"></span>
+  <table class="doc-table">
+    <thead><tr><th>Route</th><th>Method</th><th>Purpose</th><th>Auth Required</th></tr></thead>
+    <tbody>
+      <tr><td><code>/api/auth/login</code></td><td>POST</td><td>Validate credentials, set JWT session cookie</td><td>No</td></tr><tr><td><code>/api/auth/logout</code></td><td>GET</td><td>Clear session cookie</td><td>No</td></tr><tr><td><code>/api/storehub/sync</code></td><td>POST</td><td>Pull StoreHub transactions and auto-approve matching requests</td><td>Staff</td></tr><tr><td><code>/api/webhooks</code></td><td>POST</td><td>Receive Shopify order events (HMAC verified)</td><td>Shopify HMAC</td></tr>
+    </tbody>
+  </table>
+</div>
+<div class="page page-last" id="status-ref">
+  <div class="section-badge">Chapter 22</div>
+  <h1 class="page-title">Registration Status <span>Reference</span></h1>
+  <p class="page-subtitle">Complete reference of all 16 registration statuses in the <code>WorkshopRegistration</code> model, their meanings, who triggers them, and allowed next states.</p>
+  <div class="divider"></div>
+  <table class="doc-table">
+    <thead><tr><th>Status</th><th>Badge</th><th>Triggered By</th><th>Description</th><th>Next States</th></tr></thead>
+    <tbody>
+      <tr><td><code>AWAITING_PAYMENT</code></td><td><span class="badge badge-yellow">AWAITING PAYMENT</span></td><td>Customer submits booking form</td><td>Soft lock active. Auto-cancels after 15 min if unpaid.</td><td>PAYMENT_PENDING, PAID_FOR_ADMIN_VERIFICATION, CANCELLED</td></tr><tr><td><code>PAYMENT_PENDING</code></td><td><span class="badge badge-yellow">PAYMENT PENDING</span></td><td>Payment initiated on Shopify</td><td>Customer is in Shopify checkout. Payment not confirmed yet.</td><td>PAID_FOR_ADMIN_VERIFICATION, CANCELLED</td></tr><tr><td><code>PAID_FOR_ADMIN_VERIFICATION</code></td><td><span class="badge badge-orange">PAID FOR ADMIN VERIFICATION</span></td><td>Shopify webhook (order paid)</td><td>Payment received. Admin must verify and assign to a session.</td><td>RESERVED, PENDING_SCHEDULE_CONFIRMATION, CANCELLED</td></tr><tr><td><code>PENDING_SCHEDULE_CONFIRMATION</code></td><td><span class="badge badge-yellow">PENDING SCHEDULE</span></td><td>Admin creates walk-in without session</td><td>Payment done but no session assigned yet.</td><td>RESERVED, CANCELLED</td></tr><tr><td><code>RESERVED</code></td><td><span class="badge badge-green">RESERVED</span></td><td>Admin verifies payment + assigns session</td><td>Booking confirmed. Seat held. Customer cleared to attend.</td><td>CONFIRMED, RESCHEDULING_REQUESTED, ATTENDED, NO_SHOW, CANCELLED</td></tr><tr><td><code>CONFIRMED</code></td><td><span class="badge badge-green">CONFIRMED</span></td><td>Admin explicitly confirms RESERVED booking</td><td>Explicitly confirmed status — same effect as RESERVED.</td><td>ATTENDED, NO_SHOW, CANCELLED</td></tr><tr><td><code>WAITING_LIST</code></td><td><span class="badge badge-blue">WAITING LIST</span></td><td>Session at capacity</td><td>Customer is on a waitlist. Moved if slot opens.</td><td>RESERVED, CANCELLED</td></tr><tr><td><code>RESCHEDULING_REQUESTED</code></td><td><span class="badge badge-yellow">RESCHEDULING</span></td><td>Customer or admin requests reschedule</td><td>Active reschedule request. Admin must assign new session.</td><td>RESCHEDULED, RESERVED</td></tr><tr><td><code>RESCHEDULED</code></td><td><span class="badge badge-blue">RESCHEDULED</span></td><td>Admin completes reschedule</td><td>Successfully moved to a new session. RescheduleLog created.</td><td>ATTENDED, NO_SHOW, CANCELLED</td></tr><tr><td><code>ATTENDED</code></td><td><span class="badge badge-green">ATTENDED</span></td><td>Receptionist confirms check-in</td><td>Customer physically checked in. Workshop completed.</td><td>— (terminal state)</td></tr><tr><td><code>NO_SHOW</code></td><td><span class="badge badge-red">NO SHOW</span></td><td>Admin marks after session ends</td><td>Customer had confirmed booking but did not attend.</td><td>— (terminal state)</td></tr><tr><td><code>CANCELLED</code></td><td><span class="badge badge-red">CANCELLED</span></td><td>Auto-cancel (lock expired) or admin</td><td>Booking cancelled. Seat released back to available slots.</td><td>— (terminal state)</td></tr><tr><td><code>CANCELLED_BY_CUSTOMER</code></td><td><span class="badge badge-red">CANCELLED BY CUSTOMER</span></td><td>Customer self-cancels</td><td>Customer requested cancellation via the cancel-booking page.</td><td>— (terminal state)</td></tr><tr><td><code>REFUNDED</code></td><td><span class="badge badge-gray">REFUNDED</span></td><td>Admin marks after refund issued</td><td>Payment was refunded. Seat released. Not counted in capacity.</td><td>— (terminal state)</td></tr><tr><td><code>PARTIALLY_REFUNDED</code></td><td><span class="badge badge-gray">PARTIALLY REFUNDED</span></td><td>Admin marks after partial refund</td><td>Partial refund issued. Customer may retain partial credit.</td><td>CANCELLED, ATTENDED</td></tr><tr><td><code>DUPLICATE_ORDER</code></td><td><span class="badge badge-gray">DUPLICATE</span></td><td>Admin marks duplicate Shopify orders</td><td>Shopify created a duplicate order. Ignored in capacity calculations.</td><td>— (terminal state)</td></tr>
+    </tbody>
+  </table>
+  <div class="alert alert-info"><span style="font-size:1rem;flex-shrink:0;">&#8505;</span><div><strong>Capacity Calculation:</strong> Active registrations (not cancelled, not refunded, not duplicate) are counted against session capacity. Statuses excluded: CANCELLED, CANCELLED_BY_CUSTOMER, REFUNDED, DUPLICATE_ORDER.</div></div>
+  <div style="margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:0.72rem;color:var(--muted);">
+    <div><strong style="color:var(--primary);">Makerlab Workshop Management System</strong><br>Documentation v1.0.0 &mdash; August 2026</div>
+    <div style="text-align:right;">Built with Next.js 16 + Prisma + PostgreSQL<br>&copy; 2026 Makerlab Experience Hub. All rights reserved.</div>
+  </div>
+</div>
+<div class="print-hint">&#128196; Press <kbd>Ctrl+P</kbd> to save as PDF</div>
+</body>
+</html>

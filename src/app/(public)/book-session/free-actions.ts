@@ -19,18 +19,22 @@ export async function validateFreeRegistrationAndGetSessions(paxCount: number) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  // Find all upcoming OPEN Free Workshop sessions
+  // Find all upcoming OPEN Free Workshop sessions (Category FREE / FREE_KID or module name contains Free)
   const sessions = await prisma.workshopSession.findMany({
     where: {
       sessionDate: { gte: today },
       status: 'OPEN',
       availableSlots: { gte: paxCount },
-      module: {
-        name: 'Free Workshop'
-      }
+      OR: [
+        { category: 'FREE' },
+        { category: 'FREE_KID' },
+        { category: { not: 'PAID' }, module: { name: { contains: 'Free', mode: 'insensitive' } } }
+      ]
     },
     include: {
-      module: true
+      module: true,
+      bookings: true,
+      registrations: true
     },
     orderBy: { sessionDate: 'asc' }
   })
@@ -46,24 +50,46 @@ export async function validateFreeRegistrationAndGetSessions(paxCount: number) {
   })
 
   // Format sessions for the client calendar component mapping
-  const formattedSessions = activeSessions.map(s => ({
-    id: s.id,
-    category: s.category,
-    sessionDate: s.sessionDate.toISOString(),
-    startTime: s.startTime,
-    endTime: s.endTime,
-    durationHours: s.durationHours,
-    capacity: s.capacity,
-    availableSlots: s.availableSlots,
-    status: s.status,
-    notes: s.notes,
-    module: {
-      id: s.module.id,
-      name: s.module.name,
-      description: s.module.description,
-      units: s.module.units
+  const formattedSessions = activeSessions.map(s => {
+    const activeBookings = s.bookings.filter(b => !['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'RELEASED_TO_WALKIN', 'REFUNDED'].includes(b.status))
+    const activeRegistrations = s.registrations.filter(r => !['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED'].includes(r.status))
+
+    let bookedCount = 0
+    activeBookings.forEach(b => {
+      if (s.category === 'FREE_KID' || (b.notes && b.notes.includes('KID'))) {
+        bookedCount += 2
+      } else if (b.notes) {
+        const match = b.notes.match(/for (\d+) pax/)
+        bookedCount += match ? parseInt(match[1], 10) : 1
+      } else {
+        bookedCount += 1
+      }
+    })
+    activeRegistrations.forEach(r => {
+      bookedCount += (r.participantsCount || 1)
+    })
+
+    const computedAvailable = Math.max(0, s.capacity - bookedCount)
+
+    return {
+      id: s.id,
+      category: s.category,
+      sessionDate: s.sessionDate.toISOString(),
+      startTime: s.startTime,
+      endTime: s.endTime,
+      durationHours: s.durationHours,
+      capacity: s.capacity,
+      availableSlots: computedAvailable,
+      status: s.status,
+      notes: s.notes,
+      module: {
+        id: s.module.id,
+        name: s.module.name,
+        description: s.module.description,
+        units: s.module.units
+      }
     }
-  }))
+  })
 
   return { success: true, sessions: formattedSessions }
 }
@@ -82,6 +108,8 @@ export async function createFreeBooking(formData: FormData) {
   const phone = formData.get('phone') as string
   const sessionId = formData.get('sessionId') as string
   const paxCountStr = formData.get('paxCount') as string
+  const freeCategory = formData.get('freeCategory') as string || 'ADULT'
+  const kidName = formData.get('kidName') as string || null
   const notes = formData.get('notes') as string || ''
 
   if (!name || !email || !phone || !sessionId || !paxCountStr) {
@@ -179,13 +207,15 @@ export async function createFreeBooking(formData: FormData) {
           customerName: name,
           customerEmail: email,
           customerPhone: phone,
+          kidName: kidName ? kidName.trim() : null,
+          companionName: freeCategory === 'KID' ? name : null,
           status: 'RESERVED',
           sessionDurationHours: session.durationHours,
           unitsToDeduct: 0, // Free
           balanceDueUnits: 0,
           balanceDueAmount: 0,
           balanceDuePaid: true,
-          notes: `Free Workshop reservation for ${paxCount} pax. ${notes}`.trim()
+          notes: `Free Workshop (${freeCategory}) reservation for ${paxCount} pax. ${notes}`.trim()
         },
         include: {
           session: {

@@ -32,7 +32,7 @@ export default function AdminLoginForm() {
         if (data.role === 'ADMIN') {
           router.push('/admin')
         } else if (data.role === 'RECEPTIONIST') {
-          router.push('/receptionist')
+          router.push('/admin/check-in')
         } else {
           router.push('/')
         }

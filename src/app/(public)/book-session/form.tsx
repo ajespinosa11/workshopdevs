@@ -116,10 +116,12 @@ export default function BookSessionForm() {
   const [voucherEmailInput, setVoucherEmailInput] = useState('')
 
   // Free Workshop Form Fields
+  const [freeCategory, setFreeCategory] = useState<'ADULT' | 'KID'>('ADULT')
   const [freeName, setFreeName] = useState('')
   const [freeEmail, setFreeEmail] = useState('')
   const [freePhone, setFreePhone] = useState('')
   const [freePaxCount, setFreePaxCount] = useState(1)
+  const [freeKidName, setFreeKidName] = useState('')
 
   // My Bookings Form Fields
   const [bookingRefInput, setBookingRefInput] = useState('')
@@ -211,10 +213,12 @@ export default function BookSessionForm() {
     setAgreedToTC(false)
     setVoucherCodeInput('')
     setVoucherEmailInput('')
+    setFreeCategory('ADULT')
     setFreeName('')
     setFreeEmail('')
     setFreePhone('')
     setFreePaxCount(1)
+    setFreeKidName('')
     setBookingRefInput('')
     setBookingEmailInput('')
     setMyBookings([])
@@ -343,6 +347,10 @@ export default function BookSessionForm() {
     formData.append('phone', freePhone)
     formData.append('sessionId', selectedSessionId)
     formData.append('paxCount', String(freePaxCount))
+    formData.append('freeCategory', freeCategory)
+    if (freeCategory === 'KID' && freeKidName) {
+      formData.append('kidName', freeKidName)
+    }
 
     const res = await createFreeBooking(formData)
 
@@ -553,6 +561,11 @@ export default function BookSessionForm() {
   const filteredSessions = sessions.filter(s => {
     if (!selectedDate) return false
     if (activePanel === 'voucher' && selectedDifficulty && s.category !== selectedDifficulty) return false
+    if (activePanel === 'free') {
+      const isKidSession = s.category === 'FREE_KID' || s.module?.name?.toLowerCase().includes('kid') || (s.notes && s.notes.toLowerCase().includes('kid'))
+      if (freeCategory === 'KID' && !isKidSession) return false
+      if (freeCategory === 'ADULT' && isKidSession) return false
+    }
     const sDate = new Date(s.sessionDate)
     return sDate.getFullYear() === selectedDate.getFullYear() && sDate.getMonth() === selectedDate.getMonth() && sDate.getDate() === selectedDate.getDate()
   })
@@ -560,6 +573,10 @@ export default function BookSessionForm() {
   const dateHasSessions = (date: Date) =>
     sessions.some(s => {
       if (activePanel === 'voucher' && selectedDifficulty && s.category !== selectedDifficulty) return false
+      if (activePanel === 'free') {
+        if (freeCategory === 'KID' && s.category !== 'FREE_KID' && !s.module?.name.toLowerCase().includes('kid')) return false
+        if (freeCategory === 'ADULT' && s.category === 'FREE_KID') return false
+      }
       const sDate = new Date(s.sessionDate)
       return sDate.getFullYear() === date.getFullYear() && sDate.getMonth() === date.getMonth() && sDate.getDate() === date.getDate()
     })
@@ -892,19 +909,6 @@ export default function BookSessionForm() {
 
                   {error && <div style={{ padding: '0.75rem 1rem', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '0.75rem', fontSize: '0.85rem', marginBottom: '1.25rem' }}>{error}</div>}
 
-                  {/* Pax Count Selector */}
-                  <div>
-                    <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>Number of Attendees</label>
-                    <select 
-                      value={freePaxCount} onChange={e => setFreePaxCount(parseInt(e.target.value, 10))}
-                      className="input-field" style={{ width: '100%', borderRadius: '0.75rem', padding: '0.75rem 1.25rem' }}
-                    >
-                      {[1,2,3,4,5,6,7,8,9,10].map(n => (
-                        <option key={n} value={n}>{n} pax</option>
-                      ))}
-                    </select>
-                  </div>
-
                   {/* Calendar Widget */}
                   <div style={{ border: '1px solid #e2e8f0', borderRadius: '1rem', padding: '1.25rem', background: '#f8fafc' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -939,7 +943,26 @@ export default function BookSessionForm() {
                           return (
                             <button
                               key={idx} type="button" disabled={isPast || !hasSess}
-                              onClick={() => { setSelectedDate(dObj); setSelectedSessionId(''); }}
+                              onClick={() => { 
+                                setSelectedDate(dObj)
+                                setSelectedSessionId('')
+                                // Auto-switch freeCategory to whichever type is available on this date
+                                const daySess = sessions.filter(s => {
+                                  const sDate = new Date(s.sessionDate)
+                                  return sDate.getFullYear() === dObj.getFullYear() &&
+                                         sDate.getMonth() === dObj.getMonth() &&
+                                         sDate.getDate() === dObj.getDate()
+                                })
+                                const hasKidSess = daySess.some(s => s.category === 'FREE_KID' || s.module?.name?.toLowerCase().includes('kid'))
+                                const hasAdultSess = daySess.some(s => s.category !== 'FREE_KID')
+                                if (hasKidSess && !hasAdultSess) {
+                                  setFreeCategory('KID')
+                                  setFreePaxCount(2)
+                                } else if (hasAdultSess) {
+                                  setFreeCategory('ADULT')
+                                  setFreePaxCount(1)
+                                }
+                              }}
                               style={{
                                 padding: '0.5rem 0', borderRadius: '0.5rem', cursor: 'pointer',
                                 background: isSel ? 'var(--accent)' : (hasSess ? '#ffedd5' : 'transparent'),
@@ -957,31 +980,204 @@ export default function BookSessionForm() {
                     </div>
                   </div>
 
-                  {/* Available Time Slots */}
+                  {/* Category Selector (ADULT vs KID) - Appears dynamically when Date is selected */}
+                  {selectedDate && (
+                    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {(() => {
+                        const daySessions = sessions.filter(s => {
+                          const sDate = new Date(s.sessionDate)
+                          return sDate.getFullYear() === selectedDate.getFullYear() &&
+                                 sDate.getMonth() === selectedDate.getMonth() &&
+                                 sDate.getDate() === selectedDate.getDate()
+                        })
+                        const hasAdult = daySessions.some(s => s.category !== 'FREE_KID')
+                        const hasKid = daySessions.some(s => s.category === 'FREE_KID' || s.module?.name?.toLowerCase().includes('kid'))
+
+                        return (
+                          <>
+                            <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', color: 'var(--primary)' }}>
+                              Workshop Types Available on {selectedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                            </label>
+
+                            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                              {/* ADULT Pill */}
+                              {hasAdult && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFreeCategory('ADULT')
+                                    setFreePaxCount(1)
+                                    setSelectedSessionId('')
+                                  }}
+                                  style={{
+                                    flex: 1,
+                                    padding: '0.75rem',
+                                    borderRadius: '0.75rem',
+                                    border: freeCategory === 'ADULT' ? '2px solid var(--accent)' : '1px solid #e2e8f0',
+                                    background: freeCategory === 'ADULT' ? 'rgba(249,115,22,0.08)' : '#ffffff',
+                                    color: freeCategory === 'ADULT' ? 'var(--accent)' : '#475569',
+                                    fontWeight: 700,
+                                    fontSize: '0.88rem',
+                                    cursor: 'pointer',
+                                    textAlign: 'center',
+                                    boxShadow: freeCategory === 'ADULT' ? '0 2px 8px rgba(249,115,22,0.15)' : 'none'
+                                  }}
+                                >
+                                  🧑 Starter Workshop ✓
+                                </button>
+                              )}
+
+                              {/* KID Pill */}
+                              {hasKid && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFreeCategory('KID')
+                                    setFreePaxCount(2)
+                                    setSelectedSessionId('')
+                                  }}
+                                  style={{
+                                    flex: 1,
+                                    padding: '0.75rem',
+                                    borderRadius: '0.75rem',
+                                    border: freeCategory === 'KID' ? '2px solid #10b981' : '1px solid #e2e8f0',
+                                    background: freeCategory === 'KID' ? '#ecfdf5' : '#ffffff',
+                                    color: freeCategory === 'KID' ? '#047857' : '#475569',
+                                    fontWeight: 700,
+                                    fontSize: '0.88rem',
+                                    cursor: 'pointer',
+                                    textAlign: 'center',
+                                    boxShadow: freeCategory === 'KID' ? '0 2px 8px rgba(16,185,129,0.15)' : 'none'
+                                  }}
+                                >
+                                  👦 Kids Workshop ✓
+                                </button>
+                              )}
+                            </div>
+
+                            <div style={{ fontSize: '0.78rem', color: 'var(--secondary-foreground)', marginTop: '0.2rem' }}>
+                              {freeCategory === 'ADULT'
+                                ? '• Showing Adult workshops (1 pax slot).'
+                                : '• Showing Kid workshops (2 pax: 1 kid + 1 parent/guardian total).'}
+                            </div>
+                          </>
+                        )
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Available Time Slots & Event Details */}
                   {selectedDate && (
                     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)' }}>Available Slots</h4>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)' }}>
+                          Available Workshops for {selectedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </h4>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--secondary-foreground)', fontWeight: 600 }}>
+                          {filteredSessions.length} session{filteredSessions.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
                       
                       {filteredSessions.length === 0 ? (
-                        <div style={{ fontSize: '0.82rem', color: '#64748b', padding: '0.5rem', textAlign: 'center' }}>No sessions open for this date.</div>
+                        <div style={{ fontSize: '0.85rem', color: '#64748b', padding: '1.5rem', textAlign: 'center', background: '#ffffff', borderRadius: '0.85rem', border: '1px dashed #cbd5e1' }}>
+                          No free workshop sessions scheduled on this date.
+                        </div>
                       ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          {filteredSessions.map(s => (
-                            <label 
-                              key={s.id}
-                              style={{ display: 'flex', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid', borderColor: selectedSessionId === s.id ? 'var(--accent)' : '#e2e8f0', background: selectedSessionId === s.id ? '#fffaf5' : '#fff', cursor: 'pointer', fontSize: '0.85rem' }}
-                            >
-                              <input 
-                                type="radio" name="selectedSessionFree" value={s.id} 
-                                checked={selectedSessionId === s.id} onChange={() => setSelectedSessionId(s.id)}
-                                style={{ marginTop: '2px' }}
-                              />
-                              <div>
-                                <strong style={{ color: 'var(--primary)' }}>{formatTime(s.startTime)} - {formatTime(s.endTime)}</strong>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--secondary-foreground)', marginTop: '2px' }}>{s.module?.name} · Slots Left: {s.availableSlots}</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          {filteredSessions.map(s => {
+                            const isSelected = selectedSessionId === s.id
+                            const isKid = s.category === 'FREE_KID' || s.module?.name?.toLowerCase().includes('kid')
+                            const desc = s.module?.description
+
+                            return (
+                              <div
+                                key={s.id}
+                                onClick={() => setSelectedSessionId(s.id)}
+                                style={{
+                                  padding: '1rem 1.15rem',
+                                  borderRadius: '0.85rem',
+                                  border: '2px solid',
+                                  borderColor: isSelected ? 'var(--accent)' : '#e2e8f0',
+                                  background: isSelected ? '#fffaf5' : '#ffffff',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease',
+                                  boxShadow: isSelected ? '0 4px 12px rgba(249,115,22,0.12)' : '0 1px 3px rgba(0,0,0,0.03)'
+                                }}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
+                                    <input 
+                                      type="radio" 
+                                      name="selectedSessionFree" 
+                                      value={s.id} 
+                                      checked={isSelected} 
+                                      onChange={() => setSelectedSessionId(s.id)}
+                                      style={{ marginTop: '3px', accentColor: 'var(--accent)' }}
+                                    />
+                                    <div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                        <strong style={{ fontSize: '1rem', color: 'var(--primary)', fontWeight: 800 }}>
+                                          {s.module?.name || 'Free Workshop'}
+                                        </strong>
+                                        {isKid && (
+                                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '99px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>
+                                            👦 KID + Guardian (2 Pax)
+                                          </span>
+                                        )}
+                                      </div>
+                                      
+                                      <div style={{ fontSize: '0.85rem', color: 'var(--accent)', fontWeight: 700, marginTop: '2px' }}>
+                                        ⏰ {formatTime(s.startTime)} – {formatTime(s.endTime)}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <span style={{
+                                    fontSize: '0.72rem',
+                                    fontWeight: 700,
+                                    padding: '0.2rem 0.65rem',
+                                    borderRadius: '99px',
+                                    background: s.availableSlots <= 3 ? '#fef2f2' : '#f0fdf4',
+                                    color: s.availableSlots <= 3 ? '#dc2626' : '#16a34a',
+                                    border: s.availableSlots <= 3 ? '1px solid #fca5a5' : '1px solid #bbf7d0',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    ⚡ {s.availableSlots} slot{s.availableSlots !== 1 ? 's' : ''} left
+                                  </span>
+                                </div>
+
+                                {/* Workshop Description */}
+                                {desc && (
+                                  <div style={{
+                                    marginTop: '0.75rem',
+                                    paddingTop: '0.65rem',
+                                    borderTop: '1px dashed #e2e8f0',
+                                    fontSize: '0.82rem',
+                                    color: '#475569',
+                                    lineHeight: '1.5'
+                                  }}>
+                                    <span dangerouslySetInnerHTML={{
+                                      __html: desc
+                                        .replace(/<script[\s\S]*?<\/script>/gi, '')
+                                        .replace(/on\w+="[^"]*"/gi, '')
+                                    }} />
+                                  </div>
+                                )}
+
+                                {/* Optional Note */}
+                                {s.notes && (
+                                  <div style={{ marginTop: '0.4rem', fontSize: '0.78rem', color: '#64748b', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span>📝</span> 
+                                    <span dangerouslySetInnerHTML={{
+                                      __html: s.notes
+                                        .replace(/<script[\s\S]*?<\/script>/gi, '')
+                                        .replace(/on\w+="[^"]*"/gi, '')
+                                    }} />
+                                  </div>
+                                )}
                               </div>
-                            </label>
-                          ))}
+                            )
+                          })}
                         </div>
                       )}
                     </div>
@@ -1050,12 +1246,26 @@ export default function BookSessionForm() {
                     style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
                   >
                     <div>
-                      <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>Full Name</label>
+                      <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>
+                        {freeCategory === 'KID' ? 'Parent / Guardian Name' : 'Full Name'}
+                      </label>
                       <input 
                         type="text" required value={freeName} onChange={e => setFreeName(e.target.value)}
-                        placeholder="Aldrin Espinosa" className="input-field" style={{ width: '100%', borderRadius: '0.75rem', padding: '0.75rem 1.25rem' }}
+                        placeholder={freeCategory === 'KID' ? 'Parent/Guardian Full Name' : 'Aldrin Espinosa'}
+                        className="input-field" style={{ width: '100%', borderRadius: '0.75rem', padding: '0.75rem 1.25rem' }}
                       />
                     </div>
+                    {freeCategory === 'KID' && (
+                      <div>
+                        <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>
+                          👦 Kid's Name
+                        </label>
+                        <input 
+                          type="text" required value={freeKidName} onChange={e => setFreeKidName(e.target.value)}
+                          placeholder="Enter child's full name" className="input-field" style={{ width: '100%', borderRadius: '0.75rem', padding: '0.75rem 1.25rem' }}
+                        />
+                      </div>
+                    )}
                     <div>
                       <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>Email Address</label>
                       <input 

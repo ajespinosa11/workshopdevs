@@ -161,6 +161,8 @@ export async function createSession(formData: FormData) {
   const startTime = formData.get('startTime') as string
   const endTime = formData.get('endTime') as string
   const capacityStr = formData.get('capacity') as string
+  const pricingType = (formData.get('pricingType') as string) || 'FREE'
+  const freeSubCategory = formData.get('freeSubCategory') as string
   const notes = formData.get('notes') as string | undefined
   const description = formData.get('description') as string | undefined
   const collaborator = formData.get('collaborator') as string | undefined
@@ -205,10 +207,14 @@ export async function createSession(formData: FormData) {
     const overlapError = await checkOverlap(sessionDate, startTime, endTime)
     if (overlapError) return { error: overlapError }
 
+    const finalCategory = pricingType === 'FREE'
+      ? (freeSubCategory === 'KID' ? 'FREE_KID' : 'FREE')
+      : 'PAID'
+
     const session = await prisma.workshopSession.create({
       data: {
         moduleId: finalModuleId,
-        category: moduleItem.category,
+        category: finalCategory,
         sessionDate,
         startTime,
         endTime,
@@ -243,6 +249,7 @@ export async function updateSession(formData: FormData) {
   const startTime = formData.get('startTime') as string
   const endTime = formData.get('endTime') as string
   const capacityStr = formData.get('capacity') as string
+  const pricingType = formData.get('pricingType') as string
   const notes = formData.get('notes') as string | undefined
   const collaborator = formData.get('collaborator') as string | undefined
 
@@ -287,11 +294,16 @@ export async function updateSession(formData: FormData) {
     const takenSlots = existing.capacity - existing.availableSlots
     const newAvailableSlots = Math.max(0, capacity - takenSlots)
 
+    const freeSubCategory = formData.get('freeSubCategory') as string
+    const updatedCategory = pricingType
+      ? (pricingType === 'FREE' ? (freeSubCategory === 'KID' ? 'FREE_KID' : 'FREE') : 'PAID')
+      : undefined
+
     await prisma.workshopSession.update({
       where: { id: sessionId },
       data: {
         moduleId: finalModuleId,
-        category: moduleItem.category,
+        ...(updatedCategory ? { category: updatedCategory } : {}),
         startTime,
         endTime,
         durationHours,

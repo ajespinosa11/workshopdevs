@@ -221,6 +221,8 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
   const [capacity, setCapacity] = useState(20)
   const [actionError, setActionError] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
+  const [pricingType, setPricingType] = useState<'FREE' | 'PAID'>('FREE')
+  const [freeSubCategory, setFreeSubCategory] = useState<'ADULT' | 'KID'>('ADULT')
   const [notes, setNotes] = useState('')
   const [collaborator, setCollaborator] = useState('')
   const [newSessionDesc, setNewSessionDesc] = useState('')
@@ -228,6 +230,8 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
   // Edit session modal state
   const [editSession, setEditSession] = useState<SessionData | null>(null)
   const [editModuleId, setEditModuleId] = useState('')
+  const [editPricingType, setEditPricingType] = useState<'FREE' | 'PAID'>('FREE')
+  const [editFreeSubCategory, setEditFreeSubCategory] = useState<'ADULT' | 'KID'>('ADULT')
   const [editStartTime, setEditStartTime] = useState('09:00')
   const [editEndTime, setEditEndTime] = useState('11:00')
   const [editCapacity, setEditCapacity] = useState(20)
@@ -318,6 +322,8 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     formData.append('startTime', startTime)
     formData.append('endTime', endTime)
     formData.append('capacity', capacity.toString())
+    formData.append('pricingType', pricingType)
+    formData.append('freeSubCategory', pricingType === 'FREE' ? freeSubCategory : '')
     formData.append('notes', notes)
     formData.append('description', newSessionDesc)
     formData.append('collaborator', collaborator)
@@ -351,20 +357,46 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
       setActionError(res.error)
     } else if (res.success && res.module) {
       setSelectedModuleId(res.module.id)
+      if (res.module.description) {
+        setNewSessionDesc(res.module.description)
+      }
       setModuleName('')
       setModuleDesc('')
       setModuleCategory('BEGINNER')
       setModuleUnits(2)
       setShowModuleModal(false)
-      // Trigger Next.js router refresh to update modules list in client
       router.refresh()
     }
     setActionLoading(false)
   }
 
+  // Helper to change selected module and auto-fill its saved description if available
+  const handleSelectModule = (modId: string) => {
+    setSelectedModuleId(modId)
+    const mod = modules.find(m => m.id === modId)
+    if (mod && mod.description) {
+      setNewSessionDesc(mod.description)
+    }
+  }
+
+  function openScheduleModal() {
+    setActionError('')
+    if (modules.length > 0) {
+      const initialModId = selectedModuleId || modules[0].id
+      setSelectedModuleId(initialModId)
+      const mod = modules.find(m => m.id === initialModId)
+      if (mod && mod.description) {
+        setNewSessionDesc(mod.description)
+      }
+    }
+    setShowCreateModal(true)
+  }
+
   function openEditModal(s: SessionData) {
     setEditSession(s)
     setEditModuleId(s.module?.id || (modules.length > 0 ? modules[0].id : ''))
+    setEditPricingType(s.category === 'PAID' ? 'PAID' : 'FREE')
+    setEditFreeSubCategory(s.category === 'FREE_KID' ? 'KID' : 'ADULT')
     setEditStartTime(s.startTime)
     setEditEndTime(s.endTime)
     setEditCapacity(s.capacity)
@@ -383,6 +415,8 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     const formData = new FormData()
     formData.append('sessionId', editSession.id)
     formData.append('moduleId', editModuleId)
+    formData.append('pricingType', editPricingType)
+    formData.append('freeSubCategory', editPricingType === 'FREE' ? editFreeSubCategory : '')
     formData.append('startTime', editStartTime)
     formData.append('endTime', editEndTime)
     formData.append('capacity', editCapacity.toString())
@@ -476,6 +510,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     return today
   })
   const [selectedSession, setSelectedSession] = useState<SessionData | null>(null)
+  const [statusFilter, setStatusFilter] = useState<'OPEN' | 'CANCELLED' | 'ALL'>('OPEN')
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -504,7 +539,10 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
 
   const filteredSessions = sessions.filter(s => {
     if (!selectedDate) return false
-    return isSameCalendarDay(selectedDate, s.sessionDate)
+    if (!isSameCalendarDay(selectedDate, s.sessionDate)) return false
+    if (statusFilter === 'OPEN') return s.status !== 'CANCELLED'
+    if (statusFilter === 'CANCELLED') return s.status === 'CANCELLED'
+    return true
   })
 
   const changeMonth = (offset: number) => setCurrentDate(new Date(year, month + offset, 1))
@@ -661,7 +699,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
               {selectedDate && selectedDate >= today && (
                 <button
                   type="button"
-                  onClick={() => { setShowCreateModal(true); setActionError(''); }}
+                  onClick={openScheduleModal}
                   style={{
                     padding: '0.4rem 0.85rem',
                     fontSize: '0.8rem',
@@ -678,18 +716,50 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                 </button>
               )}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--admin-text-secondary)' }}>
-              <span>Scheduled events:</span>
-              <span style={{ fontWeight: 600 }}>
-                {filteredSessions.length} session{filteredSessions.length !== 1 ? 's' : ''}
-              </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--admin-text-secondary)', alignItems: 'center' }}>
+              <span>Scheduled events: <strong style={{ color: 'var(--primary)' }}>{filteredSessions.length}</strong></span>
+
+              {/* Status Filter Tabs */}
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                {(['OPEN', 'CANCELLED', 'ALL'] as const).map(f => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setStatusFilter(f)}
+                    style={{
+                      padding: '0.2rem 0.65rem',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      borderRadius: '999px',
+                      border: '1.5px solid',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      borderColor: statusFilter === f
+                        ? (f === 'CANCELLED' ? '#ef4444' : 'var(--accent)')
+                        : '#e2e8f0',
+                      background: statusFilter === f
+                        ? (f === 'CANCELLED' ? '#fef2f2' : 'rgba(249,115,22,0.08)')
+                        : '#fff',
+                      color: statusFilter === f
+                        ? (f === 'CANCELLED' ? '#ef4444' : 'var(--accent)')
+                        : '#94a3b8',
+                    }}
+                  >
+                    {f === 'OPEN' ? '🟢 Open' : f === 'CANCELLED' ? '🔴 Cancelled' : '📋 All'}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="slots-list" style={{ maxHeight: '400px' }}>
+          <div className="slots-list">
             {filteredSessions.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--admin-text-secondary)', fontSize: '0.9rem' }}>
-                No sessions scheduled on this date.
+                {statusFilter === 'CANCELLED'
+                  ? 'No cancelled sessions on this date.'
+                  : statusFilter === 'ALL'
+                    ? 'No sessions scheduled on this date.'
+                    : 'No open sessions scheduled on this date.'}
               </div>
             ) : (
               filteredSessions.map(s => (
@@ -971,11 +1041,39 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
               {editError && <div style={{ padding: '0.6rem 0.85rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.5rem', fontSize: '0.85rem', borderLeft: '3px solid #ef4444' }}>{editError}</div>}
 
               <div className="input-group">
-                <label style={{ fontWeight: 600 }}>Select Event Workshop</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                  <label style={{ fontWeight: 600, margin: 0 }}>Select Event Workshop</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowModuleModal(true)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--accent)',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      padding: 0
+                    }}
+                  >
+                    + Create New Event Title
+                  </button>
+                </div>
                 <select
                   name="moduleId"
                   value={editModuleId}
-                  onChange={(e) => setEditModuleId(e.target.value)}
+                  onChange={(e) => {
+                    if (e.target.value === '__NEW__') {
+                      setShowModuleModal(true)
+                    } else {
+                      const selectedId = e.target.value
+                      setEditModuleId(selectedId)
+                      const mod = modules.find(m => m.id === selectedId)
+                      if (mod && mod.description) {
+                        setEditDesc(mod.description)
+                      }
+                    }
+                  }}
                   className="input-field"
                   required
                   style={{ borderRadius: '0.5rem', padding: '0.55rem' }}
@@ -985,7 +1083,76 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                       {m.name}
                     </option>
                   ))}
+                  <option value="__NEW__" style={{ fontWeight: 'bold', color: 'var(--accent)' }}>
+                    + Create Custom Event Workshop Title...
+                  </option>
                 </select>
+              </div>
+
+              <div className="input-group">
+                <label style={{ fontWeight: 600 }}>Workshop Pricing Type</label>
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+                  <label style={{
+                    flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.85rem',
+                    borderRadius: '0.5rem', border: editPricingType === 'FREE' ? '2px solid #10b981' : '1px solid #cbd5e1',
+                    background: editPricingType === 'FREE' ? '#ecfdf5' : '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem'
+                  }}>
+                    <input
+                      type="radio"
+                      name="editPricingType"
+                      value="FREE"
+                      checked={editPricingType === 'FREE'}
+                      onChange={() => setEditPricingType('FREE')}
+                    />
+                    🎁 FREE Workshop
+                  </label>
+                  <label style={{
+                    flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.85rem',
+                    borderRadius: '0.5rem', border: editPricingType === 'PAID' ? '2px solid #3b82f6' : '1px solid #cbd5e1',
+                    background: editPricingType === 'PAID' ? '#eff6ff' : '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem'
+                  }}>
+                    <input
+                      type="radio"
+                      name="editPricingType"
+                      value="PAID"
+                      checked={editPricingType === 'PAID'}
+                      onChange={() => setEditPricingType('PAID')}
+                    />
+                    💳 PAID Workshop
+                  </label>
+                </div>
+                {editPricingType === 'FREE' && (
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <label style={{
+                      flex: 1, display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.75rem',
+                      borderRadius: '0.4rem', border: editFreeSubCategory === 'ADULT' ? '2px solid #6366f1' : '1px solid #cbd5e1',
+                      background: editFreeSubCategory === 'ADULT' ? '#eef2ff' : '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem'
+                    }}>
+                      <input
+                        type="radio"
+                        name="editFreeSubCategory"
+                        value="ADULT"
+                        checked={editFreeSubCategory === 'ADULT'}
+                        onChange={() => setEditFreeSubCategory('ADULT')}
+                      />
+                      🧑 ADULT (1 Pax)
+                    </label>
+                    <label style={{
+                      flex: 1, display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.75rem',
+                      borderRadius: '0.4rem', border: editFreeSubCategory === 'KID' ? '2px solid #10b981' : '1px solid #cbd5e1',
+                      background: editFreeSubCategory === 'KID' ? '#ecfdf5' : '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem'
+                    }}>
+                      <input
+                        type="radio"
+                        name="editFreeSubCategory"
+                        value="KID"
+                        checked={editFreeSubCategory === 'KID'}
+                        onChange={() => setEditFreeSubCategory('KID')}
+                      />
+                      👦 KID + Guardian (2 Pax)
+                    </label>
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -1136,11 +1303,34 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
               </div>
 
               <div className="input-group">
-                <label style={{ fontWeight: 600 }}>Select Event Workshop</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                  <label style={{ fontWeight: 600, margin: 0 }}>Select Event Workshop</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowModuleModal(true)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--accent)',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      padding: 0
+                    }}
+                  >
+                    + Create New Event Title
+                  </button>
+                </div>
                 <select
                   name="moduleId"
                   value={selectedModuleId}
-                  onChange={(e) => setSelectedModuleId(e.target.value)}
+                  onChange={(e) => {
+                    if (e.target.value === '__NEW__') {
+                      setShowModuleModal(true)
+                    } else {
+                      handleSelectModule(e.target.value)
+                    }
+                  }}
                   className="input-field"
                   required
                   style={{ borderRadius: '0.5rem', padding: '0.55rem' }}
@@ -1150,7 +1340,76 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                       {m.name}
                     </option>
                   ))}
+                  <option value="__NEW__" style={{ fontWeight: 'bold', color: 'var(--accent)' }}>
+                    + Create Custom Event Workshop Title...
+                  </option>
                 </select>
+              </div>
+
+              <div className="input-group">
+                <label style={{ fontWeight: 600 }}>Workshop Pricing Type</label>
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+                  <label style={{
+                    flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.85rem',
+                    borderRadius: '0.5rem', border: pricingType === 'FREE' ? '2px solid #10b981' : '1px solid #cbd5e1',
+                    background: pricingType === 'FREE' ? '#ecfdf5' : '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem'
+                  }}>
+                    <input
+                      type="radio"
+                      name="pricingType"
+                      value="FREE"
+                      checked={pricingType === 'FREE'}
+                      onChange={() => setPricingType('FREE')}
+                    />
+                    🎁 FREE Workshop
+                  </label>
+                  <label style={{
+                    flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.85rem',
+                    borderRadius: '0.5rem', border: pricingType === 'PAID' ? '2px solid #3b82f6' : '1px solid #cbd5e1',
+                    background: pricingType === 'PAID' ? '#eff6ff' : '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem'
+                  }}>
+                    <input
+                      type="radio"
+                      name="pricingType"
+                      value="PAID"
+                      checked={pricingType === 'PAID'}
+                      onChange={() => setPricingType('PAID')}
+                    />
+                    💳 PAID Workshop
+                  </label>
+                </div>
+                {pricingType === 'FREE' && (
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <label style={{
+                      flex: 1, display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.75rem',
+                      borderRadius: '0.4rem', border: freeSubCategory === 'ADULT' ? '2px solid #6366f1' : '1px solid #cbd5e1',
+                      background: freeSubCategory === 'ADULT' ? '#eef2ff' : '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem'
+                    }}>
+                      <input
+                        type="radio"
+                        name="freeSubCategory"
+                        value="ADULT"
+                        checked={freeSubCategory === 'ADULT'}
+                        onChange={() => setFreeSubCategory('ADULT')}
+                      />
+                      🧑 ADULT (1 Pax)
+                    </label>
+                    <label style={{
+                      flex: 1, display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.75rem',
+                      borderRadius: '0.4rem', border: freeSubCategory === 'KID' ? '2px solid #10b981' : '1px solid #cbd5e1',
+                      background: freeSubCategory === 'KID' ? '#ecfdf5' : '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem'
+                    }}>
+                      <input
+                        type="radio"
+                        name="freeSubCategory"
+                        value="KID"
+                        checked={freeSubCategory === 'KID'}
+                        onChange={() => setFreeSubCategory('KID')}
+                      />
+                      👦 KID + Guardian (2 Pax)
+                    </label>
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -1221,7 +1480,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
           <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '620px', borderRadius: '1.5rem', background: '#ffffff', color: 'var(--foreground)', padding: '2.25rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
               <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>
-                Create Academic Module
+                Create New Event Workshop Title
               </h3>
               <button onClick={() => setShowModuleModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.75rem', color: 'var(--admin-text-secondary)', cursor: 'pointer' }}>&times;</button>
             </div>
@@ -1230,8 +1489,8 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
               {actionError && <div style={{ padding: '0.65rem 0.85rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.5rem', fontSize: '0.85rem' }}>{actionError}</div>}
 
               <div className="input-group">
-                <label style={{ fontWeight: 600 }}>Module Title / Name</label>
-                <input type="text" value={moduleName} onChange={(e) => setModuleName(e.target.value)} className="input-field" placeholder="e.g. Intro to 3D Printing" required style={{ borderRadius: '0.5rem' }} />
+                <label style={{ fontWeight: 600 }}>Event Title / Name</label>
+                <input type="text" value={moduleName} onChange={(e) => setModuleName(e.target.value)} className="input-field" placeholder="e.g. AI & Robotics Masterclass" required style={{ borderRadius: '0.5rem' }} />
               </div>
 
               <FormattedTextarea
@@ -1239,14 +1498,14 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                 optionalHint="optional"
                 value={moduleDesc}
                 onChange={setModuleDesc}
-                placeholder="Brief description of the module"
+                placeholder="Brief description of the workshop event..."
                 minHeight="100px"
               />
 
               <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem' }}>
                 <button type="button" onClick={() => setShowModuleModal(false)} className="admin-btn-outline" style={{ flex: 1, padding: '0.6rem', borderRadius: '0.5rem' }}>Cancel</button>
                 <button type="submit" disabled={actionLoading} className="pricing-btn pricing-btn-solid" style={{ flex: 1, padding: '0.6rem', borderRadius: '0.5rem', background: 'var(--accent)', border: 'none', color: 'white', fontWeight: 600 }}>
-                  {actionLoading ? 'Creating...' : 'Create Module'}
+                  {actionLoading ? 'Creating...' : 'Create Event Title'}
                 </button>
               </div>
             </form>

@@ -1199,7 +1199,7 @@ a {
 
 @media (min-width: 768px) {
   .scheduler-container {
-    grid-template-columns: 1.2fr 0.8fr;
+    grid-template-columns: 1fr 1fr;
   }
 }
 
@@ -1311,10 +1311,11 @@ a {
 
 /* Time Slots Box */
 .slots-box {
-  padding: 2rem;
+  padding: 1.75rem;
   display: flex;
   flex-direction: column;
   background: #f8fafc;
+  min-height: 520px;
 }
 
 .slots-header {
@@ -1327,17 +1328,18 @@ a {
 .slots-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.85rem;
   overflow-y: auto;
-  max-height: 320px;
+  flex: 1;
+  min-height: 0;
   padding-right: 0.25rem;
 }
 
 .slot-item-btn {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 0.75rem;
-  padding: 1rem;
+  border-radius: 0.85rem;
+  padding: 1.25rem 1.25rem;
   text-align: left;
   cursor: pointer;
   transition: all 0.2s;

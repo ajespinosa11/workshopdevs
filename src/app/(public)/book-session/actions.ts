@@ -219,7 +219,7 @@ export async function createBooking(formData: FormData) {
       
       let bookingQrCodeData = ''
       try {
-        const qrValue = `${hostUrl}/receptionist?voucherCode=${voucher.voucherCode}&bookingReference=${bookingReference}`
+        const qrValue = `${hostUrl}/admin/check-in?voucherCode=${voucher.voucherCode}&bookingReference=${bookingReference}`
         bookingQrCodeData = await QRCode.default.toDataURL(qrValue)
       } catch (err) {
         console.error('Failed to generate booking QR code:', err)

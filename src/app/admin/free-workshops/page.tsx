@@ -5,10 +5,11 @@ export const dynamic = 'force-dynamic'
 
 export default async function AdminFreeWorkshopsPage() {
   // Query free workshop sessions and all associated reservations
-  const [freeSessions, freeBookings, freeRegistrations] = await Promise.all([
+  const [freeSessions, freeBookings, freeRegistrations, openFreeSessions] = await Promise.all([
     prisma.workshopSession.findMany({
       where: {
         OR: [
+          { category: { in: ['FREE', 'FREE_KID'] } },
           { module: { name: { contains: 'Free', mode: 'insensitive' } } },
           { notes: { contains: 'Free', mode: 'insensitive' } },
           { module: { description: { contains: 'Free', mode: 'insensitive' } } },
@@ -47,33 +48,57 @@ export default async function AdminFreeWorkshopsPage() {
         }
       },
       orderBy: { createdAt: 'desc' }
+    }),
+    prisma.workshopSession.findMany({
+      where: {
+        status: { not: 'CANCELLED' },
+        sessionDate: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+        OR: [
+          { category: { in: ['FREE', 'FREE_KID'] } },
+          { module: { name: { contains: 'Free', mode: 'insensitive' } } }
+        ]
+      },
+      include: { module: true },
+      orderBy: { sessionDate: 'asc' }
     })
   ])
 
   // Normalize into unified Free Workshop Reservation format
   const normalizedRecords = [
-    ...freeBookings.map(b => ({
-      id: b.id,
-      bookingReference: b.bookingReference,
-      customerName: b.customerName,
-      customerEmail: b.customerEmail,
-      customerPhone: b.customerPhone,
-      status: b.status,
-      source: 'BOOKING_SYSTEM' as const,
-      voucherCode: b.voucher.voucherCode,
-      createdAt: b.createdAt.toISOString(),
-      participantsCount: 1,
-      session: b.session ? {
-        id: b.session.id,
-        sessionDate: b.session.sessionDate.toISOString(),
-        startTime: b.session.startTime,
-        endTime: b.session.endTime,
-        capacity: b.session.capacity,
-        availableSlots: b.session.availableSlots,
-        status: b.session.status,
-        moduleName: b.session.module?.name ?? 'Free Workshop'
-      } : null
-    })),
+    ...freeBookings.map(b => {
+      // Determine pax count (2 pax if Kid session or noted in notes, otherwise 1)
+      let pax = 1
+      if (b.session?.category === 'FREE_KID' || (b.notes && b.notes.includes('KID'))) {
+        pax = 2
+      } else if (b.notes) {
+        const match = b.notes.match(/for (\d+) pax/)
+        if (match) pax = parseInt(match[1], 10)
+      }
+
+      return {
+        id: b.id,
+        bookingReference: b.bookingReference,
+        customerName: b.customerName,
+        customerEmail: b.customerEmail,
+        customerPhone: b.customerPhone,
+        status: b.status,
+        source: 'BOOKING_SYSTEM' as const,
+        voucherCode: b.voucher.voucherCode,
+        createdAt: b.createdAt.toISOString(),
+        participantsCount: pax,
+        session: b.session ? {
+          id: b.session.id,
+          sessionDate: b.session.sessionDate.toISOString(),
+          startTime: b.session.startTime,
+          endTime: b.session.endTime,
+          capacity: b.session.capacity,
+          availableSlots: b.session.availableSlots,
+          status: b.session.status,
+          moduleName: b.session.module?.name ?? 'Free Workshop',
+          category: b.session.category
+        } : null
+      }
+    }),
     ...freeRegistrations.map(r => ({
       id: r.id,
       bookingReference: r.bookingReference,
@@ -93,7 +118,8 @@ export default async function AdminFreeWorkshopsPage() {
         capacity: r.session.capacity,
         availableSlots: r.session.availableSlots,
         status: r.session.status,
-        moduleName: r.session.module?.name ?? 'Free Workshop'
+        moduleName: r.session.module?.name ?? 'Free Workshop',
+        category: r.session.category
       } : null
     }))
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -106,7 +132,8 @@ export default async function AdminFreeWorkshopsPage() {
     capacity: s.capacity,
     availableSlots: s.availableSlots,
     status: s.status,
-    moduleName: s.module?.name ?? 'Free Workshop'
+    moduleName: s.module?.name ?? 'Free Workshop',
+    category: s.category
   }))
 
   return (
@@ -118,7 +145,11 @@ export default async function AdminFreeWorkshopsPage() {
         </p>
       </div>
 
-      <FreeWorkshopsClient reservations={normalizedRecords} sessions={normalizedSessions} />
+      <FreeWorkshopsClient
+        reservations={normalizedRecords}
+        sessions={normalizedSessions}
+        openSessions={openFreeSessions}
+      />
     </div>
   )
 }

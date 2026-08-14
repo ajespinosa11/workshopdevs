@@ -1,12 +1,14 @@
 import { prisma } from '@/lib/prisma'
-import RosterCalendar from './RosterCalendar'
 import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import CheckInClient from './CheckInClient'
 
-export default async function ReceptionistRosterPage() {
+export const dynamic = 'force-dynamic'
+
+export default async function AdminCheckInPage() {
   const session = await getSession()
-  if (!session || (session.role !== 'RECEPTIONIST' && session.role !== 'ADMIN')) {
-    redirect('/receptionist/login')
+  if (!session || (session.role !== 'ADMIN' && session.role !== 'RECEPTIONIST')) {
+    redirect('/login')
   }
 
   // Load all sessions with their module, bookings, and registrations
@@ -26,9 +28,7 @@ export default async function ReceptionistRosterPage() {
             status: { in: ['CANCELLED_BY_CUSTOMER', 'RELEASED_TO_WALKIN', 'CANCELLED'] }
           }
         },
-        include: {
-          voucher: true
-        }
+        include: { voucher: true }
       }
     },
     orderBy: [
@@ -37,7 +37,6 @@ export default async function ReceptionistRosterPage() {
     ]
   })
 
-  // Format the sessions to safely serialize across Server-Client boundary
   const serializedSessions = sessions.map(s => ({
     id: s.id,
     category: s.category,
@@ -72,8 +71,6 @@ export default async function ReceptionistRosterPage() {
       customerEmail: b.customerEmail,
       customerPhone: b.customerPhone,
       status: b.status,
-      kidName: b.kidName,
-      companionName: b.companionName,
       unitsToDeduct: b.unitsToDeduct,
       balanceDueAmount: b.balanceDueAmount,
       balanceDuePaid: b.balanceDuePaid,
@@ -81,17 +78,5 @@ export default async function ReceptionistRosterPage() {
     }))
   }))
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-1" style={{ fontSize: '2rem', fontWeight: 800 }}>Calendar Roster</h1>
-        <p style={{ color: 'var(--secondary-foreground)', fontSize: '0.95rem' }}>
-          Browse workshops by date, see attendee headcount, and check in participants directly.
-        </p>
-      </div>
-
-      <RosterCalendar sessions={serializedSessions} />
-    </div>
-  )
+  return <CheckInClient sessions={serializedSessions} />
 }
-

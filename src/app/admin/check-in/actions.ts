@@ -28,13 +28,11 @@ export async function validateCheckInDetails(formData: FormData) {
   })
 
   if (reg) {
-    // Payment status classification
     const isPaidVerified = ['PAID_FOR_ADMIN_VERIFICATION', 'RESERVED', 'CONFIRMED', 'CHECKED_IN', 'ATTENDED'].includes(reg.status)
     const isReservedStatus = ['RESERVED', 'CONFIRMED', 'PAID_FOR_ADMIN_VERIFICATION'].includes(reg.status)
     const isAlreadyCheckedIn = ['CHECKED_IN', 'ATTENDED', 'COMPLETED'].includes(reg.status)
     const isCancelled = ['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED', 'DUPLICATE_ORDER'].includes(reg.status)
 
-    // Schedule check (check if session is scheduled for today)
     const now = new Date()
     let isTodaySchedule = false
     if (reg.session?.sessionDate) {
@@ -44,7 +42,6 @@ export async function validateCheckInDetails(formData: FormData) {
                         sDate.getDate() === now.getDate()
     }
 
-    // Determine readiness and specific guidance
     const validationIssues: string[] = []
     if (isCancelled) validationIssues.push(`This reservation is currently CANCELLED (${reg.status.replace(/_/g, ' ')}).`)
     if (isAlreadyCheckedIn) validationIssues.push(`Customer is ALREADY CHECKED IN for this session.`)
@@ -168,9 +165,7 @@ export async function processCheckIn(formData: FormData) {
 
   try {
     if (recordType === 'REGISTRATION') {
-      const reg = await prisma.workshopRegistration.findUnique({
-        where: { id: recordId }
-      })
+      const reg = await prisma.workshopRegistration.findUnique({ where: { id: recordId } })
 
       if (!reg) return { error: 'Registration not found.' }
       if (['CHECKED_IN', 'ATTENDED'].includes(reg.status)) {
@@ -179,9 +174,7 @@ export async function processCheckIn(formData: FormData) {
 
       await prisma.workshopRegistration.update({
         where: { id: recordId },
-        data: {
-          status: 'CHECKED_IN'
-        }
+        data: { status: 'CHECKED_IN' }
       })
 
       await prisma.auditTrail.create({
@@ -189,11 +182,11 @@ export async function processCheckIn(formData: FormData) {
           registrationId: recordId,
           performedByStaffId: sessionUser?.id || null,
           action: 'CHECKED_IN',
-          details: `Customer checked in by receptionist (${sessionUser?.name || 'Staff'})`
+          details: `Customer checked in by admin (${sessionUser?.name || 'Staff'})`
         }
       })
 
-      revalidatePath('/receptionist')
+      revalidatePath('/admin/check-in')
       revalidatePath('/admin/registrations')
       return { success: true }
     } else {
@@ -245,7 +238,7 @@ export async function processCheckIn(formData: FormData) {
         }
       })
 
-      revalidatePath('/receptionist')
+      revalidatePath('/admin/check-in')
       revalidatePath('/admin/registrations')
       return { success: true }
     }
@@ -255,35 +248,97 @@ export async function processCheckIn(formData: FormData) {
   }
 }
 
-export async function markBalancePaid(formData: FormData) {
-  const bookingId = formData.get('bookingId') as string
+export async function updateBookingStatus(recordId: string, recordType: string, newStatus: string, notes?: string) {
   const sessionUser = await getSession()
+  if (!recordId || !newStatus) return { error: 'Record ID and new status are required.' }
 
   try {
-    const booking = await prisma.booking.update({
-      where: { id: bookingId },
-      data: {
-        balanceDuePaid: true,
-        status: 'RESERVED'
-      }
-    })
+    if (recordType === 'REGISTRATION') {
+      const reg = await prisma.workshopRegistration.findUnique({
+        where: { id: recordId }
+      })
+      if (!reg) return { error: 'Registration not found.' }
 
-    if (booking.voucherId) {
-      await prisma.creditTransaction.create({
-        data: {
-          voucherId: booking.voucherId,
-          bookingId: booking.id,
-          transactionType: 'BALANCE_DUE_PAYMENT',
-          amountPaid: booking.balanceDueAmount,
-          description: `Paid balance due of PHP ${booking.balanceDueAmount}`,
-          createdByStaffId: sessionUser?.id || null
+      const oldStatus = reg.status
+
+      // If cancelling/refunding from active status, restore available slots
+      if (['RESERVED', 'CONFIRMED', 'RESCHEDULED', 'CHECKED_IN'].includes(oldStatus) &&
+          ['CANCELLED', 'REFUNDED', 'DUPLICATE_ORDER', 'CANCELLED_BY_CUSTOMER', 'RELEASED_TO_WALKIN', 'NO_SHOW'].includes(newStatus)) {
+        if (reg.sessionId) {
+          const session = await prisma.workshopSession.findUnique({ where: { id: reg.sessionId } })
+          if (session) {
+            await prisma.workshopSession.update({
+              where: { id: reg.sessionId },
+              data: {
+                availableSlots: session.availableSlots + (reg.participantsCount || 1),
+                status: 'OPEN'
+              }
+            })
+          }
         }
+      }
+
+      await prisma.workshopRegistration.update({
+        where: { id: recordId },
+        data: {
+          status: newStatus,
+          notes: notes ? `${reg.notes || ''}\n[Status Update]: ${notes}` : reg.notes
+        }
+      })
+
+      await prisma.auditTrail.create({
+        data: {
+          registrationId: recordId,
+          performedByStaffId: sessionUser?.id || null,
+          action: 'STATUS_UPDATED',
+          details: `Status manually updated from ${oldStatus} to ${newStatus} via Check-In Console. Notes: ${notes || 'None'}`
+        }
+      })
+    } else {
+      // Legacy Booking update
+      const booking = await prisma.booking.findUnique({ where: { id: recordId } })
+      if (!booking) return { error: 'Booking not found.' }
+
+      const oldStatus = booking.status
+
+      if (['RESERVED', 'CONFIRMED', 'CHECKED_IN'].includes(oldStatus) &&
+          ['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'RELEASED_TO_WALKIN', 'NO_SHOW', 'REFUNDED'].includes(newStatus)) {
+        if (booking.sessionId) {
+          const session = await prisma.workshopSession.findUnique({ where: { id: booking.sessionId } })
+          if (session) {
+            // Determine pax count to restore (2 pax for Kids free workshop, otherwise 1)
+            let paxToRestore = 1
+            if (session.category === 'FREE_KID' || (booking.notes && booking.notes.includes('KID'))) {
+              paxToRestore = 2
+            } else if (booking.notes) {
+              const match = booking.notes.match(/for (\d+) pax/)
+              if (match) paxToRestore = parseInt(match[1], 10)
+            }
+
+            await prisma.workshopSession.update({
+              where: { id: booking.sessionId },
+              data: {
+                availableSlots: session.availableSlots + paxToRestore,
+                status: 'OPEN'
+              }
+            })
+          }
+        }
+      }
+
+      await prisma.booking.update({
+        where: { id: recordId },
+        data: { status: newStatus }
       })
     }
 
+    revalidatePath('/admin/check-in')
+    revalidatePath('/admin/registrations')
+    revalidatePath('/admin/free-workshops')
     return { success: true }
-  } catch (err) {
-    return { error: 'Error updating balance' }
+  } catch (err: any) {
+    console.error('Failed to update booking status:', err)
+    return { error: err.message || 'Failed to update status.' }
   }
 }
 

@@ -9,9 +9,8 @@ export async function proxy(request: NextRequest) {
 
   const path = request.nextUrl.pathname
   const isAdminRoute = path.startsWith('/admin') && path !== '/admin/login'
-  const isReceptionistRoute = path.startsWith('/receptionist') && path !== '/receptionist/login'
 
-  if (isAdminRoute || isReceptionistRoute) {
+  if (isAdminRoute) {
     const sessionToken = request.cookies.get('session')?.value
     let session = null
     
@@ -24,7 +23,7 @@ export async function proxy(request: NextRequest) {
     }
 
     if (!session) {
-      const redirectUrl = new URL(isAdminRoute ? '/admin/login' : '/receptionist/login', request.url)
+      const redirectUrl = new URL('/admin/login', request.url)
       const redirectResponse = NextResponse.redirect(redirectUrl)
       // Transfer Supabase cookies to redirect response
       response.cookies.getAll().forEach(cookie => {
@@ -33,15 +32,7 @@ export async function proxy(request: NextRequest) {
       return redirectResponse
     }
 
-    if (isAdminRoute && session.role !== 'ADMIN') {
-      const redirectResponse = NextResponse.redirect(new URL('/receptionist/login', request.url))
-      response.cookies.getAll().forEach(cookie => {
-        redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
-      })
-      return redirectResponse
-    }
-
-    if (isReceptionistRoute && session.role !== 'RECEPTIONIST' && session.role !== 'ADMIN') {
+    if (session.role !== 'ADMIN') {
       const redirectResponse = NextResponse.redirect(new URL('/admin/login', request.url))
       response.cookies.getAll().forEach(cookie => {
         redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
@@ -56,7 +47,6 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     '/admin/:path*',
-    '/receptionist/:path*',
     /*
      * Match all request paths except for the ones starting with:
      * - _next/static (static files)

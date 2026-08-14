@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import { updateRegistrationStatus } from '../registrations/status-actions'
+import { adminManualBookSlot } from '../registrations/actions'
+import { updateBookingStatus } from '../check-in/actions'
 
 interface FreeSession {
   id: string
@@ -12,6 +14,7 @@ interface FreeSession {
   availableSlots: number
   status: string
   moduleName: string
+  category?: string
 }
 
 interface FreeReservation {
@@ -34,22 +37,43 @@ interface FreeReservation {
     availableSlots?: number
     status?: string
     moduleName: string
+    category?: string
   } | null
 }
 
 interface FreeWorkshopsClientProps {
   reservations: FreeReservation[]
   sessions: FreeSession[]
+  openSessions?: any[]
 }
 
-export default function FreeWorkshopsClient({ reservations, sessions }: FreeWorkshopsClientProps) {
+export default function FreeWorkshopsClient({ reservations, sessions, openSessions = [] }: FreeWorkshopsClientProps) {
   // Navigation & Selection States
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null)
 
+  // Manual Walk-in Modal state
+  const [showWalkInModal, setShowWalkInModal] = useState(false)
+  const [walkInStep, setWalkInStep] = useState(1)
+  const [walkInSessionId, setWalkInSessionId] = useState(openSessions.length > 0 ? openSessions[0].id : '')
+  const [walkInFirstName, setWalkInFirstName] = useState('')
+  const [walkInLastName, setWalkInLastName] = useState('')
+  const [walkInKidName, setWalkInKidName] = useState('')
+  const [walkInPhone, setWalkInPhone] = useState('')
+  const [walkInEmail, setWalkInEmail] = useState('')
+  const [walkInCount, setWalkInCount] = useState(1)
+
+  // Auto-detect if selected walk-in session is a KID session
+  const selectedWalkInSession = openSessions.find(s => s.id === walkInSessionId)
+  const isWalkInKidSession = selectedWalkInSession?.category === 'FREE_KID' || selectedWalkInSession?.module?.name?.toLowerCase().includes('kid')
+  const [walkInNotes, setWalkInNotes] = useState('')
+  const [walkInSubmitting, setWalkInSubmitting] = useState(false)
+  const [walkInError, setWalkInError] = useState('')
+
   // Registration Filter & Pagination States
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
+  const [workshopTypeFilter, setWorkshopTypeFilter] = useState<'ALL' | 'ADULT' | 'KID'>('ALL')
   const [sortBy, setSortBy] = useState<'NAME' | 'STATUS' | 'TIME' | 'NEWEST'>('NEWEST')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 8
@@ -62,6 +86,17 @@ export default function FreeWorkshopsClient({ reservations, sessions }: FreeWork
   const [loading, setLoading] = useState(false)
   const [toastMsg, setToastMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
+  // Format date safely into YYYY-MM-DD using local/PHT date parts
+  const toLocalDateKey = (dStr: string | Date) => {
+    const d = new Date(dStr)
+    // Shift by 8 hours to align UTC noon or UTC midnight DB timestamps to Philippine local calendar day
+    const adj = new Date(d.getTime() + 8 * 3600 * 1000)
+    const y = adj.getUTCFullYear()
+    const m = String(adj.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(adj.getUTCDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
   // Merge session dates from both sessions prop and reservations' session dates
   const dateSessionMap = useMemo(() => {
     const map = new Map<string, {
@@ -72,7 +107,7 @@ export default function FreeWorkshopsClient({ reservations, sessions }: FreeWork
 
     // 1. Map known sessions
     sessions.forEach(s => {
-      const dateKey = new Date(s.sessionDate).toISOString().slice(0, 10)
+      const dateKey = toLocalDateKey(s.sessionDate)
       if (!map.has(dateKey)) {
         map.set(dateKey, { sessions: [], reservations: [], totalRegistrants: 0 })
       }
@@ -82,7 +117,7 @@ export default function FreeWorkshopsClient({ reservations, sessions }: FreeWork
     // 2. Map reservations to dates
     reservations.forEach(r => {
       if (!r.session?.sessionDate) return
-      const dateKey = new Date(r.session.sessionDate).toISOString().slice(0, 10)
+      const dateKey = toLocalDateKey(r.session.sessionDate)
       if (!map.has(dateKey)) {
         map.set(dateKey, { sessions: [], reservations: [], totalRegistrants: 0 })
       }
@@ -151,7 +186,16 @@ export default function FreeWorkshopsClient({ reservations, sessions }: FreeWork
         (statusFilter === 'CHECKED_IN' && isCheckedIn) ||
         (statusFilter === 'CANCELLED' && isCancelled)
 
-      return matchesSearch && matchesStatus
+      // Workshop type filter — check session category or module name
+      const sessionCat = r.session?.category || ''
+      const sessionModName = r.session?.moduleName || ''
+      const isKidWorkshop = sessionCat === 'FREE_KID' || /kid/i.test(sessionModName)
+      const matchesType =
+        workshopTypeFilter === 'ALL' ||
+        (workshopTypeFilter === 'KID' && isKidWorkshop) ||
+        (workshopTypeFilter === 'ADULT' && !isKidWorkshop)
+
+      return matchesSearch && matchesStatus && matchesType
     }).sort((a, b) => {
       if (sortBy === 'NAME') return a.customerName.localeCompare(b.customerName)
       if (sortBy === 'STATUS') return a.status.localeCompare(b.status)
@@ -162,7 +206,7 @@ export default function FreeWorkshopsClient({ reservations, sessions }: FreeWork
       }
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     })
-  }, [dateReservations, searchTerm, statusFilter, sortBy])
+  }, [dateReservations, searchTerm, statusFilter, workshopTypeFilter, sortBy])
 
   // Paginated records
   const totalPages = Math.ceil(filteredReservations.length / pageSize) || 1
@@ -223,10 +267,14 @@ export default function FreeWorkshopsClient({ reservations, sessions }: FreeWork
           setSelectedRes(null)
         }
       } else {
-        // Fallback or toast for legacy booking
-        setToastMsg({ type: 'success', text: `Status updated to ${newStatus}` })
-        setModalType(null)
-        setSelectedRes(null)
+        const res = await updateBookingStatus(selectedRes.id, 'BOOKING', newStatus, actionNotes)
+        if (res.error) {
+          setToastMsg({ type: 'error', text: res.error })
+        } else {
+          setToastMsg({ type: 'success', text: `Status updated to ${newStatus}` })
+          setModalType(null)
+          setSelectedRes(null)
+        }
       }
     } catch (err: any) {
       setToastMsg({ type: 'error', text: err.message || 'Action failed.' })
@@ -239,6 +287,33 @@ export default function FreeWorkshopsClient({ reservations, sessions }: FreeWork
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', fontFamily: "'Inter', sans-serif" }}>
       
+      {/* ═══ Top Action Bar ═══ */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.25rem' }}>
+        <button
+          onClick={() => {
+            setShowWalkInModal(true)
+            setWalkInStep(1)
+            setWalkInError('')
+          }}
+          style={{
+            background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '10px',
+            padding: '0.65rem 1.25rem',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}
+        >
+          <span>+</span> Manual Walk-in Booking
+        </button>
+      </div>
+
       {/* ═══ Summary Cards ═══ */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
         <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1rem 1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
@@ -343,13 +418,14 @@ export default function FreeWorkshopsClient({ reservations, sessions }: FreeWork
             {/* Days in Month */}
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const dayNum = i + 1
-              const dateObj = new Date(year, month, dayNum)
-              const dateStr = dateObj.toISOString().slice(0, 10)
+              const pad = (n: number) => String(n).padStart(2, '0')
+              const dateStr = `${year}-${pad(month + 1)}-${pad(dayNum)}`
 
               const dateData = dateSessionMap.get(dateStr)
               const hasSessions = dateData && (dateData.sessions.length > 0 || dateData.reservations.length > 0)
               const isSelected = selectedDateStr === dateStr
-              const isToday = new Date().toISOString().slice(0, 10) === dateStr
+              const todayObj = new Date()
+              const isToday = `${todayObj.getFullYear()}-${pad(todayObj.getMonth() + 1)}-${pad(todayObj.getDate())}` === dateStr
 
               const regCount = dateData?.totalRegistrants || 0
               const isFull = dateData?.sessions.every(s => s.availableSlots === 0 || s.status === 'FULL')
@@ -442,7 +518,8 @@ export default function FreeWorkshopsClient({ reservations, sessions }: FreeWork
           }}>
             {/* Header Banner for Selected Date */}
             {(() => {
-              const dateObj = new Date(selectedDateStr)
+              const [y, m, d] = selectedDateStr.split('-').map(Number)
+              const dateObj = new Date(y, m - 1, d)
               const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
               const activeSessions = selectedDateData?.sessions || []
 
@@ -502,7 +579,7 @@ export default function FreeWorkshopsClient({ reservations, sessions }: FreeWork
               borderRadius: '14px',
               padding: '0.85rem',
               display: 'grid',
-              gridTemplateColumns: '2fr 1fr 1fr',
+              gridTemplateColumns: '2fr 1fr 1fr 1fr',
               gap: '0.65rem',
               boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
             }}>
@@ -540,6 +617,24 @@ export default function FreeWorkshopsClient({ reservations, sessions }: FreeWork
                 <option value="ACTIVE">Confirmed / Active</option>
                 <option value="CHECKED_IN">Checked In</option>
                 <option value="CANCELLED">Cancelled</option>
+              </select>
+
+              <select
+                value={workshopTypeFilter}
+                onChange={e => { setWorkshopTypeFilter(e.target.value as any); setCurrentPage(1) }}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '0.5rem 0.75rem',
+                  fontSize: '0.75rem',
+                  outline: 'none',
+                  fontFamily: 'inherit'
+                }}
+              >
+                <option value="ALL">All Types</option>
+                <option value="ADULT">🧑 Starter Workshop (Adult)</option>
+                <option value="KID">👦 Kids Workshop</option>
               </select>
 
               <select
@@ -601,6 +696,33 @@ export default function FreeWorkshopsClient({ reservations, sessions }: FreeWork
                       </tr>
                     ) : (
                       paginatedReservations.map(r => {
+                        // Check-in rule: Available on event date AND starting 30 mins before start time
+                        let isCheckInAllowed = false
+                        let checkInDisabledReason = 'Check-in opens 30 minutes before event start.'
+
+                        if (r.session) {
+                          const now = new Date()
+                          const sessionDateObj = new Date(r.session.sessionDate)
+                          const isSameDate = now.getFullYear() === sessionDateObj.getFullYear() &&
+                                             now.getMonth() === sessionDateObj.getMonth() &&
+                                             now.getDate() === sessionDateObj.getDate()
+
+                          if (!isSameDate) {
+                            checkInDisabledReason = 'Check-in is locked until the day of the event.'
+                          } else {
+                            const [sHours, sMins] = r.session.startTime.split(':').map(Number)
+                            const sessionStartObj = new Date(sessionDateObj)
+                            sessionStartObj.setHours(sHours, sMins, 0, 0)
+                            
+                            const windowStart = new Date(sessionStartObj.getTime() - 30 * 60 * 1000)
+                            if (now >= windowStart) {
+                              isCheckInAllowed = true
+                            } else {
+                              checkInDisabledReason = 'Check-in opens 30 minutes before event start.'
+                            }
+                          }
+                        }
+
                         const isCancelled = ['CANCELLED_BY_CUSTOMER', 'RELEASED_TO_WALKIN', 'CANCELLED'].includes(r.status)
                         const isCheckedIn = ['CHECKED_IN', 'ATTENDED', 'WALKIN_CONFIRMED'].includes(r.status)
 
@@ -650,14 +772,6 @@ export default function FreeWorkshopsClient({ reservations, sessions }: FreeWork
                             {/* Actions */}
                             <td style={{ padding: '0.75rem 0.95rem', fontSize: '0.76rem', textAlign: 'right', verticalAlign: 'top' }}>
                               <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                                {!isCheckedIn && !isCancelled && (
-                                  <button
-                                    onClick={() => { setSelectedRes(r); setModalType('CHECKIN') }}
-                                    style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', borderRadius: '6px', padding: '0.3rem 0.55rem', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer' }}
-                                  >
-                                    ✓ Check In
-                                  </button>
-                                )}
 
                                 {!isCancelled && (
                                   <button
@@ -803,6 +917,214 @@ export default function FreeWorkshopsClient({ reservations, sessions }: FreeWork
               )}
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MANUAL WALK-IN BOOKING MODAL ═══ */}
+      {showWalkInModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+          <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', width: '100%', maxWidth: '520px', padding: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>Manual Walk-in / On-Site Booking</h3>
+                <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>Register a walk-in attendee directly into a Free Workshop session.</p>
+              </div>
+              <button onClick={() => setShowWalkInModal(false)} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '1.2rem', cursor: 'pointer', padding: '0.2rem' }}>✕</button>
+            </div>
+
+            {walkInError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '0.6rem 0.85rem', borderRadius: '8px', fontSize: '0.78rem', marginBottom: '1rem' }}>
+                {walkInError}
+              </div>
+            )}
+
+            {/* Step 1: Select Session */}
+            {walkInStep === 1 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155' }}>Select Free Workshop Session *</label>
+                <select
+                  value={walkInSessionId}
+                  onChange={e => {
+                    const sid = e.target.value
+                    setWalkInSessionId(sid)
+                    const sess = openSessions.find(s => s.id === sid)
+                    const isKid = sess?.category === 'FREE_KID' || sess?.module?.name?.toLowerCase().includes('kid')
+                    setWalkInCount(isKid ? 2 : 1)
+                  }}
+                  style={{ width: '100%', padding: '0.65rem 0.85rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', color: '#0f172a', outline: 'none' }}
+                >
+                  {openSessions.length === 0 ? (
+                    <option value="">No upcoming open Free Workshop sessions available</option>
+                  ) : (
+                    openSessions.map(s => {
+                      const isKid = s.category === 'FREE_KID' || s.module?.name?.toLowerCase().includes('kid')
+                      return (
+                        <option key={s.id} value={s.id}>
+                          {isKid ? '👦 [KID + Guardian] ' : '🧑 [ADULT] '}
+                          {s.module?.name || 'Free Workshop'} — {new Date(s.sessionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} ({s.startTime} - {s.endTime}) [{s.availableSlots} slots left]
+                        </option>
+                      )
+                    })
+                  )}
+                </select>
+
+                {selectedWalkInSession && (
+                  <div style={{ padding: '0.75rem', borderRadius: '8px', background: isWalkInKidSession ? '#ecfdf5' : '#eef2ff', border: isWalkInKidSession ? '1px solid #a7f3d0' : '1px solid #c7d2fe', fontSize: '0.78rem', color: isWalkInKidSession ? '#047857' : '#4338ca', fontWeight: 600 }}>
+                    {isWalkInKidSession
+                      ? '👦 Free Workshop for Kids: Requires 2 pax (1 Kid + 1 Parent / Guardian).'
+                      : '🧑 Free Workshop for Adults: Requires 1 pax.'}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                  <button
+                    disabled={!walkInSessionId}
+                    onClick={() => {
+                      if (isWalkInKidSession) {
+                        setWalkInCount(2)
+                      } else {
+                        setWalkInCount(1)
+                      }
+                      setWalkInStep(2)
+                    }}
+                    style={{ background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '8px', padding: '0.6rem 1.25rem', fontSize: '0.82rem', fontWeight: 700, cursor: walkInSessionId ? 'pointer' : 'not-allowed', opacity: walkInSessionId ? 1 : 0.5 }}
+                  >
+                    Next: Participant Details →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Customer Details */}
+            {walkInStep === 2 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#4f46e5', background: '#eef2ff', padding: '0.5rem 0.75rem', borderRadius: '6px' }}>
+                  {isWalkInKidSession ? '👦 Kids Workshop Registration (Parent/Guardian + Kid)' : '🧑 Adult Workshop Registration (1 Pax)'}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '0.25rem' }}>
+                      {isWalkInKidSession ? 'Parent / Guardian First Name *' : 'First Name *'}
+                    </label>
+                    <input type="text" placeholder="John" value={walkInFirstName} onChange={e => setWalkInFirstName(e.target.value)} style={{ width: '100%', padding: '0.6rem 0.85rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.82rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '0.25rem' }}>
+                      {isWalkInKidSession ? 'Parent / Guardian Last Name *' : 'Last Name *'}
+                    </label>
+                    <input type="text" placeholder="Doe" value={walkInLastName} onChange={e => setWalkInLastName(e.target.value)} style={{ width: '100%', padding: '0.6rem 0.85rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.82rem' }} />
+                  </div>
+                </div>
+
+                {isWalkInKidSession && (
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#047857', display: 'block', marginBottom: '0.25rem' }}>
+                      👦 Kid's Full Name *
+                    </label>
+                    <input type="text" placeholder="Child's full name" value={walkInKidName} onChange={e => setWalkInKidName(e.target.value)} style={{ width: '100%', padding: '0.6rem 0.85rem', border: '1px solid #6ee7b7', background: '#f0fdf4', borderRadius: '8px', fontSize: '0.82rem' }} />
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '0.25rem' }}>Mobile Phone *</label>
+                    <input type="tel" placeholder="09171234567" value={walkInPhone} onChange={e => setWalkInPhone(e.target.value)} style={{ width: '100%', padding: '0.6rem 0.85rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.82rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '0.25rem' }}>Email *</label>
+                    <input type="email" placeholder="attendee@email.com" value={walkInEmail} onChange={e => setWalkInEmail(e.target.value)} style={{ width: '100%', padding: '0.6rem 0.85rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.82rem' }} />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '0.25rem' }}>
+                    Number of Participants (Pax) * {isWalkInKidSession && <span style={{ color: '#047857', fontWeight: 600 }}>(Locked to 2 pax for Kid + Guardian)</span>}
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    disabled={isWalkInKidSession}
+                    value={isWalkInKidSession ? 2 : walkInCount}
+                    onChange={e => setWalkInCount(parseInt(e.target.value, 10) || 1)}
+                    style={{
+                      width: '100%',
+                      padding: '0.6rem 0.85rem',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      fontSize: '0.82rem',
+                      background: isWalkInKidSession ? '#f1f5f9' : '#ffffff',
+                      color: isWalkInKidSession ? '#64748b' : '#0f172a',
+                      cursor: isWalkInKidSession ? 'not-allowed' : 'text'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '0.25rem' }}>Notes / Internal Reference</label>
+                  <input type="text" placeholder="On-site registration note..." value={walkInNotes} onChange={e => setWalkInNotes(e.target.value)} style={{ width: '100%', padding: '0.6rem 0.85rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.82rem' }} />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+                  <button onClick={() => setWalkInStep(1)} style={{ background: 'transparent', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>
+                    ← Back
+                  </button>
+                  <button
+                    disabled={
+                      !walkInFirstName.trim() ||
+                      !walkInLastName.trim() ||
+                      (isWalkInKidSession && !walkInKidName.trim()) ||
+                      !walkInEmail.trim() ||
+                      !walkInPhone.trim() ||
+                      walkInSubmitting
+                    }
+                    onClick={async () => {
+                      setWalkInSubmitting(true)
+                      setWalkInError('')
+                      try {
+                        const formData = new FormData()
+                        formData.append('sessionId', walkInSessionId)
+                        formData.append('customerName', `${walkInFirstName.trim()} ${walkInLastName.trim()}`)
+                        formData.append('customerEmail', walkInEmail.trim())
+                        formData.append('customerPhone', walkInPhone.trim())
+                        const finalPax = isWalkInKidSession ? 2 : walkInCount
+                        formData.append('participantsCount', finalPax.toString())
+                        formData.append('branchLocation', 'Ayala Malls Manila Bay')
+                        const mergedNotes = isWalkInKidSession
+                          ? `Kid Name: ${walkInKidName.trim()} | Guardian: ${walkInFirstName.trim()} ${walkInLastName.trim()} | ${walkInNotes}`
+                          : walkInNotes
+                        formData.append('notes', mergedNotes)
+                        formData.append('workshopType', 'FREE')
+                        formData.append('paymentMethod', 'FREE_ON_SITE')
+
+                        const res = await adminManualBookSlot(formData)
+                        if (res.error) {
+                          setWalkInError(res.error)
+                        } else {
+                          setShowWalkInModal(false)
+                          setWalkInFirstName('')
+                          setWalkInLastName('')
+                          setWalkInKidName('')
+                          setWalkInPhone('')
+                          setWalkInEmail('')
+                          setWalkInNotes('')
+                          window.location.reload()
+                        }
+                      } catch (err: any) {
+                        setWalkInError(err.message || 'Failed to complete registration.')
+                      } finally {
+                        setWalkInSubmitting(false)
+                      }
+                    }}
+                    style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', padding: '0.6rem 1.25rem', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    {walkInSubmitting ? 'Confirming...' : 'Confirm Free Booking ✓'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

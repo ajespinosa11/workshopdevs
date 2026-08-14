@@ -195,6 +195,7 @@ export async function adminManualBookSlot(formData: FormData) {
     }
 
     revalidatePath('/admin/registrations')
+    revalidatePath('/admin/free-workshops')
     revalidatePath('/admin/sessions')
     return { success: true, registration: result }
 

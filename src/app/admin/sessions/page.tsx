@@ -37,11 +37,6 @@ export default async function AdminSessionsPage() {
   })
 
   const modules = await prisma.module.findMany({
-    where: {
-      name: {
-        in: ['Prints 2 Profit', 'Print 2 Profit', 'Make-ur-robot workshop', 'Free Workshop']
-      }
-    },
     orderBy: { name: 'asc' }
   })
 
@@ -76,7 +71,7 @@ export default async function AdminSessionsPage() {
       endTime: s.endTime,
       durationHours: s.durationHours,
       capacity: s.capacity,
-      availableSlots: s.availableSlots,
+      availableSlots: Math.max(0, s.capacity - totalParticipants),
       status: s.status,
       notes: s.notes,
       collaborator: s.collaborator,
