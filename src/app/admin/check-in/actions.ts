@@ -43,12 +43,15 @@ export async function validateCheckInDetails(formData: FormData) {
     }
 
     let inCheckInWindow = true
-    if (reg.session?.sessionDate && reg.session?.startTime) {
+    if (reg.session?.startTime) {
+      // Always compare in PHT (UTC+8) to avoid server timezone issues
       const [h, m] = reg.session.startTime.split(':').map(Number)
-      const sessionStart = new Date(reg.session.sessionDate)
-      sessionStart.setHours(h, m, 0, 0)
-      const windowStart = new Date(sessionStart.getTime() - 30 * 60 * 1000)
-      if (now < windowStart) {
+      const sessionStartMinutes = h * 60 + m
+      const windowStartMinutes = sessionStartMinutes - 30
+      // Get current PHT time-of-day in minutes
+      const nowPht = new Date(now.getTime() + 8 * 60 * 60 * 1000)
+      const nowMinutesPht = nowPht.getUTCHours() * 60 + nowPht.getUTCMinutes()
+      if (nowMinutesPht < windowStartMinutes) {
         inCheckInWindow = false
       }
     }
@@ -127,12 +130,15 @@ export async function validateCheckInDetails(formData: FormData) {
     }
 
     let inCheckInWindow = true
-    if (booking.session?.sessionDate && booking.session?.startTime) {
+    if (booking.session?.startTime) {
+      // Always compare in PHT (UTC+8) to avoid server timezone issues
       const [h, m] = booking.session.startTime.split(':').map(Number)
-      const sessionStart = new Date(booking.session.sessionDate)
-      sessionStart.setHours(h, m, 0, 0)
-      const windowStart = new Date(sessionStart.getTime() - 30 * 60 * 1000)
-      if (now < windowStart) {
+      const sessionStartMinutes = h * 60 + m
+      const windowStartMinutes = sessionStartMinutes - 30
+      // Get current PHT time-of-day in minutes
+      const nowPht = new Date(now.getTime() + 8 * 60 * 60 * 1000)
+      const nowMinutesPht = nowPht.getUTCHours() * 60 + nowPht.getUTCMinutes()
+      if (nowMinutesPht < windowStartMinutes) {
         inCheckInWindow = false
       }
     }
