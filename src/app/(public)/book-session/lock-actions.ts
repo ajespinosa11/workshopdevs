@@ -89,11 +89,73 @@ export async function createSoftLockReservation(params: {
 
   return await prisma.$transaction(async (tx) => {
     const session = await tx.workshopSession.findUnique({
-      where: { id: sessionId }
+      where: { id: sessionId },
+      include: { module: true }
     })
 
     if (!session) {
       return { error: 'Selected workshop session does not exist.' }
+    }
+
+    const isFreeSession = session.category === 'FREE' || session.category === 'FREE_KID' || (session.category !== 'PAID' && session.module?.name?.toLowerCase().includes('free'))
+
+    if (isFreeSession) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      // Check active free bookings
+      const activeFreeBooking = await tx.booking.findFirst({
+        where: {
+          customerEmail: { equals: customerEmail, mode: 'insensitive' },
+          status: {
+            in: ['RESERVED', 'BALANCE_DUE', 'CHECKED_IN', 'WALKIN_CONFIRMED']
+          },
+          session: {
+            sessionDate: { gte: today },
+            OR: [
+              { category: 'FREE' },
+              { category: 'FREE_KID' },
+              { category: { not: 'PAID' }, module: { name: { contains: 'Free', mode: 'insensitive' } } }
+            ]
+          }
+        },
+        include: { session: { include: { module: true } } }
+      })
+
+      if (activeFreeBooking) {
+        const isSameSession = activeFreeBooking.sessionId === session.id
+        if (isSameSession) {
+          return { error: 'You have already registered for this free workshop session.' }
+        }
+        return { error: `You currently have an active reservation for an upcoming free workshop (${activeFreeBooking.session.module?.name || 'Free Workshop'}). You cannot register for another free workshop until your current session has finished.` }
+      }
+
+      // Check active free registrations
+      const activeFreeRegistration = await tx.workshopRegistration.findFirst({
+        where: {
+          customerEmail: { equals: customerEmail, mode: 'insensitive' },
+          status: {
+            in: ['RESERVED', 'CONFIRMED', 'PENDING_CHECKOUT', 'PENDING_SCHEDULE_CONFIRMATION', 'PAID_FOR_ADMIN_VERIFICATION']
+          },
+          session: {
+            sessionDate: { gte: today },
+            OR: [
+              { category: 'FREE' },
+              { category: 'FREE_KID' },
+              { category: { not: 'PAID' }, module: { name: { contains: 'Free', mode: 'insensitive' } } }
+            ]
+          }
+        },
+        include: { session: { include: { module: true } } }
+      })
+
+      if (activeFreeRegistration && activeFreeRegistration.sessionId) {
+        const isSameSession = activeFreeRegistration.sessionId === session.id
+        if (isSameSession) {
+          return { error: 'You have already registered for this free workshop session.' }
+        }
+        return { error: `You currently have an active reservation for an upcoming free workshop (${activeFreeRegistration.session?.module?.name || 'Free Workshop'}). You cannot register for another free workshop until your current session has finished.` }
+      }
     }
 
     if (session.availableSlots < participantsCount) {

@@ -117,7 +117,8 @@ export default function BookSessionForm() {
 
   // Free Workshop Form Fields
   const [freeCategory, setFreeCategory] = useState<'ADULT' | 'KID'>('ADULT')
-  const [freeName, setFreeName] = useState('')
+  const [freeFirstName, setFreeFirstName] = useState('')
+  const [freeLastName, setFreeLastName] = useState('')
   const [freeEmail, setFreeEmail] = useState('')
   const [freePhone, setFreePhone] = useState('')
   const [freePaxCount, setFreePaxCount] = useState(1)
@@ -214,7 +215,8 @@ export default function BookSessionForm() {
     setVoucherCodeInput('')
     setVoucherEmailInput('')
     setFreeCategory('ADULT')
-    setFreeName('')
+    setFreeFirstName('')
+    setFreeLastName('')
     setFreeEmail('')
     setFreePhone('')
     setFreePaxCount(1)
@@ -338,11 +340,17 @@ export default function BookSessionForm() {
       setError('Please select a session slot.')
       return
     }
+    if (!freeFirstName.trim() || !freeLastName.trim()) {
+      setError('Please enter both First Name and Last Name.')
+      return
+    }
     setError('')
     setLoading(true)
 
     const formData = new FormData()
-    formData.append('name', freeName)
+    formData.append('firstName', freeFirstName.trim())
+    formData.append('lastName', freeLastName.trim())
+    formData.append('name', `${freeFirstName.trim()} ${freeLastName.trim()}`)
     formData.append('email', freeEmail)
     formData.append('phone', freePhone)
     formData.append('sessionId', selectedSessionId)
@@ -1245,15 +1253,27 @@ export default function BookSessionForm() {
                     }} 
                     style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
                   >
-                    <div>
-                      <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>
-                        {freeCategory === 'KID' ? 'Parent / Guardian Name' : 'Full Name'}
-                      </label>
-                      <input 
-                        type="text" required value={freeName} onChange={e => setFreeName(e.target.value)}
-                        placeholder={freeCategory === 'KID' ? 'Parent/Guardian Full Name' : 'Aldrin Espinosa'}
-                        className="input-field" style={{ width: '100%', borderRadius: '0.75rem', padding: '0.75rem 1.25rem' }}
-                      />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <div>
+                        <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>
+                          {freeCategory === 'KID' ? 'Parent First Name' : 'First Name'}
+                        </label>
+                        <input 
+                          type="text" required value={freeFirstName} onChange={e => setFreeFirstName(e.target.value)}
+                          placeholder="Aldrin"
+                          className="input-field" style={{ width: '100%', borderRadius: '0.75rem', padding: '0.75rem 1.25rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', color: 'var(--primary)' }}>
+                          {freeCategory === 'KID' ? 'Parent Last Name' : 'Last Name'}
+                        </label>
+                        <input 
+                          type="text" required value={freeLastName} onChange={e => setFreeLastName(e.target.value)}
+                          placeholder="Espinosa"
+                          className="input-field" style={{ width: '100%', borderRadius: '0.75rem', padding: '0.75rem 1.25rem' }}
+                        />
+                      </div>
                     </div>
                     {freeCategory === 'KID' && (
                       <div>

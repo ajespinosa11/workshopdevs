@@ -121,6 +121,22 @@ export default function AdminCheckInClient({ sessions }: { sessions: Session[] }
   const [statusUpdating, setStatusUpdating] = useState(false)
   const [statusError, setStatusError] = useState('')
 
+  // Collapsible session roster state (map of session ID -> boolean)
+  const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({})
+
+  // Toggle individual session collapse/expand
+  const toggleSessionExpand = (sessionId: string) => {
+    setExpandedSessions(prev => ({
+      ...prev,
+      [sessionId]: prev[sessionId] === undefined ? false : !prev[sessionId]
+    }))
+  }
+
+  // Helper to check if session is expanded (default to true/expanded)
+  const isSessionExpanded = (sessionId: string) => {
+    return expandedSessions[sessionId] !== false
+  }
+
   const getSessionsForDate = (date: Date) => sessions.filter(s => {
     const sd = new Date(s.sessionDate)
     return sd.getFullYear() === date.getFullYear() && sd.getMonth() === date.getMonth() && sd.getDate() === date.getDate()
@@ -536,86 +552,130 @@ export default function AdminCheckInClient({ sessions }: { sessions: Session[] }
                   const { allowed: checkInWindowOpen } = checkInWindow(session.sessionDate, session.startTime)
                   const categoryColor = session.category === 'FREE' || session.category === 'FREE_KID' ? '#10b981' : '#6366f1'
 
+                  const isExpanded = isSessionExpanded(session.id)
+
                   return (
                     <div key={session.id} style={{ border: '1px solid #e2e8f0', borderRadius: '14px', overflow: 'hidden' }}>
-                      {/* Session header */}
-                      <div style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', padding: '0.85rem 1.1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '0.5rem' }}>
-                        <div>
-                          <span style={{ fontSize: '0.62rem', fontWeight: 800, color: categoryColor, textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '0.4rem' }}>
-                            {session.category === 'FREE' ? '🎁 Free (Adult)' : session.category === 'FREE_KID' ? '👦 Free (Kids)' : '🎯 Paid Workshop'}
-                          </span>
-                          <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#94a3b8' }}>· {session.module.name}</span>
-                          <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', marginTop: '0.1rem' }}>
-                            ⏰ {session.startTime} – {session.endTime}
+                      {/* Session header (clickable to collapse/expand) */}
+                      <div
+                        onClick={() => toggleSessionExpand(session.id)}
+                        style={{
+                          background: isExpanded ? 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' : '#f8fafc',
+                          padding: '0.85rem 1.1rem',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          borderBottom: isExpanded ? '1px solid #e2e8f0' : 'none',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                          flexWrap: 'wrap',
+                          gap: '0.5rem',
+                          transition: 'background 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                          <div style={{
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '6px',
+                            background: '#ffffff',
+                            border: '1px solid #cbd5e1',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
+                            color: '#475569',
+                            transition: 'transform 0.2s ease',
+                            transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'
+                          }}>
+                            ▶
+                          </div>
+                          <div>
+                            <span style={{ fontSize: '0.62rem', fontWeight: 800, color: categoryColor, textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '0.4rem' }}>
+                              {session.category === 'FREE' ? '🎁 Free (Adult)' : session.category === 'FREE_KID' ? '👦 Free (Kids)' : '🎯 Paid Workshop'}
+                            </span>
+                            <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#94a3b8' }}>· {session.module.name}</span>
+                            <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', marginTop: '0.1rem' }}>
+                              ⏰ {session.startTime} – {session.endTime}
+                            </div>
                           </div>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569' }}>
-                            {checkedInCount}/{allAttendees.length} checked in
+
+                        <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                          <div>
+                            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569' }}>
+                              {checkedInCount}/{allAttendees.length} checked in
+                            </div>
+                            <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>
+                              Cap: {session.capacity} · Avail: {session.availableSlots}
+                            </div>
+                            {!checkInWindowOpen && (
+                              <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#d97706', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '99px', padding: '0.1rem 0.45rem', display: 'inline-block', marginTop: '0.2rem' }}>
+                                🔒 Check-in locked
+                              </span>
+                            )}
                           </div>
-                          <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>
-                            Cap: {session.capacity} · Avail: {session.availableSlots}
-                          </div>
-                          {!checkInWindowOpen && (
-                            <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#d97706', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '99px', padding: '0.1rem 0.45rem', display: 'inline-block', marginTop: '0.2rem' }}>
-                              🔒 Check-in locked
-                            </span>
+                          <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>
+                            {isExpanded ? 'Hide Attendees ▲' : `Show (${allAttendees.length}) ▼`}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Attendee list (Collapsible) */}
+                      {isExpanded && (
+                        <div style={{ padding: '0.5rem 0' }}>
+                          {allAttendees.length === 0 ? (
+                            <div style={{ padding: '1rem 1.1rem', fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic' }}>No reservations for this session.</div>
+                          ) : (
+                            allAttendees.map(att => {
+                              const isCheckedIn = ['CHECKED_IN', 'ATTENDED', 'COMPLETED', 'WALKIN_CONFIRMED'].includes(att.status)
+                              const isCancelled = ['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'RELEASED_TO_WALKIN'].includes(att.status)
+                              const { allowed, reason } = checkInWindow(session.sessionDate, session.startTime)
+                              return (
+                                <div key={att.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.7rem 1.1rem', borderBottom: '1px solid #f8fafc', gap: '0.75rem', flexWrap: 'wrap', opacity: isCancelled ? 0.5 : 1 }}>
+                                  <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.83rem', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                      {att.name}
+                                      <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#6366f1' }}>({att.pax} pax)</span>
+                                      {isCheckedIn && <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#16a34a', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '99px', padding: '0.05rem 0.4rem' }}>✓ In</span>}
+                                    </div>
+                                    <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.05rem' }}>{att.email} {att.phone ? `· ${att.phone}` : ''}</div>
+                                    <div style={{ fontFamily: 'monospace', fontSize: '0.68rem', color: '#6366f1', fontWeight: 700, marginTop: '0.05rem' }}>{att.ref}</div>
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                                    <StatusBadge status={att.status} />
+
+                                    {/* Update status button */}
+                                    <button
+                                      onClick={() => {
+                                        setStatusModalAttendee({ id: att.id, ref: att.ref, name: att.name, status: att.status, recordType: att.recordType })
+                                        setSelectedNewStatus(att.status)
+                                        setStatusNotes('')
+                                        setStatusError('')
+                                      }}
+                                      style={{
+                                        padding: '0.35rem 0.6rem',
+                                        borderRadius: '8px',
+                                        background: '#ffffff',
+                                        border: '1px solid #cbd5e1',
+                                        color: '#475569',
+                                        fontSize: '0.7rem',
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap'
+                                      }}
+                                    >
+                                      ⚙️ Status
+                                    </button>
+
+                                  </div>
+                                </div>
+                              )
+                            })
                           )}
                         </div>
-                      </div>
-
-                      {/* Attendee list */}
-                      <div style={{ padding: '0.5rem 0' }}>
-                        {allAttendees.length === 0 ? (
-                          <div style={{ padding: '1rem 1.1rem', fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic' }}>No reservations for this session.</div>
-                        ) : (
-                          allAttendees.map(att => {
-                            const isCheckedIn = ['CHECKED_IN', 'ATTENDED', 'COMPLETED', 'WALKIN_CONFIRMED'].includes(att.status)
-                            const isCancelled = ['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'RELEASED_TO_WALKIN'].includes(att.status)
-                            const { allowed, reason } = checkInWindow(session.sessionDate, session.startTime)
-                            return (
-                              <div key={att.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.7rem 1.1rem', borderBottom: '1px solid #f8fafc', gap: '0.75rem', flexWrap: 'wrap', opacity: isCancelled ? 0.5 : 1 }}>
-                                <div style={{ minWidth: 0 }}>
-                                  <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.83rem', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                                    {att.name}
-                                    <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#6366f1' }}>({att.pax} pax)</span>
-                                    {isCheckedIn && <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#16a34a', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '99px', padding: '0.05rem 0.4rem' }}>✓ In</span>}
-                                  </div>
-                                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.05rem' }}>{att.email} {att.phone ? `· ${att.phone}` : ''}</div>
-                                  <div style={{ fontFamily: 'monospace', fontSize: '0.68rem', color: '#6366f1', fontWeight: 700, marginTop: '0.05rem' }}>{att.ref}</div>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
-                                  <StatusBadge status={att.status} />
-
-                                  {/* Update status button */}
-                                  <button
-                                    onClick={() => {
-                                      setStatusModalAttendee({ id: att.id, ref: att.ref, name: att.name, status: att.status, recordType: att.recordType })
-                                      setSelectedNewStatus(att.status)
-                                      setStatusNotes('')
-                                      setStatusError('')
-                                    }}
-                                    style={{
-                                      padding: '0.35rem 0.6rem',
-                                      borderRadius: '8px',
-                                      background: '#ffffff',
-                                      border: '1px solid #cbd5e1',
-                                      color: '#475569',
-                                      fontSize: '0.7rem',
-                                      fontWeight: 700,
-                                      cursor: 'pointer',
-                                      whiteSpace: 'nowrap'
-                                    }}
-                                  >
-                                    ⚙️ Status
-                                  </button>
-
-                                </div>
-                              </div>
-                            )
-                          })
-                        )}
-                      </div>
+                      )}
                     </div>
                   )
                 })}

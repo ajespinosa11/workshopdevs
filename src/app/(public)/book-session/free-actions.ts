@@ -103,7 +103,14 @@ async function generateBookingReference() {
 export async function createFreeBooking(formData: FormData) {
   await autoCancelExpiredBookings()
 
-  const name = formData.get('name') as string
+  const firstName = (formData.get('firstName') as string || '').trim()
+  const lastName = (formData.get('lastName') as string || '').trim()
+  let name = (formData.get('name') as string || '').trim()
+
+  if (!name && (firstName || lastName)) {
+    name = `${firstName} ${lastName}`.trim()
+  }
+
   const email = formData.get('email') as string
   const phone = formData.get('phone') as string
   const sessionId = formData.get('sessionId') as string
@@ -165,19 +172,65 @@ export async function createFreeBooking(formData: FormData) {
       })
     }
 
-    // 2. Double check duplicate booking
-    const existingBooking = await prisma.booking.findFirst({
+    // 2. Check if customer already has an active/unfinished FREE workshop booking or registration
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const activeFreeBooking = await prisma.booking.findFirst({
       where: {
         customerEmail: { equals: email, mode: 'insensitive' },
-        sessionId: session.id,
         status: {
-          in: ['RESERVED', 'BALANCE_DUE', 'CHECKED_IN', 'COMPLETED_CONSUMED', 'WALKIN_CONFIRMED']
+          in: ['RESERVED', 'BALANCE_DUE', 'CHECKED_IN', 'WALKIN_CONFIRMED']
+        },
+        session: {
+          sessionDate: { gte: today },
+          OR: [
+            { category: 'FREE' },
+            { category: 'FREE_KID' },
+            { category: { not: 'PAID' }, module: { name: { contains: 'Free', mode: 'insensitive' } } }
+          ]
         }
+      },
+      include: {
+        session: { include: { module: true } }
       }
     })
 
-    if (existingBooking) {
-      return { error: 'You have already booked this session.' }
+    if (activeFreeBooking) {
+      const isSameSession = activeFreeBooking.sessionId === session.id
+      if (isSameSession) {
+        return { error: 'You have already registered for this free workshop session.' }
+      }
+      return { error: `You currently have an active reservation for an upcoming free workshop (${activeFreeBooking.session.module?.name || 'Free Workshop'}). You cannot register for another free workshop until your current session has finished.` }
+    }
+
+    // Check if customer has an active soft-lock or confirmed registration for a free workshop
+    const activeFreeRegistration = await prisma.workshopRegistration.findFirst({
+      where: {
+        customerEmail: { equals: email, mode: 'insensitive' },
+        status: {
+          in: ['RESERVED', 'CONFIRMED', 'PENDING_CHECKOUT', 'PENDING_SCHEDULE_CONFIRMATION', 'PAID_FOR_ADMIN_VERIFICATION']
+        },
+        session: {
+          sessionDate: { gte: today },
+          OR: [
+            { category: 'FREE' },
+            { category: 'FREE_KID' },
+            { category: { not: 'PAID' }, module: { name: { contains: 'Free', mode: 'insensitive' } } }
+          ]
+        }
+      },
+      include: {
+        session: { include: { module: true } }
+      }
+    })
+
+    if (activeFreeRegistration && activeFreeRegistration.sessionId) {
+      const isSameSession = activeFreeRegistration.sessionId === session.id
+      if (isSameSession) {
+        return { error: 'You have already registered for this free workshop session.' }
+      }
+      return { error: `You currently have an active reservation for an upcoming free workshop (${activeFreeRegistration.session?.module?.name || 'Free Workshop'}). You cannot register for another free workshop until your current session has finished.` }
     }
 
     // 3. Create booking reference
