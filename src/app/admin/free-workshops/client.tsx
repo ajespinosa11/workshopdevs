@@ -105,8 +105,9 @@ export default function FreeWorkshopsClient({ reservations, sessions, openSessio
       totalRegistrants: number
     }>()
 
-    // 1. Map known sessions
+    // 1. Map known sessions (ONLY open / non-cancelled sessions)
     sessions.forEach(s => {
+      if (s.status === 'CANCELLED') return
       const dateKey = toLocalDateKey(s.sessionDate)
       if (!map.has(dateKey)) {
         map.set(dateKey, { sessions: [], reservations: [], totalRegistrants: 0 })
@@ -117,6 +118,8 @@ export default function FreeWorkshopsClient({ reservations, sessions, openSessio
     // 2. Map reservations to dates
     reservations.forEach(r => {
       if (!r.session?.sessionDate) return
+      // Skip reservations belonging to cancelled sessions
+      if (r.session.status === 'CANCELLED') return
       const dateKey = toLocalDateKey(r.session.sessionDate)
       if (!map.has(dateKey)) {
         map.set(dateKey, { sessions: [], reservations: [], totalRegistrants: 0 })
@@ -516,57 +519,174 @@ export default function FreeWorkshopsClient({ reservations, sessions, openSessio
             gap: '1rem',
             animation: 'fadeIn 0.3s ease',
           }}>
-            {/* Header Banner for Selected Date */}
+            {/* Header / Interactive Workshop Category Selection Cards for Selected Date */}
             {(() => {
               const [y, m, d] = selectedDateStr.split('-').map(Number)
               const dateObj = new Date(y, m - 1, d)
               const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
               const activeSessions = selectedDateData?.sessions || []
 
+              // Group sessions & count registrants for each workshop type on this date
+              const adultSessions = activeSessions.filter(s => !(s.category === 'FREE_KID' || /kid/i.test(s.moduleName)))
+              const kidSessions = activeSessions.filter(s => s.category === 'FREE_KID' || /kid/i.test(s.moduleName))
+
+              const dayRes = selectedDateData?.reservations || []
+              const adultRegs = dayRes.filter(r => {
+                const isKid = r.session?.category === 'FREE_KID' || /kid/i.test(r.session?.moduleName || '')
+                return !isKid && !['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'RELEASED_TO_WALKIN'].includes(r.status)
+              }).reduce((sum, r) => sum + (r.participantsCount || 1), 0)
+
+              const kidRegs = dayRes.filter(r => {
+                const isKid = r.session?.category === 'FREE_KID' || /kid/i.test(r.session?.moduleName || '')
+                return isKid && !['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'RELEASED_TO_WALKIN'].includes(r.status)
+              }).reduce((sum, r) => sum + (r.participantsCount || 1), 0)
+
               return (
-                <div style={{
-                  background: 'linear-gradient(135deg, #eef2ff 0%, #fff7ed 100%)',
-                  border: '1px solid #c7d2fe',
-                  borderRadius: '16px',
-                  padding: '1.15rem 1.4rem',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap' as const,
-                  gap: '1rem',
-                  boxShadow: '0 2px 8px rgba(99,102,241,0.06)'
-                }}>
-                  <div>
-                    <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.2rem' }}>
-                      🎁 Selected Free Workshop Date
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
+                      📅 {formattedDate}
                     </div>
-                    <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                      {formattedDate}
-                    </h2>
-                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.25rem' }}>
-                      {activeSessions.length > 0 ? (
-                        activeSessions.map(s => `${s.startTime} - ${s.endTime} (${s.moduleName})`).join(' • ')
-                      ) : (
-                        'Free Workshop Sessions'
-                      )}
-                    </div>
+                    {workshopTypeFilter !== 'ALL' && (
+                      <button
+                        onClick={() => setWorkshopTypeFilter('ALL')}
+                        style={{ background: '#f1f5f9', border: 'none', color: '#64748b', fontSize: '0.72rem', fontWeight: 700, padding: '0.25rem 0.65rem', borderRadius: '6px', cursor: 'pointer' }}
+                      >
+                        Show All Workshops
+                      </button>
+                    )}
                   </div>
 
-                  <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
-                    <div style={{ textAlign: 'right' as const }}>
-                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Registrants</div>
-                      <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#4f46e5' }}>
-                        {selectedDateData?.totalRegistrants ?? 0}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                    {/* Card 1: Starter Workshop (Adult) */}
+                    <div
+                      onClick={() => {
+                        setWorkshopTypeFilter(workshopTypeFilter === 'ADULT' ? 'ALL' : 'ADULT')
+                        setCurrentPage(1)
+                      }}
+                      style={{
+                        background: workshopTypeFilter === 'ADULT' ? 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)' : '#ffffff',
+                        border: workshopTypeFilter === 'ADULT' ? '2px solid #6366f1' : '1px solid #e2e8f0',
+                        borderRadius: '14px',
+                        padding: '1rem 1.15rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: workshopTypeFilter === 'ADULT' ? '0 4px 12px rgba(99,102,241,0.2)' : '0 1px 3px rgba(0,0,0,0.04)',
+                        position: 'relative' as const,
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
+                        <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                          🧑 STARTER WORKSHOP
+                        </div>
+                        {workshopTypeFilter === 'ADULT' && (
+                          <span style={{ fontSize: '0.62rem', fontWeight: 800, background: '#6366f1', color: '#fff', padding: '1px 6px', borderRadius: '99px' }}>SELECTED</span>
+                        )}
+                      </div>
+
+                      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>
+                        Start your 3D Printing Journey
+                      </div>
+
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.65rem' }}>
+                        ⏰ {adultSessions.map(s => `${s.startTime} - ${s.endTime}`).join(', ') || 'No session scheduled'}
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
+                        <div>
+                          <span style={{ fontSize: '0.64rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Registrants: </span>
+                          <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#4f46e5' }}>{adultRegs}</span>
+                        </div>
+                        {adultSessions.length > 0 ? (() => {
+                          const maxCap = adultSessions[0]?.capacity || 20
+                          const liveLeft = Math.max(0, maxCap - adultRegs)
+                          return (
+                            <div>
+                              <span style={{
+                                padding: '0.15rem 0.5rem',
+                                borderRadius: '99px',
+                                fontSize: '0.65rem',
+                                fontWeight: 700,
+                                background: liveLeft === 0 ? '#fef2f2' : '#f0fdf4',
+                                color: liveLeft === 0 ? '#dc2626' : '#16a34a',
+                                border: liveLeft === 0 ? '1px solid #fecaca' : '1px solid #bbf7d0',
+                              }}>
+                                {liveLeft === 0 ? '🔴 Full' : `⚡ ${liveLeft} slots left`}
+                              </span>
+                            </div>
+                          )
+                        })() : (
+                          <span style={{ padding: '0.15rem 0.5rem', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>
+                            Cancelled
+                          </span>
+                        )}
                       </div>
                     </div>
-                    {activeSessions.length > 0 && (
-                      <div style={{ textAlign: 'right' as const }}>
-                        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Session Status</div>
-                        <div style={{ marginTop: '0.2rem' }}>
-                          {renderSessionStatusBadge(activeSessions[0])}
+
+                    {/* Card 2: Kids Workshop */}
+                    <div
+                      onClick={() => {
+                        setWorkshopTypeFilter(workshopTypeFilter === 'KID' ? 'ALL' : 'KID')
+                        setCurrentPage(1)
+                      }}
+                      style={{
+                        background: workshopTypeFilter === 'KID' ? 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)' : '#ffffff',
+                        border: workshopTypeFilter === 'KID' ? '2px solid #ea580c' : '1px solid #e2e8f0',
+                        borderRadius: '14px',
+                        padding: '1rem 1.15rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: workshopTypeFilter === 'KID' ? '0 4px 12px rgba(234,88,12,0.2)' : '0 1px 3px rgba(0,0,0,0.04)',
+                        position: 'relative' as const,
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
+                        <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                          👦 KIDS WORKSHOP
                         </div>
+                        {workshopTypeFilter === 'KID' && (
+                          <span style={{ fontSize: '0.62rem', fontWeight: 800, background: '#ea580c', color: '#fff', padding: '1px 6px', borderRadius: '99px' }}>SELECTED</span>
+                        )}
                       </div>
-                    )}
+
+                      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>
+                        The Magic of 3D Printing (Kids)
+                      </div>
+
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.65rem' }}>
+                        ⏰ {kidSessions.map(s => `${s.startTime} - ${s.endTime}`).join(', ') || 'No session scheduled'}
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
+                        <div>
+                          <span style={{ fontSize: '0.64rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Registrants: </span>
+                          <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#c2410c' }}>{kidRegs}</span>
+                        </div>
+                        {kidSessions.length > 0 ? (() => {
+                          const maxCap = kidSessions[0]?.capacity || 20
+                          const liveLeft = Math.max(0, maxCap - kidRegs)
+                          return (
+                            <div>
+                              <span style={{
+                                padding: '0.15rem 0.5rem',
+                                borderRadius: '99px',
+                                fontSize: '0.65rem',
+                                fontWeight: 700,
+                                background: liveLeft === 0 ? '#fef2f2' : '#f0fdf4',
+                                color: liveLeft === 0 ? '#dc2626' : '#16a34a',
+                                border: liveLeft === 0 ? '1px solid #fecaca' : '1px solid #bbf7d0',
+                              }}>
+                                {liveLeft === 0 ? '🔴 Full' : `⚡ ${liveLeft} slots left`}
+                              </span>
+                            </div>
+                          )
+                        })() : (
+                          <span style={{ padding: '0.15rem 0.5rem', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>
+                            Cancelled
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )

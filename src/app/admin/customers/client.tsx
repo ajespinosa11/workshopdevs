@@ -189,7 +189,9 @@ export default function CustomersClient({ customers, metrics: serverMetrics }: C
     switch (status) {
       case 'CONFIRMED':
       case 'ATTENDED':
-        return <span style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', padding: '0.2rem 0.55rem', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 700 }}>✓ {status}</span>
+      case 'CHECKED_IN':
+      case 'WALKIN_CONFIRMED':
+        return <span style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', padding: '0.2rem 0.55rem', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 700 }}>✓ {status === 'CHECKED_IN' ? 'CHECKED IN' : status}</span>
       case 'RESERVED':
         return <span style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '0.2rem 0.55rem', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 700 }}>🔒 Reserved</span>
       case 'AWAITING_PAYMENT':

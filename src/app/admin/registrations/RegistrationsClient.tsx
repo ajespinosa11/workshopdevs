@@ -615,14 +615,15 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
   const summaryCounts = useMemo(() => {
     const pendingVerification = registrations.filter(r =>
       ['PAID_FOR_ADMIN_VERIFICATION', 'PENDING_SCHEDULE_CONFIRMATION'].includes(r.status)
-    ).length
+    ).reduce((sum, r) => sum + (r.participantsCount || 1), 0)
     const awaitingPayment = registrations.filter(r =>
       ['AWAITING_PAYMENT', 'PAYMENT_PENDING'].includes(r.status)
-    ).length
+    ).reduce((sum, r) => sum + (r.participantsCount || 1), 0)
     const reservedConfirmed = registrations.filter(r =>
-      ['RESERVED', 'CONFIRMED', 'RESCHEDULED'].includes(r.status)
-    ).length
-    return { pendingVerification, awaitingPayment, reservedConfirmed, total: registrations.length }
+      ['RESERVED', 'CONFIRMED', 'RESCHEDULED', 'CHECKED_IN', 'WALKIN_CONFIRMED'].includes(r.status)
+    ).reduce((sum, r) => sum + (r.participantsCount || 1), 0)
+    const totalPax = registrations.reduce((sum, r) => sum + (r.participantsCount || 1), 0)
+    return { pendingVerification, awaitingPayment, reservedConfirmed, total: totalPax }
   }, [registrations])
 
   // ── Session Master Data List ──
@@ -634,9 +635,15 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
       totalCount: number
     }>()
 
-    // Seed openSessions
+    // Seed openSessions (paid sessions only)
     openSessions.forEach(s => {
-      map.set(s.id, { session: s, pendingCount: 0, reservedCount: 0, totalCount: 0 })
+      const cat = s.category || ''
+      const modName = s.module?.name || s.module?.title || ''
+      const notes = s.notes || ''
+      const isFree = cat === 'FREE' || cat === 'FREE_KID' || /free/i.test(modName) || /free/i.test(notes)
+      if (!isFree) {
+        map.set(s.id, { session: s, pendingCount: 0, reservedCount: 0, totalCount: 0 })
+      }
     })
 
     // Tally registrations into their sessions
@@ -655,9 +662,10 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
       }
       const entry = map.get(r.sessionId)
       if (!entry) return
-      entry.totalCount++
-      if (['PAID_FOR_ADMIN_VERIFICATION', 'PENDING_SCHEDULE_CONFIRMATION', 'AWAITING_PAYMENT'].includes(r.status)) entry.pendingCount++
-      if (['RESERVED', 'CONFIRMED', 'RESCHEDULED'].includes(r.status)) entry.reservedCount++
+      const pax = r.participantsCount || 1
+      entry.totalCount += pax
+      if (['PAID_FOR_ADMIN_VERIFICATION', 'PENDING_SCHEDULE_CONFIRMATION', 'AWAITING_PAYMENT'].includes(r.status)) entry.pendingCount += pax
+      if (['RESERVED', 'CONFIRMED', 'RESCHEDULED', 'CHECKED_IN', 'WALKIN_CONFIRMED'].includes(r.status)) entry.reservedCount += pax
     })
 
     return Array.from(map.values())
@@ -784,6 +792,8 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
       case 'PAID_FOR_ADMIN_VERIFICATION':
       case 'RESERVED':
       case 'CONFIRMED':
+      case 'CHECKED_IN':
+      case 'WALKIN_CONFIRMED':
         return <span style={S.chip('#f0fdf4', '#16a34a', '#bbf7d0')}>✓ Verified</span>
       case 'AWAITING_PAYMENT':
       case 'PAYMENT_PENDING':
@@ -801,6 +811,9 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
       case 'RESERVED':
       case 'CONFIRMED':
         return <span style={S.chip('#f0fdf4', '#16a34a', '#bbf7d0')}>Reserved</span>
+      case 'CHECKED_IN':
+      case 'WALKIN_CONFIRMED':
+        return <span style={S.chip('#f0fdf4', '#16a34a', '#bbf7d0')}>Checked In</span>
       case 'RESCHEDULED':
         return <span style={S.chip('#eff6ff', '#2563eb', '#bfdbfe')}>Rescheduled</span>
       case 'PAID_FOR_ADMIN_VERIFICATION':

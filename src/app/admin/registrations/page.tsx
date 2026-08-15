@@ -26,8 +26,12 @@ export default async function AdminRegistrationsPage() {
     where: {
       status: { not: 'CANCELLED' },
       sessionDate: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
-      category: { notIn: ['FREE', 'FREE_KID'] },
-      module: { name: { not: 'Free Workshop' } }
+      NOT: [
+        { category: { in: ['FREE', 'FREE_KID'] } },
+        { module: { name: { contains: 'Free', mode: 'insensitive' } } },
+        { notes: { contains: 'Free', mode: 'insensitive' } },
+        { module: { description: { contains: 'Free', mode: 'insensitive' } } }
+      ]
     },
     include: { module: true },
     orderBy: { sessionDate: 'asc' }
