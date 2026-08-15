@@ -180,7 +180,12 @@ export async function createSession(formData: FormData) {
     return { error: 'All fields (Date, Start Time, End Time) are required.' }
   }
 
-  const capacity = capacityStr ? parseInt(capacityStr, 10) : 20
+  const onlineCapacityStr = formData.get('onlineCapacity') as string
+  const offlineCapacityStr = formData.get('offlineCapacity') as string
+  const onlineCapacity = onlineCapacityStr ? parseInt(onlineCapacityStr, 10) : 10
+  const offlineCapacity = offlineCapacityStr ? parseInt(offlineCapacityStr, 10) : 10
+  const capacity = (onlineCapacity > 0 && offlineCapacity > 0) ? (onlineCapacity + offlineCapacity) : (capacityStr ? parseInt(capacityStr, 10) : 20)
+  
   if (isNaN(capacity) || capacity <= 0) {
     return { error: 'Capacity must be a positive integer.' }
   }
@@ -220,6 +225,8 @@ export async function createSession(formData: FormData) {
         endTime,
         durationHours,
         capacity,
+        onlineCapacity,
+        offlineCapacity,
         availableSlots: capacity,
         status: 'OPEN',
         notes,
@@ -249,6 +256,8 @@ export async function updateSession(formData: FormData) {
   const startTime = formData.get('startTime') as string
   const endTime = formData.get('endTime') as string
   const capacityStr = formData.get('capacity') as string
+  const onlineCapacityStr = formData.get('onlineCapacity') as string
+  const offlineCapacityStr = formData.get('offlineCapacity') as string
   const pricingType = formData.get('pricingType') as string
   const notes = formData.get('notes') as string | undefined
   const collaborator = formData.get('collaborator') as string | undefined
@@ -268,7 +277,10 @@ export async function updateSession(formData: FormData) {
     return { error: 'All fields are required.' }
   }
 
-  const capacity = capacityStr ? parseInt(capacityStr, 10) : 20
+  const onlineCapacity = onlineCapacityStr ? parseInt(onlineCapacityStr, 10) : 10
+  const offlineCapacity = offlineCapacityStr ? parseInt(offlineCapacityStr, 10) : 10
+  const capacity = (onlineCapacity > 0 && offlineCapacity > 0) ? (onlineCapacity + offlineCapacity) : (capacityStr ? parseInt(capacityStr, 10) : 20)
+
   if (isNaN(capacity) || capacity <= 0) {
     return { error: 'Capacity must be a positive integer.' }
   }
@@ -308,6 +320,8 @@ export async function updateSession(formData: FormData) {
         endTime,
         durationHours,
         capacity,
+        onlineCapacity,
+        offlineCapacity,
         availableSlots: newAvailableSlots,
         notes,
         collaborator: collaborator?.trim() || null

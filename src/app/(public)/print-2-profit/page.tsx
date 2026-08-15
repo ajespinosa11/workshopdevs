@@ -41,9 +41,13 @@ export default async function Print2ProfitPage() {
       bookedCount += (r.participantsCount || 1)
     })
 
+    const onlineCap = (s.onlineCapacity ?? Math.floor(s.capacity / 2)) || 10
+
     return {
       ...s,
-      availableSlots: Math.max(0, s.capacity - bookedCount)
+      capacity: onlineCap,
+      totalCapacity: s.capacity,
+      availableSlots: Math.max(0, onlineCap - bookedCount)
     }
   })
 

@@ -101,6 +101,8 @@ model WorkshopSession {
   endTime          String
   durationHours    Int
   capacity         Int      @default(20)
+  onlineCapacity   Int?     @default(10)
+  offlineCapacity  Int?     @default(10)
   availableSlots   Int
   status           String   @default("OPEN") // OPEN, FULL, CANCELLED, COMPLETED
   notes            String?

@@ -69,7 +69,8 @@ export async function validateFreeRegistrationAndGetSessions(paxCount: number) {
       bookedCount += (r.participantsCount || 1)
     })
 
-    const computedAvailable = Math.max(0, s.capacity - bookedCount)
+    const targetOnlineCapacity = (s.onlineCapacity ?? Math.floor(s.capacity / 2)) || 10
+    const computedAvailable = Math.max(0, targetOnlineCapacity - bookedCount)
 
     return {
       id: s.id,
@@ -78,7 +79,10 @@ export async function validateFreeRegistrationAndGetSessions(paxCount: number) {
       startTime: s.startTime,
       endTime: s.endTime,
       durationHours: s.durationHours,
-      capacity: s.capacity,
+      capacity: targetOnlineCapacity,
+      totalCapacity: s.capacity,
+      onlineCapacity: targetOnlineCapacity,
+      offlineCapacity: (s.offlineCapacity ?? Math.ceil(s.capacity / 2)) || 10,
       availableSlots: computedAvailable,
       status: s.status,
       notes: s.notes,

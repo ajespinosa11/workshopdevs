@@ -22,6 +22,8 @@ interface SessionData {
   endTime: string
   durationHours: number
   capacity: number
+  onlineCapacity?: number | null
+  offlineCapacity?: number | null
   availableSlots: number
   status: string
   bookingsCount: number
@@ -218,6 +220,8 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
   const [selectedModuleId, setSelectedModuleId] = useState(modules.length > 0 ? modules[0].id : '')
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('11:00')
+  const [onlineCapacity, setOnlineCapacity] = useState(10)
+  const [offlineCapacity, setOfflineCapacity] = useState(10)
   const [capacity, setCapacity] = useState(20)
   const [actionError, setActionError] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
@@ -234,6 +238,8 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
   const [editFreeSubCategory, setEditFreeSubCategory] = useState<'ADULT' | 'KID'>('ADULT')
   const [editStartTime, setEditStartTime] = useState('09:00')
   const [editEndTime, setEditEndTime] = useState('11:00')
+  const [editOnlineCapacity, setEditOnlineCapacity] = useState(10)
+  const [editOfflineCapacity, setEditOfflineCapacity] = useState(10)
   const [editCapacity, setEditCapacity] = useState(20)
   const [editNotes, setEditNotes] = useState('')
   const [editCollaborator, setEditCollaborator] = useState('')
@@ -399,6 +405,10 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     setEditFreeSubCategory(s.category === 'FREE_KID' ? 'KID' : 'ADULT')
     setEditStartTime(s.startTime)
     setEditEndTime(s.endTime)
+    const onCap = (s.onlineCapacity ?? Math.floor(s.capacity / 2)) || 10
+    const offCap = (s.offlineCapacity ?? Math.ceil(s.capacity / 2)) || 10
+    setEditOnlineCapacity(onCap)
+    setEditOfflineCapacity(offCap)
     setEditCapacity(s.capacity)
     setEditNotes(s.notes || '')
     setEditCollaborator(s.collaborator || '')
@@ -419,7 +429,9 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     formData.append('freeSubCategory', editPricingType === 'FREE' ? editFreeSubCategory : '')
     formData.append('startTime', editStartTime)
     formData.append('endTime', editEndTime)
-    formData.append('capacity', editCapacity.toString())
+    formData.append('onlineCapacity', editOnlineCapacity.toString())
+    formData.append('offlineCapacity', editOfflineCapacity.toString())
+    formData.append('capacity', (editOnlineCapacity + editOfflineCapacity).toString())
     formData.append('notes', editNotes)
     formData.append('collaborator', editCollaborator)
 
@@ -1166,20 +1178,44 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                 </div>
               </div>
 
-              <div className="input-group">
-                <label style={{ fontWeight: 600 }}>Session Capacity</label>
-                <input
-                  type="number"
-                  min={editSession.capacity - editSession.availableSlots || 1}
-                  value={editCapacity}
-                  onChange={(e) => setEditCapacity(parseInt(e.target.value, 10))}
-                  className="input-field"
-                  required
-                  style={{ borderRadius: '0.5rem' }}
-                />
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '0.75rem', padding: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>📊 Seat Allocation Breakdown</span>
+                  <span style={{ fontSize: '0.78rem', color: '#6366f1', background: '#eef2ff', padding: '0.2rem 0.6rem', borderRadius: '99px' }}>
+                    Total Backend Capacity: <strong>{editOnlineCapacity + editOfflineCapacity} seats</strong>
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="input-group">
+                    <label style={{ fontWeight: 600, fontSize: '0.82rem' }}>🌐 Online Seats (Website)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={editOnlineCapacity}
+                      onChange={(e) => setEditOnlineCapacity(Math.max(1, parseInt(e.target.value, 10) || 0))}
+                      className="input-field"
+                      required
+                      style={{ borderRadius: '0.5rem' }}
+                    />
+                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Displayed on the website for public booking</span>
+                  </div>
+                  <div className="input-group">
+                    <label style={{ fontWeight: 600, fontSize: '0.82rem' }}>🏢 Offline / Manual Reservation Seats</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={editOfflineCapacity}
+                      onChange={(e) => setEditOfflineCapacity(Math.max(1, parseInt(e.target.value, 10) || 0))}
+                      className="input-field"
+                      required
+                      style={{ borderRadius: '0.5rem' }}
+                    />
+                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Reserved for walk-ins &amp; admin manual entries</span>
+                  </div>
+                </div>
                 {editSession.bookingsCount > 0 && (
-                  <div style={{ fontSize: '0.78rem', color: '#b45309', marginTop: '4px' }}>
-                    ⚠️ {editSession.bookingsCount} booking(s) already exist — capacity cannot go below {editSession.capacity - editSession.availableSlots}.
+                  <div style={{ fontSize: '0.78rem', color: '#b45309', marginTop: '2px' }}>
+                    ⚠️ {editSession.bookingsCount} booking(s) already exist — total capacity is currently {editOnlineCapacity + editOfflineCapacity}.
                   </div>
                 )}
               </div>
@@ -1423,9 +1459,41 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                 </div>
               </div>
 
-              <div className="input-group">
-                <label style={{ fontWeight: 600 }}>Session Capacity</label>
-                <input type="number" min="1" value={capacity} onChange={(e) => setCapacity(parseInt(e.target.value, 10))} className="input-field" required style={{ borderRadius: '0.5rem' }} />
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '0.75rem', padding: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>📊 Seat Allocation Breakdown</span>
+                  <span style={{ fontSize: '0.78rem', color: '#6366f1', background: '#eef2ff', padding: '0.2rem 0.6rem', borderRadius: '99px' }}>
+                    Total Backend Capacity: <strong>{onlineCapacity + offlineCapacity} seats</strong>
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="input-group">
+                    <label style={{ fontWeight: 600, fontSize: '0.82rem' }}>🌐 Online Seats (Website)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={onlineCapacity}
+                      onChange={(e) => setOnlineCapacity(Math.max(1, parseInt(e.target.value, 10) || 0))}
+                      className="input-field"
+                      required
+                      style={{ borderRadius: '0.5rem' }}
+                    />
+                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Displayed on the website for public booking</span>
+                  </div>
+                  <div className="input-group">
+                    <label style={{ fontWeight: 600, fontSize: '0.82rem' }}>🏢 Offline / Manual Reservation Seats</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={offlineCapacity}
+                      onChange={(e) => setOfflineCapacity(Math.max(1, parseInt(e.target.value, 10) || 0))}
+                      className="input-field"
+                      required
+                      style={{ borderRadius: '0.5rem' }}
+                    />
+                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Reserved for walk-ins &amp; admin manual entries</span>
+                  </div>
+                </div>
               </div>
 
               {/* Formatted Textarea for Event Description */}
