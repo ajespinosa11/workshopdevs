@@ -42,6 +42,17 @@ export async function validateCheckInDetails(formData: FormData) {
                         sDate.getDate() === now.getDate()
     }
 
+    let inCheckInWindow = true
+    if (reg.session?.sessionDate && reg.session?.startTime) {
+      const [h, m] = reg.session.startTime.split(':').map(Number)
+      const sessionStart = new Date(reg.session.sessionDate)
+      sessionStart.setHours(h, m, 0, 0)
+      const windowStart = new Date(sessionStart.getTime() - 30 * 60 * 1000)
+      if (now < windowStart) {
+        inCheckInWindow = false
+      }
+    }
+
     const validationIssues: string[] = []
     if (isCancelled) validationIssues.push(`This reservation is currently CANCELLED (${reg.status.replace(/_/g, ' ')}).`)
     if (isAlreadyCheckedIn) validationIssues.push(`Customer is ALREADY CHECKED IN for this session.`)
@@ -50,6 +61,9 @@ export async function validateCheckInDetails(formData: FormData) {
     if (!isTodaySchedule && reg.session?.sessionDate) {
       const formattedDate = new Date(reg.session.sessionDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
       validationIssues.push(`Schedule date is ${formattedDate}, which does not match today's date.`)
+    }
+    if (isTodaySchedule && !inCheckInWindow && reg.session?.startTime) {
+      validationIssues.push(`Check-in is locked until 30 minutes before session start time (${reg.session.startTime}).`)
     }
 
     const canCheckIn = validationIssues.length === 0
@@ -112,6 +126,17 @@ export async function validateCheckInDetails(formData: FormData) {
                         sDate.getDate() === now.getDate()
     }
 
+    let inCheckInWindow = true
+    if (booking.session?.sessionDate && booking.session?.startTime) {
+      const [h, m] = booking.session.startTime.split(':').map(Number)
+      const sessionStart = new Date(booking.session.sessionDate)
+      sessionStart.setHours(h, m, 0, 0)
+      const windowStart = new Date(sessionStart.getTime() - 30 * 60 * 1000)
+      if (now < windowStart) {
+        inCheckInWindow = false
+      }
+    }
+
     const validationIssues: string[] = []
     if (isCancelled) validationIssues.push(`This booking is CANCELLED.`)
     if (isAlreadyCheckedIn) validationIssues.push(`Customer is ALREADY CHECKED IN.`)
@@ -120,6 +145,9 @@ export async function validateCheckInDetails(formData: FormData) {
     if (!isTodaySchedule && booking.session?.sessionDate) {
       const formattedDate = new Date(booking.session.sessionDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
       validationIssues.push(`Schedule date is ${formattedDate}, which does not match today's date.`)
+    }
+    if (isTodaySchedule && !inCheckInWindow && booking.session?.startTime) {
+      validationIssues.push(`Check-in is locked until 30 minutes before session start time (${booking.session.startTime}).`)
     }
 
     const canCheckIn = validationIssues.length === 0
