@@ -703,7 +703,7 @@ export default function BookSessionForm() {
   // MAIN REDESIGNED 2-COLUMN VIEW
   // ──────────────────────────────────────────
   return (
-    <div className="w-full animate-fade-in" style={{ maxWidth: '1240px', margin: '0 auto', padding: '2.5rem 1rem 5rem' }}>
+    <div className="booking-page-wrapper animate-fade-in">
       
       {/* Page Title & Subtitle */}
       <div style={{ marginBottom: '2.5rem', textAlign: activePanel ? 'left' : 'center' }}>
@@ -862,7 +862,7 @@ export default function BookSessionForm() {
 
           {/* ACTIVE FLOW CONTENT */}
           {activePanel && (
-            <div style={{ background: '#ffffff', borderRadius: '1.25rem', padding: '1.75rem', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px rgba(0,0,0,0.03)' }} className="animate-fade-in">
+            <div style={{ background: '#ffffff', borderRadius: '1.25rem', padding: '1.75rem', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px rgba(0,0,0,0.03)', overflow: 'hidden', minWidth: 0 }} className="animate-fade-in">
               
               {/* Back Button */}
               {step === 1 && !activeBooking && !showReschedulePanel && (
@@ -1109,37 +1109,13 @@ export default function BookSessionForm() {
                                   background: isSelected ? '#fffaf5' : '#ffffff',
                                   cursor: 'pointer',
                                   transition: 'all 0.2s ease',
-                                  boxShadow: isSelected ? '0 4px 12px rgba(249,115,22,0.12)' : '0 1px 3px rgba(0,0,0,0.03)'
+                                  boxShadow: isSelected ? '0 4px 12px rgba(249,115,22,0.12)' : '0 1px 3px rgba(0,0,0,0.03)',
+                                  overflow: 'hidden',
+                                  wordBreak: 'break-word'
                                 }}
                               >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
-                                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
-                                    <input 
-                                      type="radio" 
-                                      name="selectedSessionFree" 
-                                      value={s.id} 
-                                      checked={isSelected} 
-                                      onChange={() => setSelectedSessionId(s.id)}
-                                      style={{ marginTop: '3px', accentColor: 'var(--accent)' }}
-                                    />
-                                    <div>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                        <strong style={{ fontSize: '1rem', color: 'var(--primary)', fontWeight: 800 }}>
-                                          {s.module?.name || 'Free Workshop'}
-                                        </strong>
-                                        {isKid && (
-                                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '99px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>
-                                            👦 KID + Guardian (2 Pax)
-                                          </span>
-                                        )}
-                                      </div>
-                                      
-                                      <div style={{ fontSize: '0.85rem', color: 'var(--accent)', fontWeight: 700, marginTop: '2px' }}>
-                                        ⏰ {formatTime(s.startTime)} – {formatTime(s.endTime)}
-                                      </div>
-                                    </div>
-                                  </div>
-
+                                {/* Slots badge — floated top-right */}
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
                                   <span style={{
                                     fontSize: '0.72rem',
                                     fontWeight: 700,
@@ -1148,11 +1124,41 @@ export default function BookSessionForm() {
                                     background: s.availableSlots <= 3 ? '#fef2f2' : '#f0fdf4',
                                     color: s.availableSlots <= 3 ? '#dc2626' : '#16a34a',
                                     border: s.availableSlots <= 3 ? '1px solid #fca5a5' : '1px solid #bbf7d0',
-                                    whiteSpace: 'nowrap'
+                                    whiteSpace: 'nowrap',
+                                    flexShrink: 0
                                   }}>
                                     ⚡ {s.availableSlots} slot{s.availableSlots !== 1 ? 's' : ''} left
                                   </span>
                                 </div>
+
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', minWidth: 0 }}>
+                                  <input 
+                                    type="radio" 
+                                    name="selectedSessionFree" 
+                                    value={s.id} 
+                                    checked={isSelected} 
+                                    onChange={() => setSelectedSessionId(s.id)}
+                                    style={{ marginTop: '3px', accentColor: 'var(--accent)', flexShrink: 0 }}
+                                  />
+                                  <div style={{ minWidth: 0, flex: 1 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                      <strong style={{ fontSize: '1rem', color: 'var(--primary)', fontWeight: 800, wordBreak: 'break-word' }}>
+                                        {s.module?.name || 'Free Workshop'}
+                                      </strong>
+                                      {isKid && (
+                                        <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '99px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', whiteSpace: 'nowrap' }}>
+                                          👦 KID + Guardian (2 Pax)
+                                        </span>
+                                      )}
+                                    </div>
+                                    
+                                    <div style={{ fontSize: '0.85rem', color: 'var(--accent)', fontWeight: 700, marginTop: '2px' }}>
+                                      ⏰ {formatTime(s.startTime)} – {formatTime(s.endTime)}
+                                    </div>
+                                  </div>
+                                </div>
+
+
 
                                 {/* Workshop Description */}
                                 {desc && (
@@ -1162,7 +1168,10 @@ export default function BookSessionForm() {
                                     borderTop: '1px dashed #e2e8f0',
                                     fontSize: '0.82rem',
                                     color: '#475569',
-                                    lineHeight: '1.5'
+                                    lineHeight: '1.5',
+                                    overflowWrap: 'break-word',
+                                    wordBreak: 'break-word',
+                                    overflow: 'hidden'
                                   }}>
                                     <span dangerouslySetInnerHTML={{
                                       __html: desc

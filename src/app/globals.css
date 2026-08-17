@@ -263,24 +263,76 @@ a {
 
 /* Navigation Responsive Styles */
 .navbar {
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  position: sticky;
+  top: 0;
   z-index: 1000;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 }
 
 .nav-container {
   display: flex;
   width: 100%;
-  max-width: 1240px;
+  max-width: 1380px;
   margin: 0 auto;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1.5rem;
+  padding: 0.85rem 2rem;
 }
 
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 1.75rem;
+  gap: 0.5rem;
+}
+
+.nav-item-link {
+  position: relative;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--primary);
+  padding: 0.5rem 0.9rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.nav-item-link:hover {
+  background: rgba(15, 37, 64, 0.05);
+  color: var(--accent);
+}
+
+.nav-item-link.active {
+  background: rgba(249, 115, 22, 0.1);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.nav-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: #ffffff !important;
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 0.55rem 1.25rem;
+  border-radius: 9999px;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
+  transition: all 0.25s ease;
+}
+
+.nav-cta-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(249, 115, 22, 0.35);
+  color: #ffffff !important;
 }
 
 .nav-hamburger {
@@ -336,6 +388,7 @@ a {
   }
 }
 
+
 /* Layout classes */
 .container {
   width: 100%;
@@ -346,9 +399,11 @@ a {
 
 .container-fluid {
   width: 100%;
-  max-width: 95%;
+  max-width: 1380px;
   margin: 0 auto;
   padding: 0 1.5rem;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .page-wrapper {
@@ -356,6 +411,9 @@ a {
   display: flex;
   flex-direction: column;
   padding: 3rem 0;
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 @media (max-width: 640px) {
@@ -458,16 +516,11 @@ a {
 /* Navigation */
 .navbar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.5rem;
-  background: var(--card-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--card-border);
+  flex-direction: column;
+  width: 100%;
   position: sticky;
   top: 0;
-  z-index: 200;
+  z-index: 1000;
 }
 
 .nav-links {
@@ -2184,8 +2237,16 @@ a {
 }
 
 /* ══════════════════════════════════════════════
-   BOOKING SESSION – two-column layout
+   BOOKING SESSION – page wrapper & two-column layout
    ══════════════════════════════════════════════ */
+.booking-page-wrapper {
+  width: 100%;
+  padding: 2.5rem 0 5rem;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  min-width: 0;
+}
+
 .booking-layout-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
@@ -2194,13 +2255,30 @@ a {
 }
 
 @media (max-width: 900px) {
+  .booking-page-wrapper {
+    padding: 1.5rem 0 3rem;
+  }
+
   .booking-layout-grid {
     grid-template-columns: 1fr;
+    gap: 1.5rem;
   }
 
   /* Move the form / right column above the venue gallery on mobile */
   .booking-location-column {
     order: 2;
+  }
+}
+
+/* Responsive heading for booking page on mobile */
+@media (max-width: 640px) {
+  .booking-page-wrapper h1 {
+    font-size: 1.65rem !important;
+    line-height: 1.2;
+    word-break: break-word;
+  }
+  .booking-page-wrapper > div:first-child {
+    margin-bottom: 1.5rem !important;
   }
 }
 
@@ -2419,5 +2497,64 @@ p, h1, h2, h3, h4, h5, h6, li, td, th {
   div[style*="position: fixed"] > div[style*="maxWidth: '500px'"] {
     width: 95% !important;
     padding: 1.5rem !important;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   P2P WORKSHOP FILTER BAR RESPONSIVENESS
+   ══════════════════════════════════════════════ */
+.p2p-filter-bar-container {
+  max-width: 1100px;
+  margin: 24px auto 0;
+  padding: 0 20px;
+}
+
+.p2p-filter-bar {
+  background: #f1f5f9;
+  border-radius: 14px;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.p2p-filter-btn {
+  flex: 1;
+  padding: 11px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .p2p-filter-bar-container {
+    padding: 0 12px;
+    margin-top: 16px;
+  }
+
+  .p2p-filter-btn {
+    padding: 9px 6px;
+    font-size: 13px;
+    gap: 5px;
+  }
+}
+
+@media (max-width: 480px) {
+  .p2p-filter-label-word {
+    display: none;
+  }
+
+  .p2p-filter-btn {
+    padding: 8px 4px;
+    font-size: 12px;
   }
 }

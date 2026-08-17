@@ -14,28 +14,28 @@ export default function Navigation() {
   useEffect(() => {
     if (pathname === '/book-session') {
       const tab = searchParams.get('tab')
-      setActiveTab(tab || 'voucher') // Default tab is voucher booking
+      setActiveTab(tab || 'voucher')
     } else {
       setActiveTab(null)
     }
   }, [pathname, searchParams])
 
   const links = [
-    { href: '/print-2-profit',           label: 'Workshops & Events', key: 'p2p' },
-    { href: '/book-session?tab=free',    label: 'Free Workshops',      key: 'free'    },
-    { href: '/book-session?tab=manage',  label: 'My Bookings',         key: 'manage'  },
+    { href: '/print-2-profit',          label: 'Workshops & Events', key: 'p2p' },
+    { href: '/book-session?tab=free',   label: 'Free Workshops',     key: 'free' },
+    { href: '/book-session?tab=manage', label: 'My Bookings',        key: 'manage' },
   ]
 
   return (
-    <nav className="navbar" style={{ background: 'rgba(255, 255, 255, 0.95)', borderBottom: '1px solid #e2e8f0', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
-      <div className="container nav-container" style={{ display: 'flex', width: '100%', maxWidth: '1240px', margin: '0 auto', justifyContent: 'space-between', alignItems: 'center' }}>
+    <nav className="navbar">
+      <div className="nav-container">
         <Link href="/" className="nav-logo" style={{ display: 'flex', alignItems: 'center' }}>
           <Image
             src="/New Logo 2024 Liner Name Dark large symbol.png"
             alt="Makerlab 3D Workshop Logo"
             height={44}
-            width={160}
-            style={{ objectFit: 'contain', objectPosition: 'left center', maxWidth: '140px', height: 'auto' }}
+            width={170}
+            style={{ objectFit: 'contain', objectPosition: 'left center', height: 'auto' }}
             priority
           />
         </Link>
@@ -43,37 +43,25 @@ export default function Navigation() {
         {/* Desktop links */}
         <div className="nav-links">
           {links.map(l => {
-            const isActive = activeTab === l.key
+            const isActive = activeTab === l.key || pathname === l.href
             return (
               <Link
                 key={l.href}
                 href={l.href}
-                className="nav-link"
-                style={{
-                  position: 'relative',
-                  fontWeight: 700,
-                  fontSize: '0.92rem',
-                  color: isActive ? 'var(--accent)' : 'var(--primary)',
-                  padding: '0.4rem 0.1rem',
-                  textDecoration: 'none',
-                  transition: 'all 0.25s ease'
-                }}
+                className={`nav-item-link ${isActive ? 'active' : ''}`}
               >
                 {l.label}
-                {/* Underline Indicator Animation */}
-                <span style={{
-                  position: 'absolute',
-                  bottom: '-2px',
-                  left: 0,
-                  width: isActive ? '100%' : '0%',
-                  height: '2px',
-                  background: 'var(--accent)',
-                  transition: 'width 0.25s ease-in-out',
-                  borderRadius: '2px'
-                }} />
               </Link>
             )
           })}
+
+          <Link href="/book-session" className="nav-cta-btn" style={{ marginLeft: '0.5rem' }}>
+            <span>Book Session</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </Link>
         </div>
 
         {/* Mobile hamburger */}
@@ -95,20 +83,17 @@ export default function Navigation() {
       {mobileOpen && (
         <div className="nav-mobile-menu">
           {links.map(l => {
-            const isActive = activeTab === l.key
+            const isActive = activeTab === l.key || pathname === l.href
             return (
               <Link
                 key={l.href}
                 href={l.href}
-                className="nav-link"
                 onClick={() => setMobileOpen(false)}
+                className={`nav-item-link ${isActive ? 'active' : ''}`}
                 style={{ 
-                  padding: '0.75rem 0.75rem', 
+                  padding: '0.75rem 1rem', 
                   borderRadius: '0.5rem', 
                   fontSize: '0.95rem',
-                  fontWeight: 700,
-                  color: isActive ? 'var(--accent)' : 'var(--primary)',
-                  background: isActive ? '#fff7ed' : 'transparent',
                   display: 'block'
                 }}
               >
@@ -116,6 +101,14 @@ export default function Navigation() {
               </Link>
             )
           })}
+          <Link
+            href="/book-session"
+            onClick={() => setMobileOpen(false)}
+            className="nav-cta-btn"
+            style={{ marginTop: '0.5rem', justifyContent: 'center', width: '100%', borderRadius: '0.5rem' }}
+          >
+            <span>Book Session</span>
+          </Link>
         </div>
       )}
     </nav>

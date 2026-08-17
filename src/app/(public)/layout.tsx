@@ -17,11 +17,18 @@ export default function PublicLayout({
       <Navigation />
       <main
         className="page-wrapper animate-fade-in"
-        style={isHome ? { paddingTop: 0 } : undefined}
+        style={isHome ? { padding: 0 } : undefined}
       >
-        <div className={isBookSession || isHome ? "container-fluid" : "container"}>
-          {children}
-        </div>
+        {isHome ? (
+          // Homepage: full-bleed, no container wrapper
+          <>{children}</>
+        ) : isBookSession ? (
+          // Book session: wide container with side padding
+          <div className="container-fluid">{children}</div>
+        ) : (
+          // All other pages: standard centered container
+          <div className="container">{children}</div>
+        )}
       </main>
     </>
   );

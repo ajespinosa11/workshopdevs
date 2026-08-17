@@ -187,21 +187,20 @@ export default function Print2ProfitClient({ sessions }: Props) {
   const [pendingSession, setPendingSession] = useState<Session | null>(null)
 
 
-  // Module Filtering
-  const [selectedModuleFilter, setSelectedModuleFilter] = useState<string>('ALL')
+  // Workshop Type Filtering: 'ALL' | 'PAID' | 'FREE'
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<'ALL' | 'PAID' | 'FREE'>('ALL')
 
-  const availableModuleNames = useMemo(() => {
-    const names = new Set<string>()
-    sessions.forEach(s => {
-      if (s.module?.name) names.add(s.module.name)
-    })
-    return Array.from(names)
-  }, [sessions])
+  const isFreeSession = (s: Session) =>
+    (s.module?.name || '').toLowerCase().includes('free')
 
   const filteredSessions = useMemo(() => {
-    if (selectedModuleFilter === 'ALL') return sessions
-    return sessions.filter(s => s.module?.name === selectedModuleFilter)
-  }, [sessions, selectedModuleFilter])
+    if (selectedTypeFilter === 'FREE') return sessions.filter(s => isFreeSession(s))
+    if (selectedTypeFilter === 'PAID') return sessions.filter(s => !isFreeSession(s))
+    return sessions
+  }, [sessions, selectedTypeFilter])
+
+  const freeCount = useMemo(() => sessions.filter(s => isFreeSession(s)).length, [sessions])
+  const paidCount = useMemo(() => sessions.filter(s => !isFreeSession(s)).length, [sessions])
 
   // Map session dates for quick lookup based on filtered sessions
   const sessionDatesMap = useMemo(() => {
@@ -267,51 +266,43 @@ export default function Print2ProfitClient({ sessions }: Props) {
         </div>
       </div>
 
-      {/* Workshop Module Filter Bar */}
-      <div style={{ maxWidth: '1100px', margin: '24px auto 0', padding: '0 20px' }}>
-        <div style={{
-          background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0',
-          padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
-        }}>
-          <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Filter Workshop:
-          </span>
-          <button
-            onClick={() => { setSelectedModuleFilter('ALL'); setSelectedDate(null) }}
-            style={{
-              padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 700,
-              border: selectedModuleFilter === 'ALL' ? 'none' : '1px solid #cbd5e1',
-              background: selectedModuleFilter === 'ALL' ? '#0f2540' : '#f8fafc',
-              color: selectedModuleFilter === 'ALL' ? '#ffffff' : '#475569',
-              cursor: 'pointer', transition: 'all 0.2s ease'
-            }}
-          >
-            All Workshops ({sessions.length})
-          </button>
-          {availableModuleNames.map(modName => {
-            const count = sessions.filter(s => s.module?.name === modName).length
-            const isSel = selectedModuleFilter === modName
-            const theme = getModuleTheme(modName)
+      {/* Workshop Type Filter Bar */}
+      <div className="p2p-filter-bar-container">
+        <div className="p2p-filter-bar">
+          {([
+            { key: 'ALL',  label: 'All',  subLabel: 'Workshops', count: sessions.length },
+            { key: 'PAID', label: 'Paid', subLabel: 'Workshops', count: paidCount },
+            { key: 'FREE', label: 'Free', subLabel: 'Workshops', count: freeCount },
+          ] as const).map(tab => {
+            const isSel = selectedTypeFilter === tab.key
             return (
               <button
-                key={modName}
-                onClick={() => { setSelectedModuleFilter(modName); setSelectedDate(null) }}
+                key={tab.key}
+                onClick={() => { setSelectedTypeFilter(tab.key); setSelectedDate(null) }}
+                className="p2p-filter-btn"
                 style={{
-                  padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 700,
-                  border: isSel ? 'none' : `1px solid ${theme.border}`,
-                  background: isSel ? theme.primary : theme.bgLight,
-                  color: isSel ? '#ffffff' : theme.badgeText,
-                  cursor: 'pointer', transition: 'all 0.2s ease',
-                  boxShadow: isSel ? `0 4px 12px ${theme.primary}33` : 'none'
+                  background: isSel ? '#f97316' : 'transparent',
+                  color: isSel ? '#ffffff' : '#64748b',
+                  boxShadow: isSel ? '0 4px 14px rgba(249,115,22,0.35)' : 'none',
                 }}
               >
-                {modName} ({count})
+                <span>
+                  {tab.label}
+                  <span className="p2p-filter-label-word"> {tab.subLabel}</span>
+                </span>
+                <span style={{
+                  background: isSel ? 'rgba(255,255,255,0.28)' : '#e2e8f0',
+                  color: isSel ? '#ffffff' : '#475569',
+                  fontSize: '12px', fontWeight: 800,
+                  padding: '2px 8px', borderRadius: '99px',
+                  minWidth: '22px', textAlign: 'center',
+                }}>{tab.count}</span>
               </button>
             )
           })}
         </div>
       </div>
+
 
       {/* Main Grid Content */}
       <div style={{
@@ -557,13 +548,14 @@ export default function Print2ProfitClient({ sessions }: Props) {
                 {/* Session Header */}
                 <div style={{
                   background: theme.bgLight, borderBottom: `1px solid ${theme.border}`,
-                  padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                  flexWrap: 'wrap', gap: '8px',
                 }}>
-                  <div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: '11px', fontWeight: 800, color: theme.primary, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       {theme.name}
                     </div>
-                    <div style={{ color: '#0f172a', fontWeight: 800, fontSize: '16px', marginTop: '2px' }}>
+                    <div style={{ color: '#0f172a', fontWeight: 800, fontSize: '16px', marginTop: '2px', wordBreak: 'break-word' }}>
                       {formatDate(session.sessionDate)}
                     </div>
                   </div>
@@ -572,17 +564,18 @@ export default function Print2ProfitClient({ sessions }: Props) {
                     background: isFull ? '#fef2f2' : isLow ? '#fff7ed' : '#f0fdf4',
                     color: isFull ? '#ef4444' : isLow ? '#c2410c' : '#15803d',
                     border: `1px solid ${isFull ? '#fecaca' : isLow ? '#ffedd5' : '#bbf7d0'}`,
+                    whiteSpace: 'nowrap', flexShrink: 0,
                   }}>
                     {isFull ? 'FULL' : isLow ? 'LIMITED SLOTS' : 'AVAILABLE'}
                   </span>
                 </div>
 
                 {/* Session Details List */}
-                <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'hidden' }}>
 
                   {/* Workshop Title & Description */}
                   <div style={{ borderBottom: '1px dashed #e2e8f0', paddingBottom: '14px' }}>
-                    <div style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>
+                    <div style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a', marginBottom: '6px', wordBreak: 'break-word' }}>
                       {session.module?.name || 'Workshop Session'}
                     </div>
                     {session.collaborator && (
@@ -595,7 +588,7 @@ export default function Print2ProfitClient({ sessions }: Props) {
                         🤝 In collaboration with: <strong>{session.collaborator}</strong>
                       </div>
                     )}
-                    <div style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.6 }}>
+                    <div style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.6, wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                       {session.module?.description ? renderFormattedText(session.module.description) : 'Hands-on practical workshop session at Makerlab.'}
                     </div>
                   </div>
