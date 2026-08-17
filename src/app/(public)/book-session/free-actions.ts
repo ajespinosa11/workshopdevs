@@ -54,23 +54,28 @@ export async function validateFreeRegistrationAndGetSessions(paxCount: number) {
     const activeBookings = s.bookings.filter(b => !['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'RELEASED_TO_WALKIN', 'REFUNDED'].includes(b.status))
     const activeRegistrations = s.registrations.filter(r => !['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED'].includes(r.status))
 
-    let bookedCount = 0
+    let onlineBookedCount = 0
     activeBookings.forEach(b => {
       if (s.category === 'FREE_KID' || (b.notes && b.notes.includes('KID'))) {
-        bookedCount += 2
+        onlineBookedCount += 2
       } else if (b.notes) {
         const match = b.notes.match(/for (\d+) pax/)
-        bookedCount += match ? parseInt(match[1], 10) : 1
+        onlineBookedCount += match ? parseInt(match[1], 10) : 1
       } else {
-        bookedCount += 1
+        onlineBookedCount += 1
       }
     })
+
     activeRegistrations.forEach(r => {
-      bookedCount += (r.participantsCount || 1)
+      const channel = (r.salesChannel || '').toUpperCase()
+      const isWalkIn = channel.includes('WALK_IN') || channel.includes('MANUAL') || channel.includes('OFFLINE') || (r.notes && r.notes.toLowerCase().includes('walk-in'))
+      if (!isWalkIn) {
+        onlineBookedCount += (r.participantsCount || 1)
+      }
     })
 
-    const targetOnlineCapacity = (s.onlineCapacity ?? Math.floor(s.capacity / 2)) || 10
-    const computedAvailable = Math.max(0, targetOnlineCapacity - bookedCount)
+    const targetOnlineCapacity = typeof s.onlineCapacity === 'number' && s.onlineCapacity >= 0 ? s.onlineCapacity : (Math.floor(s.capacity / 2) || 10)
+    const computedAvailable = Math.max(0, targetOnlineCapacity - onlineBookedCount)
 
     return {
       id: s.id,

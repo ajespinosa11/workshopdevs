@@ -400,13 +400,22 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
 
   function openEditModal(s: SessionData) {
     setEditSession(s)
-    setEditModuleId(s.module?.id || (modules.length > 0 ? modules[0].id : ''))
-    setEditPricingType(s.category === 'PAID' ? 'PAID' : 'FREE')
-    setEditFreeSubCategory(s.category === 'FREE_KID' ? 'KID' : 'ADULT')
+    const initialModId = s.module?.id || (modules.length > 0 ? modules[0].id : '')
+    setEditModuleId(initialModId)
+
+    const catUpper = (s.category || '').toUpperCase()
+    const modNameUpper = (s.module?.name || '').toUpperCase()
+
+    // Determine if session is PAID: check category or module name
+    const isExplicitlyFree = catUpper.includes('FREE') || modNameUpper.includes('FREE')
+    const isPaid = catUpper.includes('PAID') || (!isExplicitlyFree && (modNameUpper.includes('PRINT') || modNameUpper.includes('PROFIT') || catUpper === 'PAID'))
+
+    setEditPricingType(isPaid ? 'PAID' : 'FREE')
+    setEditFreeSubCategory(catUpper.includes('KID') ? 'KID' : 'ADULT')
     setEditStartTime(s.startTime)
     setEditEndTime(s.endTime)
-    const onCap = (s.onlineCapacity ?? Math.floor(s.capacity / 2)) || 10
-    const offCap = (s.offlineCapacity ?? Math.ceil(s.capacity / 2)) || 10
+    const onCap = typeof s.onlineCapacity === 'number' && s.onlineCapacity >= 0 ? s.onlineCapacity : Math.floor(s.capacity / 2)
+    const offCap = typeof s.offlineCapacity === 'number' && s.offlineCapacity >= 0 ? s.offlineCapacity : Math.ceil(s.capacity / 2)
     setEditOnlineCapacity(onCap)
     setEditOfflineCapacity(offCap)
     setEditCapacity(s.capacity)
@@ -440,15 +449,18 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
       setEditError(res.error)
     } else {
       // Also save the module description if it changed
-      if (editSession.module?.id) {
-        const modData = new FormData()
-        const existing = modules.find(m => m.id === editSession.module!.id)
-        modData.append('moduleId', editSession.module.id)
-        modData.append('name', editSession.module.name)
-        modData.append('description', editDesc)
-        modData.append('category', existing?.category || 'BEGINNER')
-        modData.append('units', (existing?.units ?? 2).toString())
-        await updateModule(modData)
+      const targetModId = editModuleId || editSession.module?.id
+      if (targetModId) {
+        const existing = modules.find(m => m.id === targetModId)
+        if (existing) {
+          const modData = new FormData()
+          modData.append('moduleId', existing.id)
+          modData.append('name', existing.name)
+          modData.append('description', editDesc)
+          modData.append('category', existing.category || 'BEGINNER')
+          modData.append('units', (existing.units ?? 2).toString())
+          await updateModule(modData)
+        }
       }
       setEditSession(null)
       router.refresh()
@@ -1081,8 +1093,14 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                       const selectedId = e.target.value
                       setEditModuleId(selectedId)
                       const mod = modules.find(m => m.id === selectedId)
-                      if (mod && mod.description) {
-                        setEditDesc(mod.description)
+                      if (mod) {
+                        if (mod.description) setEditDesc(mod.description)
+                        const mName = mod.name.toUpperCase()
+                        if (mName.includes('FREE')) {
+                          setEditPricingType('FREE')
+                        } else if (mName.includes('PRINT') || mName.includes('PROFIT')) {
+                          setEditPricingType('PAID')
+                        }
                       }
                     }
                   }}

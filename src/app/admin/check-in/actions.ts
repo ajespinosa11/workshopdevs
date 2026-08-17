@@ -28,8 +28,8 @@ export async function validateCheckInDetails(formData: FormData) {
   })
 
   if (reg) {
-    const isPaidVerified = ['PAID_FOR_ADMIN_VERIFICATION', 'RESERVED', 'CONFIRMED', 'CHECKED_IN', 'ATTENDED'].includes(reg.status)
-    const isReservedStatus = ['RESERVED', 'CONFIRMED', 'PAID_FOR_ADMIN_VERIFICATION'].includes(reg.status)
+    const isPaidVerified = ['PAID_FOR_ADMIN_VERIFICATION', 'RESERVED', 'CONFIRMED', 'CHECKED_IN', 'ATTENDED', 'RESCHEDULED'].includes(reg.status)
+    const isReservedStatus = ['RESERVED', 'CONFIRMED', 'PAID_FOR_ADMIN_VERIFICATION', 'RESCHEDULED'].includes(reg.status)
     const isAlreadyCheckedIn = ['CHECKED_IN', 'ATTENDED', 'COMPLETED'].includes(reg.status)
     const isCancelled = ['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED', 'DUPLICATE_ORDER'].includes(reg.status)
 
@@ -59,7 +59,7 @@ export async function validateCheckInDetails(formData: FormData) {
     const validationIssues: string[] = []
     if (isCancelled) validationIssues.push(`This reservation is currently CANCELLED (${reg.status.replace(/_/g, ' ')}).`)
     if (isAlreadyCheckedIn) validationIssues.push(`Customer is ALREADY CHECKED IN for this session.`)
-    if (!isReservedStatus && !isAlreadyCheckedIn && !isCancelled) validationIssues.push(`Reservation status is "${reg.status.replace(/_/g, ' ')}" (Must be "Reserved").`)
+    if (!isReservedStatus && !isAlreadyCheckedIn && !isCancelled) validationIssues.push(`Reservation status is "${reg.status.replace(/_/g, ' ')}" (Must be "Reserved" or "Rescheduled").`)
     if (!isPaidVerified) validationIssues.push(`Payment status is NOT VERIFIED (Currently pending payment verification).`)
     if (!isTodaySchedule && reg.session?.sessionDate) {
       const formattedDate = new Date(reg.session.sessionDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
@@ -115,8 +115,8 @@ export async function validateCheckInDetails(formData: FormData) {
   })
 
   if (booking) {
-    const isPaidVerified = booking.balanceDuePaid && ['RESERVED', 'CHECKED_IN', 'CONFIRMED'].includes(booking.status)
-    const isReservedStatus = ['RESERVED', 'CONFIRMED'].includes(booking.status)
+    const isPaidVerified = booking.balanceDuePaid && ['RESERVED', 'CHECKED_IN', 'CONFIRMED', 'RESCHEDULED'].includes(booking.status)
+    const isReservedStatus = ['RESERVED', 'CONFIRMED', 'RESCHEDULED'].includes(booking.status)
     const isAlreadyCheckedIn = ['CHECKED_IN', 'COMPLETED_CONSUMED'].includes(booking.status)
     const isCancelled = ['CANCELLED_BY_CUSTOMER', 'RELEASED_TO_WALKIN', 'CANCELLED'].includes(booking.status)
 

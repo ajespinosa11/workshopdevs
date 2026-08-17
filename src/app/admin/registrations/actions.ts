@@ -343,57 +343,69 @@ export async function adminRescheduleRegistration(
 
       if (!reg) throw new Error('Registration not found.')
 
+      // Only allow rescheduling for customers who haven't checked in
+      if (['CHECKED_IN', 'ATTENDED', 'WALKIN_CONFIRMED'].includes(reg.status)) {
+        throw new Error('Checked-in customers cannot be rescheduled.')
+      }
+
       const oldSessionId = reg.sessionId
 
-      // Restore capacity on old session if previously reserved
-      if (oldSessionId && ['RESERVED', 'CONFIRMED'].includes(reg.status)) {
+      // Check capacity on new target session
+      const newSession = await tx.workshopSession.findUnique({ where: { id: newSessionId } })
+      if (!newSession) throw new Error('Target session not found.')
+
+      if (newSession.availableSlots < reg.participantsCount) {
+        throw new Error(`Target session does not have enough capacity. Remaining slots: ${newSession.availableSlots}`)
+      }
+
+      // Restore capacity on old session if assigned
+      if (oldSessionId) {
         const oldSession = await tx.workshopSession.findUnique({ where: { id: oldSessionId } })
         if (oldSession) {
+          const restoredSlots = oldSession.availableSlots + reg.participantsCount
           await tx.workshopSession.update({
             where: { id: oldSessionId },
             data: {
-              availableSlots: oldSession.availableSlots + reg.participantsCount,
+              availableSlots: restoredSlots,
               status: 'OPEN'
             }
           })
         }
       }
 
-      // Check capacity on new session
-      const newSession = await tx.workshopSession.findUnique({ where: { id: newSessionId } })
-      if (!newSession) throw new Error('Target session not found.')
-
-      if (newSession.availableSlots < reg.participantsCount) {
-        throw new Error(`Target session does not have enough capacity. Available: ${newSession.availableSlots}`)
-      }
-
-      // Deduct capacity on new session if already reserved
-      if (['RESERVED', 'CONFIRMED'].includes(reg.status)) {
-        const updatedSlots = Math.max(0, newSession.availableSlots - reg.participantsCount)
-        await tx.workshopSession.update({
-          where: { id: newSessionId },
-          data: {
-            availableSlots: updatedSlots,
-            status: updatedSlots === 0 ? 'FULL' : 'OPEN'
-          }
-        })
-      }
+      // Always consume (deduct) capacity on target session date
+      const updatedSlots = Math.max(0, newSession.availableSlots - reg.participantsCount)
+      await tx.workshopSession.update({
+        where: { id: newSessionId },
+        data: {
+          availableSlots: updatedSlots,
+          status: updatedSlots === 0 ? 'FULL' : 'OPEN'
+        }
+      })
 
       // Validate staff user
       const validStaff = staffId ? await tx.staffUser.findUnique({ where: { id: staffId } }) : null
       const actualStaffId = validStaff ? validStaff.id : null
 
-      // Record reschedule history log
+      // Record reschedule history log safely
       if (oldSessionId) {
-        await tx.rescheduleLog.create({
-          data: {
-            registrationId,
+        try {
+          const logData: any = {
+            registration: { connect: { id: registrationId } },
             originalSessionId: oldSessionId,
             newSessionId,
             reason,
-            processedByStaffId: actualStaffId || reg.approvedByStaffId || '00000000-0000-0000-0000-000000000000'
           }
-        })
+          const staffIdToUse = actualStaffId || reg.approvedByStaffId
+          if (staffIdToUse) {
+            logData.processedByStaff = { connect: { id: staffIdToUse } }
+          }
+          await tx.rescheduleLog.create({
+            data: logData
+          })
+        } catch (logErr) {
+          console.warn('[adminRescheduleRegistration] RescheduleLog warning:', logErr)
+        }
       }
 
       // Update registration record
@@ -417,6 +429,7 @@ export async function adminRescheduleRegistration(
     })
 
     revalidatePath('/admin/registrations')
+    revalidatePath('/admin/sessions')
     return { success: true }
 
   } catch (error: any) {

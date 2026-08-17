@@ -81,7 +81,7 @@ function checkInWindow(sessionDate: string, startTime: string) {
 function StatusBadge({ status }: { status: string }) {
   if (['CHECKED_IN', 'ATTENDED', 'COMPLETED', 'WALKIN_CONFIRMED'].includes(status))
     return <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.68rem', fontWeight: 800, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>✓ Checked In</span>
-  if (['RESERVED', 'CONFIRMED'].includes(status))
+  if (['RESERVED', 'CONFIRMED', 'RESCHEDULED'].includes(status))
     return <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.68rem', fontWeight: 800, background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe' }}>Confirmed</span>
   if (status === 'BALANCE_DUE')
     return <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.68rem', fontWeight: 800, background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a' }}>Balance Due</span>

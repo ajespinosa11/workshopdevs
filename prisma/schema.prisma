@@ -258,8 +258,8 @@ model RescheduleLog {
   originalSessionId       String
   newSessionId            String
   reason                  String
-  processedByStaffId      String
-  processedByStaff        StaffUser            @relation(fields: [processedByStaffId], references: [id])
+  processedByStaffId      String?
+  processedByStaff        StaffUser?           @relation(fields: [processedByStaffId], references: [id])
   createdAt               DateTime             @default(now())
 }
 

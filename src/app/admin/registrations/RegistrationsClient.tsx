@@ -632,6 +632,8 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
       session: any
       pendingCount: number
       reservedCount: number
+      onlineReservedCount: number
+      walkInReservedCount: number
       totalCount: number
     }>()
 
@@ -642,7 +644,7 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
       const notes = s.notes || ''
       const isFree = cat === 'FREE' || cat === 'FREE_KID' || /free/i.test(modName) || /free/i.test(notes)
       if (!isFree) {
-        map.set(s.id, { session: s, pendingCount: 0, reservedCount: 0, totalCount: 0 })
+        map.set(s.id, { session: s, pendingCount: 0, reservedCount: 0, onlineReservedCount: 0, walkInReservedCount: 0, totalCount: 0 })
       }
     })
 
@@ -656,7 +658,7 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
           const modName = r.session.module?.name || ''
           const isFree = cat === 'FREE' || cat === 'FREE_KID' || /free/i.test(modName)
           if (!isFree) {
-            map.set(r.sessionId, { session: r.session, pendingCount: 0, reservedCount: 0, totalCount: 0 })
+            map.set(r.sessionId, { session: r.session, pendingCount: 0, reservedCount: 0, onlineReservedCount: 0, walkInReservedCount: 0, totalCount: 0 })
           }
         }
       }
@@ -665,7 +667,16 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
       const pax = r.participantsCount || 1
       entry.totalCount += pax
       if (['PAID_FOR_ADMIN_VERIFICATION', 'PENDING_SCHEDULE_CONFIRMATION', 'AWAITING_PAYMENT'].includes(r.status)) entry.pendingCount += pax
-      if (['RESERVED', 'CONFIRMED', 'RESCHEDULED', 'CHECKED_IN', 'WALKIN_CONFIRMED'].includes(r.status)) entry.reservedCount += pax
+      if (['RESERVED', 'CONFIRMED', 'RESCHEDULED', 'CHECKED_IN', 'WALKIN_CONFIRMED'].includes(r.status)) {
+        entry.reservedCount += pax
+        const ch = (r.salesChannel || '').toUpperCase()
+        const isWalkIn = ch.includes('WALK_IN') || ch.includes('MANUAL') || ch.includes('OFFLINE') || (r.notes && r.notes.toLowerCase().includes('walk-in'))
+        if (isWalkIn) {
+          entry.walkInReservedCount += pax
+        } else {
+          entry.onlineReservedCount += pax
+        }
+      }
     })
 
     return Array.from(map.values())
@@ -1192,30 +1203,59 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
-                      <div style={{ textAlign: 'right' as const }}>
-                        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Capacity</div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
-                          {selectedSessionData.reservedCount} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748b' }}>/ {s.capacity}</span>
-                        </div>
-                        {(() => {
-                          const liveLeft = Math.max(0, s.capacity - selectedSessionData.reservedCount)
-                          return (
-                            <div style={{ fontSize: '0.68rem', color: liveLeft === 0 ? '#dc2626' : '#16a34a', fontWeight: 700 }}>
-                              {liveLeft === 0 ? 'Fully Booked' : `${liveLeft} slots left`}
-                            </div>
-                          )
-                        })()}
-                      </div>
+                    {(() => {
+                      const onlineCap = typeof s.onlineCapacity === 'number' && s.onlineCapacity >= 0 ? s.onlineCapacity : Math.floor(s.capacity / 2)
+                      const offlineCap = typeof s.offlineCapacity === 'number' && s.offlineCapacity >= 0 ? s.offlineCapacity : Math.ceil(s.capacity / 2)
+                      const onlineLeft = Math.max(0, onlineCap - selectedSessionData.onlineReservedCount)
+                      const walkInLeft = Math.max(0, offlineCap - selectedSessionData.walkInReservedCount)
+                      const totalLeft = Math.max(0, s.capacity - selectedSessionData.reservedCount)
 
-                      <div style={{ textAlign: 'right' as const }}>
-                        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pending Staff Review</div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#d97706' }}>
-                          {selectedSessionData.pendingCount}
+                      return (
+                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                          {/* 🌐 Online Seats */}
+                          <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '0.4rem 0.75rem', textAlign: 'right' }}>
+                            <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.04em' }}>🌐 Online (Website)</div>
+                            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
+                              {selectedSessionData.onlineReservedCount} <span style={{ fontSize: '0.72rem', fontWeight: 500, color: '#64748b' }}>/ {onlineCap}</span>
+                            </div>
+                            <div style={{ fontSize: '0.65rem', color: onlineLeft === 0 ? '#dc2626' : '#2563eb', fontWeight: 700 }}>
+                              {onlineLeft === 0 ? 'Online Full' : `${onlineLeft} online left`}
+                            </div>
+                          </div>
+
+                          {/* 🏢 Walk-In Seats */}
+                          <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '0.4rem 0.75rem', textAlign: 'right' }}>
+                            <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.04em' }}>🏢 Walk-In / Manual</div>
+                            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
+                              {selectedSessionData.walkInReservedCount} <span style={{ fontSize: '0.72rem', fontWeight: 500, color: '#64748b' }}>/ {offlineCap}</span>
+                            </div>
+                            <div style={{ fontSize: '0.65rem', color: walkInLeft === 0 ? '#dc2626' : '#7c3aed', fontWeight: 700 }}>
+                              {walkInLeft === 0 ? 'Walk-In Full' : `${walkInLeft} walk-in left`}
+                            </div>
+                          </div>
+
+                          {/* 📊 Total Capacity */}
+                          <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '0.4rem 0.75rem', textAlign: 'right' }}>
+                            <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>📊 Total Capacity</div>
+                            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
+                              {selectedSessionData.reservedCount} <span style={{ fontSize: '0.72rem', fontWeight: 500, color: '#64748b' }}>/ {s.capacity}</span>
+                            </div>
+                            <div style={{ fontSize: '0.65rem', color: totalLeft === 0 ? '#dc2626' : '#16a34a', fontWeight: 700 }}>
+                              {totalLeft === 0 ? 'Fully Booked' : `${totalLeft} total left`}
+                            </div>
+                          </div>
+
+                          {/* ⏳ Pending Staff Review */}
+                          <div style={{ textAlign: 'right', paddingLeft: '0.25rem' }}>
+                            <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pending Review</div>
+                            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#d97706' }}>
+                              {selectedSessionData.pendingCount}
+                            </div>
+                            <div style={{ fontSize: '0.65rem', color: '#64748b' }}>Awaiting lock</div>
+                          </div>
                         </div>
-                        <div style={{ fontSize: '0.68rem', color: '#64748b' }}>Awaiting lock</div>
-                      </div>
-                    </div>
+                      )
+                    })()}
                   </div>
                 )
               })()}
@@ -1395,7 +1435,7 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                                       <div style={S.dropdownMenu}>
                                         {[
                                           { icon: '👁️', label: 'View Details', onClick: () => { setDrawerBooking(r); setActionMenuOpenId(null) } },
-                                          { icon: '🔄', label: 'Reschedule', onClick: () => { setSelectedReg(r); setRescheduleSessionId(openSessions[0]?.id || ''); setRescheduleReason(''); setErrorMsg(''); setModalType('RESCHEDULE'); setActionMenuOpenId(null) } },
+                                          ...(!['CHECKED_IN', 'ATTENDED', 'WALKIN_CONFIRMED'].includes(r.status) ? [{ icon: '🔄', label: 'Reschedule', onClick: () => { setSelectedReg(r); setRescheduleSessionId(openSessions[0]?.id || ''); setRescheduleReason(''); setErrorMsg(''); setModalType('RESCHEDULE'); setActionMenuOpenId(null) } }] : []),
                                           { icon: '⚙️', label: 'Update Status', onClick: () => { setSelectedReg(r); setNewStatus(r.status); setStatusNotes(''); setErrorMsg(''); setModalType('STATUS'); setActionMenuOpenId(null) } },
                                           {
                                             icon: sendingEmailId === r.id ? '⏳' : '📧',

@@ -71,6 +71,8 @@ export default async function AdminSessionsPage() {
       endTime: s.endTime,
       durationHours: s.durationHours,
       capacity: s.capacity,
+      onlineCapacity: s.onlineCapacity,
+      offlineCapacity: s.offlineCapacity,
       availableSlots: Math.max(0, s.capacity - totalParticipants),
       status: s.status,
       notes: s.notes,
