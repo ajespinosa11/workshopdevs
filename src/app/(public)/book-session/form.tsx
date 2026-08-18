@@ -181,9 +181,25 @@ export default function BookSessionForm() {
         } else if (res.success) {
           setSessions(res.sessions)
           if (res.sessions && res.sessions.length > 0) {
-            const firstSessionDate = new Date(res.sessions[0].sessionDate)
-            setSelectedDate(firstSessionDate)
-            setCurrentDate(firstSessionDate)
+            setSelectedDate(prevDate => {
+              if (!prevDate) {
+                const firstSessionDate = new Date(res.sessions[0].sessionDate)
+                setCurrentDate(firstSessionDate)
+                return firstSessionDate
+              }
+              const hasSessionsOnPrevDate = res.sessions.some((s: any) => {
+                const sDate = new Date(s.sessionDate)
+                return sDate.getFullYear() === prevDate.getFullYear() &&
+                       sDate.getMonth() === prevDate.getMonth() &&
+                       sDate.getDate() === prevDate.getDate()
+              })
+              if (hasSessionsOnPrevDate) {
+                return prevDate
+              }
+              const firstSessionDate = new Date(res.sessions[0].sessionDate)
+              setCurrentDate(firstSessionDate)
+              return firstSessionDate
+            })
           } else {
             setSelectedDate(null)
           }
@@ -482,20 +498,42 @@ export default function BookSessionForm() {
     setRescheduleLoading(false)
   }
 
+  const getQrDataUrl = async (qrUrlOrRef: string): Promise<string | null> => {
+    try {
+      let url = qrUrlOrRef
+      if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('data:')) {
+        url = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrlOrRef)}`
+      }
+      const res = await fetch(url)
+      const blob = await res.blob()
+      return new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror = () => resolve(null)
+        reader.readAsDataURL(blob)
+      })
+    } catch (err) {
+      console.error('Failed to convert QR code to Data URL:', err)
+      return null
+    }
+  }
+
   const downloadTicketPDF = async () => {
     try {
       const { jsPDF } = await import('jspdf')
       const bookingsList = successData?.bookings || [{
-        bookingReference: successData.bookingReference,
-        bookingQrCodeData: successData.bookingQrCodeData,
+        bookingReference: successData?.bookingReference,
+        bookingQrCodeData: successData?.bookingQrCodeData || successData?.booking?.bookingQrCodeData,
+        customerName: successData?.customerName || successData?.booking?.customerName,
         kidName: null,
-        status: successData.status,
-        balanceDueAmount: successData.balanceDueAmount
+        status: successData?.status || successData?.booking?.status,
+        balanceDueAmount: successData?.balanceDueAmount
       }]
 
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [140, 80] })
 
-      bookingsList.forEach((bItem: any, index: number) => {
+      for (let index = 0; index < bookingsList.length; index++) {
+        const bItem = bookingsList[index]
         if (index > 0) doc.addPage([140, 80], 'landscape')
         doc.setFillColor(248, 250, 252)
         doc.rect(0, 0, 140, 80, 'F')
@@ -518,7 +556,8 @@ export default function BookSessionForm() {
         } else {
           doc.text('CUSTOMER NAME', 8, 24)
           doc.setFont('Helvetica', 'normal').setFontSize(11).setTextColor(74, 85, 104)
-          doc.text(voucher?.customerName || successData.customerName || 'Customer', 8, 29)
+          const nameToDisplay = bItem.customerName || voucher?.customerName || successData?.customerName || successData?.booking?.customerName || (freeFirstName || freeLastName ? `${freeFirstName} ${freeLastName}`.trim() : '') || 'Customer'
+          doc.text(nameToDisplay, 8, 29)
         }
 
         doc.setTextColor(15, 37, 64).setFont('Helvetica', 'bold').setFontSize(10)
@@ -526,17 +565,17 @@ export default function BookSessionForm() {
         doc.setFont('Helvetica', 'normal').setFontSize(10).setTextColor(74, 85, 104)
 
         const selS = sessions.find(s => s.id === selectedSessionId)
-        const dateStr = new Date(selS?.sessionDate || successData.sessionDate).toLocaleDateString(undefined, {
+        const dateStr = new Date(selS?.sessionDate || successData?.sessionDate || successData?.booking?.session?.sessionDate).toLocaleDateString(undefined, {
           weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
         })
         doc.text(`${dateStr}`, 8, 44)
-        doc.text(`${selS?.startTime || successData.startTime} - ${selS?.endTime || successData.endTime}`, 8, 49)
-        doc.setFont('Helvetica', 'italic').text(`Module: ${selS?.module?.name || successData.moduleName}`, 8, 54)
+        doc.text(`${selS?.startTime || successData?.startTime || successData?.booking?.session?.startTime} - ${selS?.endTime || successData?.endTime || successData?.booking?.session?.endTime}`, 8, 49)
+        doc.setFont('Helvetica', 'italic').text(`Module: ${selS?.module?.name || successData?.moduleName || successData?.booking?.session?.module?.name}`, 8, 54)
 
         doc.setTextColor(15, 37, 64).setFont('Helvetica', 'bold').setFontSize(10)
         doc.text('VOUCHER & STATUS', 8, 61)
         doc.setFont('Helvetica', 'normal').setFontSize(9).setTextColor(74, 85, 104)
-        doc.text(`Voucher: ${voucher?.voucherCode || successData.voucherCode || 'FREE WORKSHOP'}`, 8, 66)
+        doc.text(`Voucher: ${voucher?.voucherCode || successData?.voucherCode || 'FREE WORKSHOP'}`, 8, 66)
 
         if (bItem.status === 'BALANCE_DUE') {
           doc.setTextColor(220, 38, 38).setFont('Helvetica', 'bold')
@@ -547,13 +586,18 @@ export default function BookSessionForm() {
         }
 
         doc.setDrawColor(203, 213, 225).setLineDashPattern([2, 2], 0).line(95, 15, 95, 80)
-        if (bItem.bookingQrCodeData) {
-          doc.setLineDashPattern([], 0)
-          doc.addImage(bItem.bookingQrCodeData, 'PNG', 98, 20, 36, 36)
+        
+        const rawQr = bItem.bookingQrCodeData || successData?.bookingQrCodeData || bItem.bookingReference
+        if (rawQr) {
+          const qrDataUrl = await getQrDataUrl(rawQr)
+          if (qrDataUrl) {
+            doc.setLineDashPattern([], 0)
+            doc.addImage(qrDataUrl, 'PNG', 98, 20, 36, 36)
+          }
         }
         doc.setTextColor(15, 37, 64).setFont('Helvetica', 'bold').setFontSize(9)
         doc.text(bItem.bookingReference, 116, 61, { align: 'center' })
-      })
+      }
 
       doc.save(`Ticket-${successData.bookingReference}.pdf`)
     } catch (err) {

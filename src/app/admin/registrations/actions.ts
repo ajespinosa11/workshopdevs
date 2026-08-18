@@ -116,9 +116,16 @@ export async function adminManualBookSlot(formData: FormData) {
       }
 
       // Generate unique booking reference
-      const dateCode = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-      const randomCode = Math.floor(1000 + Math.random() * 9000)
-      const bookingReference = `P2P-WALKIN-${dateCode}-${randomCode}`
+      let bookingReference: string
+      if (workshopType === 'FREE') {
+        const totalCount = (await tx.workshopRegistration.count()) + (await tx.booking.count())
+        const paddedCount = String(totalCount + 1).padStart(6, '0')
+        bookingReference = `MLWS-BK-WALKIN-${paddedCount}`
+      } else {
+        const dateCode = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+        const randomCode = Math.floor(1000 + Math.random() * 9000)
+        bookingReference = `P2P-WALKIN-${dateCode}-${randomCode}`
+      }
 
       // Create Registration marked as CONFIRMED (Walk-in payment assumed completed)
       const registration = await tx.workshopRegistration.create({

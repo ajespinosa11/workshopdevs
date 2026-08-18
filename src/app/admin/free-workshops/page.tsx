@@ -86,6 +86,8 @@ export default async function AdminFreeWorkshopsPage() {
         voucherCode: b.voucher.voucherCode,
         createdAt: b.createdAt.toISOString(),
         participantsCount: pax,
+        kidName: b.kidName,
+        companionName: b.companionName,
         session: b.session ? {
           id: b.session.id,
           sessionDate: b.session.sessionDate.toISOString(),

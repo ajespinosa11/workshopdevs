@@ -1,49 +1,52 @@
 import { prisma } from '@/lib/prisma'
 import CustomersClient from './client'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminCustomersPage() {
-  const [registrations, freeBookings, freeRegistrations, workshopModules] = await Promise.all([
-    prisma.workshopRegistration.findMany({
-      include: {
-        session: {
-          include: {
-            module: true
-          }
-        },
-        shopifyOrder: true
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    }),
-    prisma.booking.findMany({
-      include: {
-        session: {
-          include: { module: true }
-        },
-        voucher: true
-      },
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.workshopRegistration.findMany({
-      where: {
-        OR: [
-          { salesChannel: 'WALK_IN_FREE' },
-          { salesChannel: 'COMPLIMENTARY' },
-          { sku: { contains: 'FREE' } }
-        ]
-      },
-      include: {
-        session: {
-          include: { module: true }
+  const registrations = await prisma.workshopRegistration.findMany({
+    include: {
+      session: {
+        include: {
+          module: true
         }
       },
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.module.findMany({
-      orderBy: { name: 'asc' }
-    })
-  ])
+      shopifyOrder: true
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  })
+
+  const freeBookings = await prisma.booking.findMany({
+    include: {
+      session: {
+        include: { module: true }
+      },
+      voucher: true
+    },
+    orderBy: { createdAt: 'desc' }
+  })
+
+  const freeRegistrations = await prisma.workshopRegistration.findMany({
+    where: {
+      OR: [
+        { salesChannel: 'WALK_IN_FREE' },
+        { salesChannel: 'COMPLIMENTARY' },
+        { sku: { contains: 'FREE' } }
+      ]
+    },
+    include: {
+      session: {
+        include: { module: true }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  })
+
+  const workshopModules = await prisma.module.findMany({
+    orderBy: { name: 'asc' }
+  })
 
   const activeStatuses = [
     'AWAITING_PAYMENT',

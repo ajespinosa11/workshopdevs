@@ -28,6 +28,8 @@ interface FreeReservation {
   voucherCode: string | null
   createdAt: string
   participantsCount?: number
+  kidName?: string | null
+  companionName?: string | null
   session: {
     id: string
     sessionDate: string
@@ -175,6 +177,8 @@ export default function FreeWorkshopsClient({ reservations, sessions, openSessio
       const q = searchTerm.toLowerCase()
       const matchesSearch = !searchTerm ||
         r.customerName.toLowerCase().includes(q) ||
+        (!!r.kidName && r.kidName.toLowerCase().includes(q)) ||
+        (!!r.companionName && r.companionName.toLowerCase().includes(q)) ||
         r.customerEmail.toLowerCase().includes(q) ||
         r.customerPhone.toLowerCase().includes(q) ||
         r.bookingReference.toLowerCase().includes(q)
@@ -863,9 +867,27 @@ export default function FreeWorkshopsClient({ reservations, sessions, openSessio
 
                             {/* Customer */}
                             <td style={{ padding: '0.75rem 0.95rem', fontSize: '0.76rem', verticalAlign: 'top' }}>
-                              <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.8rem' }}>{r.customerName}</div>
-                              <div style={{ color: '#64748b', fontSize: '0.7rem', marginTop: '0.1rem' }}>{r.customerEmail}</div>
-                              <div style={{ color: '#94a3b8', fontSize: '0.7rem' }}>{r.customerPhone}</div>
+                              {r.kidName ? (
+                                <>
+                                  <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span>👦 {r.kidName}</span>
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '1px 6px', borderRadius: '99px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>
+                                      KIDS
+                                    </span>
+                                  </div>
+                                  <div style={{ color: '#475569', fontSize: '0.72rem', marginTop: '0.15rem' }}>
+                                    <strong>Guardian:</strong> {r.companionName || r.customerName}
+                                  </div>
+                                  <div style={{ color: '#64748b', fontSize: '0.7rem', marginTop: '0.1rem' }}>{r.customerEmail}</div>
+                                  <div style={{ color: '#94a3b8', fontSize: '0.7rem' }}>{r.customerPhone}</div>
+                                </>
+                              ) : (
+                                <>
+                                  <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.8rem' }}>{r.customerName}</div>
+                                  <div style={{ color: '#64748b', fontSize: '0.7rem', marginTop: '0.1rem' }}>{r.customerEmail}</div>
+                                  <div style={{ color: '#94a3b8', fontSize: '0.7rem' }}>{r.customerPhone}</div>
+                                </>
+                              )}
                             </td>
 
                             {/* Session */}
@@ -905,7 +927,7 @@ export default function FreeWorkshopsClient({ reservations, sessions, openSessio
                                 {isCancelled && (
                                   <button
                                     onClick={() => { setSelectedRes(r); setModalType('RESTORE') }}
-                                    style={{ background: '#eef2ff', border: '1px solid #c7d2fe', color: '#4f46e5', borderRadius: '6px', padding: '0.3rem 0.55rem', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer' }}
+                                    style={{ background: '#eef2ff', border: '1px solid #c7d2fe', color: '#6366f1', borderRadius: '6px', padding: '0.3rem 0.55rem', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer' }}
                                   >
                                     ↩ Restore
                                   </button>
@@ -990,7 +1012,14 @@ export default function FreeWorkshopsClient({ reservations, sessions, openSessio
             {/* Info Summary */}
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.85rem', fontSize: '0.76rem', color: '#475569', marginBottom: '1rem', lineHeight: 1.6 }}>
               <div><strong style={{ color: '#94a3b8' }}>Ref #:</strong> <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#6366f1' }}>{selectedRes.bookingReference}</span></div>
-              <div><strong style={{ color: '#94a3b8' }}>Customer:</strong> <span style={{ color: '#0f172a', fontWeight: 700 }}>{selectedRes.customerName}</span></div>
+              {selectedRes.kidName ? (
+                <>
+                  <div><strong style={{ color: '#94a3b8' }}>Participant / Kid:</strong> <span style={{ color: '#0f172a', fontWeight: 800 }}>👦 {selectedRes.kidName}</span> <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '1px 6px', borderRadius: '99px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>KIDS (2 pax)</span></div>
+                  <div><strong style={{ color: '#94a3b8' }}>Guardian:</strong> <span style={{ color: '#0f172a', fontWeight: 700 }}>{selectedRes.companionName || selectedRes.customerName}</span></div>
+                </>
+              ) : (
+                <div><strong style={{ color: '#94a3b8' }}>Customer:</strong> <span style={{ color: '#0f172a', fontWeight: 700 }}>{selectedRes.customerName}</span></div>
+              )}
               <div><strong style={{ color: '#94a3b8' }}>Email:</strong> {selectedRes.customerEmail}</div>
               <div><strong style={{ color: '#94a3b8' }}>Phone:</strong> {selectedRes.customerPhone}</div>
               {selectedRes.session && (

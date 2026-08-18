@@ -314,6 +314,7 @@ export async function createFreeBooking(formData: FormData) {
       // Flat fields for the success screen
       bookingReference: booking.bookingReference,
       moduleName: booking.session.module?.name || 'Free Workshop',
+      customerName: name,
       customerEmail: email,
       // Full booking detail
       booking: {

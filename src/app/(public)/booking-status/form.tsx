@@ -21,6 +21,26 @@ export default function BookingStatusForm() {
   const [error, setError] = useState('')
   const [booking, setBooking] = useState<any>(null)
 
+  const getQrDataUrl = async (qrUrlOrRef: string): Promise<string | null> => {
+    try {
+      let url = qrUrlOrRef
+      if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('data:')) {
+        url = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrlOrRef)}`
+      }
+      const res = await fetch(url)
+      const blob = await res.blob()
+      return new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror = () => resolve(null)
+        reader.readAsDataURL(blob)
+      })
+    } catch (err) {
+      console.error('Failed to convert QR code to Data URL:', err)
+      return null
+    }
+  }
+
   const downloadTicketPDF = async () => {
     if (!booking) return
     try {
@@ -110,8 +130,12 @@ export default function BookingStatusForm() {
       doc.setTextColor(15, 37, 64)
       doc.text('SCAN QR', 115, 25, { align: 'center' })
 
-      if (booking.bookingQrCodeData) {
-        doc.addImage(booking.bookingQrCodeData, 'PNG', 98, 28, 34, 34)
+      const rawQr = booking.bookingQrCodeData || booking.bookingReference
+      if (rawQr) {
+        const qrDataUrl = await getQrDataUrl(rawQr)
+        if (qrDataUrl) {
+          doc.addImage(qrDataUrl, 'PNG', 98, 28, 34, 34)
+        }
       }
 
       doc.setFontSize(8)

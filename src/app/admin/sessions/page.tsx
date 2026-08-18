@@ -47,7 +47,16 @@ export default async function AdminSessionsPage() {
     
     // Combine both models into a unified list
     const combinedBookings = [
-      ...activeBookings.map(b => ({ ...b, participantsCount: 1 })),
+      ...activeBookings.map(b => {
+        let pax = 1
+        if (s.category === 'FREE_KID' || (b.notes && b.notes.includes('KID')) || b.kidName || b.companionName) {
+          pax = 2
+        } else if (b.notes) {
+          const match = b.notes.match(/for (\d+) pax/)
+          if (match) pax = parseInt(match[1], 10)
+        }
+        return { ...b, participantsCount: pax }
+      }),
       ...activeRegistrations.map(r => ({
         id: r.id,
         bookingReference: r.bookingReference,
