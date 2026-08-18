@@ -41,11 +41,17 @@ export async function validateFreeRegistrationAndGetSessions(paxCount: number) {
 
   const now = new Date()
   const activeSessions = sessions.filter(session => {
-    const startParts = session.startTime.split(':')
-    const startHours = parseInt(startParts[0], 10)
-    const startMinutes = parseInt(startParts[1], 10)
-    const sessionStart = new Date(session.sessionDate)
-    sessionStart.setHours(startHours, startMinutes, 0, 0)
+    const sDate = new Date(session.sessionDate)
+    const phtDate = new Date(sDate.getTime() + 8 * 3600 * 1000)
+    const year = phtDate.getUTCFullYear()
+    const month = String(phtDate.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(phtDate.getUTCDate()).padStart(2, '0')
+
+    const [h, m] = session.startTime.split(':').map(Number)
+    const padH = String(h).padStart(2, '0')
+    const padM = String(m || 0).padStart(2, '0')
+
+    const sessionStart = new Date(`${year}-${month}-${day}T${padH}:${padM}:00+08:00`)
     return sessionStart > now
   })
 
