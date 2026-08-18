@@ -19,7 +19,8 @@ export default async function AdminSessionsPage() {
           customerPhone: true,
           status: true,
           kidName: true,
-          companionName: true
+          companionName: true,
+          notes: true
         }
       },
       registrations: {
