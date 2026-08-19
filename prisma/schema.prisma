@@ -29,7 +29,7 @@ model Module {
   id            String   @id @default(uuid())
   name          String
   description   String?
-  category      String   // BEGINNER, INTERMEDIATE, ADVANCED
+  category      String   // FREE, PAID
   units         Int      // Number of units this module costs
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -95,7 +95,7 @@ model WorkshopSession {
   id               String   @id @default(uuid())
   moduleId         String
   module           Module   @relation(fields: [moduleId], references: [id])
-  category         String   // BEGINNER, INTERMEDIATE, ADVANCED (for backward compatibility / quick queries)
+  category         String   // FREE, PAID
   sessionDate      DateTime
   startTime        String
   endTime          String

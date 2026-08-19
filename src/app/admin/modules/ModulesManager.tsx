@@ -20,7 +20,7 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
   const [showCreate, setShowCreate] = useState(false)
   const [createName, setCreateName] = useState('')
   const [createDesc, setCreateDesc] = useState('')
-  const [createCategory, setCreateCategory] = useState('BEGINNER')
+  const [createCategory, setCreateCategory] = useState('FREE')
   const [createUnits, setCreateUnits] = useState(2)
   const [createError, setCreateError] = useState('')
   const [createLoading, setCreateLoading] = useState(false)
@@ -29,7 +29,7 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
   const [editModule, setEditModule] = useState<Module | null>(null)
   const [editName, setEditName] = useState('')
   const [editDesc, setEditDesc] = useState('')
-  const [editCategory, setEditCategory] = useState('BEGINNER')
+  const [editCategory, setEditCategory] = useState('FREE')
   const [editUnits, setEditUnits] = useState(2)
   const [editError, setEditError] = useState('')
   const [editLoading, setEditLoading] = useState(false)
@@ -63,7 +63,7 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
     if (res.error) { setCreateError(res.error) }
     else {
       setShowCreate(false)
-      setCreateName(''); setCreateDesc(''); setCreateCategory('BEGINNER'); setCreateUnits(2)
+      setCreateName(''); setCreateDesc(''); setCreateCategory('FREE'); setCreateUnits(2)
       router.refresh()
     }
     setCreateLoading(false)
@@ -108,10 +108,10 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
   }
 
   const categoryColor = (cat: string) =>
-    cat === 'BEGINNER' ? '#3b82f6' : cat === 'INTERMEDIATE' ? '#f59e0b' : cat === 'KIDS' ? '#22c55e' : '#ef4444'
+    cat === 'FREE' ? '#10b981' : '#6366f1'
 
   const categoryBadge = (cat: string) =>
-    cat === 'BEGINNER' ? 'badge-blue' : cat === 'INTERMEDIATE' ? 'badge-yellow' : cat === 'KIDS' ? 'badge-green' : 'badge-red'
+    cat === 'FREE' ? 'badge-green' : 'badge-blue'
 
   return (
     <div className="flex flex-col gap-6">
@@ -141,8 +141,8 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
       <div className="admin-stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         {[
           { label: 'Total Modules', value: modules.length, color: 'orange' },
-          { label: 'Beginner', value: modules.filter(m => m.category === 'BEGINNER').length, color: 'blue' },
-          { label: 'Intermediate / Advanced', value: modules.filter(m => m.category !== 'BEGINNER').length, color: 'orange' },
+          { label: 'Free Workshops', value: modules.filter(m => m.category === 'FREE').length, color: 'green' },
+          { label: 'Paid Workshops', value: modules.filter(m => m.category === 'PAID').length, color: 'blue' },
         ].map(stat => (
           <div key={stat.label} className="admin-stat-card">
             <div className={`admin-stat-icon-wrapper admin-stat-icon-${stat.color}`}>
@@ -175,10 +175,8 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
           style={{ borderRadius: '0.65rem', padding: '0.55rem 1rem', minWidth: '160px' }}
         >
           <option value="ALL">All Categories</option>
-          <option value="BEGINNER">Beginner</option>
-          <option value="INTERMEDIATE">Intermediate</option>
-          <option value="ADVANCED">Advanced</option>
-          <option value="KIDS">Kids</option>
+          <option value="FREE">Free Workshop</option>
+          <option value="PAID">Paid Workshop</option>
         </select>
       </div>
 
@@ -272,12 +270,10 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1rem' }}>
                 <div className="input-group">
-                  <label style={{ fontWeight: 600 }}>Category Level *</label>
+                  <label style={{ fontWeight: 600 }}>Category Type *</label>
                   <select value={createCategory} onChange={e => setCreateCategory(e.target.value)} className="input-field" style={{ borderRadius: '0.5rem', padding: '0.5rem' }}>
-                    <option value="BEGINNER">BEGINNER</option>
-                    <option value="INTERMEDIATE">INTERMEDIATE</option>
-                    <option value="ADVANCED">ADVANCED</option>
-                    <option value="KIDS">KIDS</option>
+                    <option value="FREE">FREE</option>
+                    <option value="PAID">PAID</option>
                   </select>
                 </div>
                 <div className="input-group">
@@ -316,12 +312,10 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1rem' }}>
                 <div className="input-group">
-                  <label style={{ fontWeight: 600 }}>Category Level *</label>
+                  <label style={{ fontWeight: 600 }}>Category Type *</label>
                   <select value={editCategory} onChange={e => setEditCategory(e.target.value)} className="input-field" style={{ borderRadius: '0.5rem', padding: '0.5rem' }}>
-                    <option value="BEGINNER">BEGINNER</option>
-                    <option value="INTERMEDIATE">INTERMEDIATE</option>
-                    <option value="ADVANCED">ADVANCED</option>
-                    <option value="KIDS">KIDS</option>
+                    <option value="FREE">FREE</option>
+                    <option value="PAID">PAID</option>
                   </select>
                 </div>
                 <div className="input-group">

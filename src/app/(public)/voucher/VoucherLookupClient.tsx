@@ -192,11 +192,9 @@ export default function VoucherLookupClient() {
                           Ref: {booking.bookingReference}
                         </span>
                         <span className={`badge ${
-                          booking.session.category === 'BEGINNER' ? 'badge-blue' :
-                          booking.session.category === 'INTERMEDIATE' ? 'badge-yellow' :
-                          booking.session.category === 'KIDS' ? 'badge-green' : 'badge-red'
+                          booking.session.category === 'FREE' ? 'badge-green' : 'badge-blue'
                         }`} style={{ fontSize: '0.7rem' }}>
-                          {booking.session.category === 'KIDS' ? '👦 KIDS' : booking.session.category}
+                          {booking.session.category === 'FREE' ? '🎁 FREE' : '🎯 PAID'}
                         </span>
                       </div>
                       

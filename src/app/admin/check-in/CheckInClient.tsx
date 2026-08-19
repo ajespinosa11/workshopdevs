@@ -550,7 +550,11 @@ export default function AdminCheckInClient({ sessions }: { sessions: Session[] }
                   ]
                   const checkedInCount = allAttendees.filter(a => ['CHECKED_IN', 'ATTENDED', 'COMPLETED', 'WALKIN_CONFIRMED'].includes(a.status)).length
                   const { allowed: checkInWindowOpen } = checkInWindow(session.sessionDate, session.startTime)
-                  const categoryColor = session.category === 'FREE' || session.category === 'FREE_KID' ? '#10b981' : '#6366f1'
+                  const catUpper = (session.category || '').toUpperCase()
+                  const modNameUpper = (session.module?.name || '').toUpperCase()
+                  const isKid = catUpper.includes('KID') || modNameUpper.includes('KID') || (session.notes ? session.notes.toUpperCase().includes('KID') : false)
+                  const isFree = catUpper.includes('FREE') || modNameUpper.includes('FREE') || (!catUpper.includes('PAID') && isKid)
+                  const categoryColor = isFree || isKid ? '#10b981' : '#6366f1'
 
                   const isExpanded = isSessionExpanded(session.id)
 
@@ -593,7 +597,7 @@ export default function AdminCheckInClient({ sessions }: { sessions: Session[] }
                           </div>
                           <div>
                             <span style={{ fontSize: '0.62rem', fontWeight: 800, color: categoryColor, textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '0.4rem' }}>
-                              {session.category === 'FREE' ? '🎁 Free (Adult)' : session.category === 'FREE_KID' ? '👦 Free (Kids)' : '🎯 Paid Workshop'}
+                              {isKid ? '👦 Free (Kids)' : isFree ? '🎁 Free (Adult)' : '🎯 Paid Workshop'}
                             </span>
                             <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#94a3b8' }}>· {session.module.name}</span>
                             <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', marginTop: '0.1rem' }}>

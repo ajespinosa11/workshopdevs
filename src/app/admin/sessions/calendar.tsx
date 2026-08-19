@@ -264,7 +264,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
   // Inline module states
   const [moduleName, setModuleName] = useState('')
   const [moduleDesc, setModuleDesc] = useState('')
-  const [moduleCategory, setModuleCategory] = useState('BEGINNER')
+  const [moduleCategory, setModuleCategory] = useState('FREE')
   const [moduleUnits, setModuleUnits] = useState(2)
 
   // Inline Card Editing states
@@ -284,7 +284,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     formData.append('moduleId', mod.id)
     formData.append('name', mod.name)
     formData.append('description', inlineDescText)
-    formData.append('category', existing?.category || 'BEGINNER')
+    formData.append('category', existing?.category || 'FREE')
     formData.append('units', (existing?.units ?? mod.units ?? 2).toString())
 
     const res = await updateModule(formData)
@@ -368,7 +368,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
       }
       setModuleName('')
       setModuleDesc('')
-      setModuleCategory('BEGINNER')
+      setModuleCategory('FREE')
       setModuleUnits(2)
       setShowModuleModal(false)
       router.refresh()
@@ -457,7 +457,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
           modData.append('moduleId', existing.id)
           modData.append('name', existing.name)
           modData.append('description', editDesc)
-          modData.append('category', existing.category || 'BEGINNER')
+          modData.append('category', existing.category || 'FREE')
           modData.append('units', (existing.units ?? 2).toString())
           await updateModule(modData)
         }
