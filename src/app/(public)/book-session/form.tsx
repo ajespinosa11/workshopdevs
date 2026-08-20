@@ -147,6 +147,24 @@ export default function BookSessionForm() {
 
   // Level Selection (Paid Only)
   const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null)
+
+  // Google Reviews live state
+  const [googleRating, setGoogleRating] = useState<number>(5.0)
+  const [googleReviewsCount, setGoogleReviewsCount] = useState<number>(133)
+  const [googleReviewsList, setGoogleReviewsList] = useState<any[]>([])
+
+  useEffect(() => {
+    fetch('/api/google-reviews')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.rating) setGoogleRating(data.rating)
+        if (data.userRatingCount) setGoogleReviewsCount(data.userRatingCount)
+        if (Array.isArray(data.reviews) && data.reviews.length > 0) {
+          setGoogleReviewsList(data.reviews.slice(0, 4))
+        }
+      })
+      .catch(() => {})
+  }, [])
   const [kidPaxCount, setKidPaxCount] = useState(1)
   const [kidNames, setKidNames] = useState<string[]>([''])
 
@@ -780,18 +798,10 @@ export default function BookSessionForm() {
                   { id: 5, file: '5' },
                   { id: 4, file: '4' },
                   { id: 1, file: '1' }
-                ].map((img, index) => (
+                ].map((img) => (
                   <div key={img.id} style={{ position: 'relative', overflow: 'hidden', height: '100%' }}>
                     <img src={`/20260629-152952.129-${img.file}.jpg`} alt={`Venue photo ${img.id}`}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: 'brightness(0.95)' }} />
-                    {index === 3 && (
-                      <div style={{
-                        position: 'absolute', inset: 0, background: 'rgba(15,37,64,0.6)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                      }}>
-                        <span style={{ color: 'white', fontWeight: 700, fontSize: '0.85rem' }}>See all</span>
-                      </div>
-                    )}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                   </div>
                 ))}
               </div>
@@ -808,8 +818,8 @@ export default function BookSessionForm() {
                         <svg key={s} width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                       ))}
                     </div>
-                    <strong style={{ color: 'var(--primary)' }}>5.0</strong>
-                    <span style={{ color: 'var(--secondary-foreground)' }}>(59 reviews) • Electronics store</span>
+                    <strong style={{ color: 'var(--primary)' }}>{googleRating.toFixed(1)}</strong>
+                    <span style={{ color: 'var(--secondary-foreground)' }}>({googleReviewsCount} reviews) • Electronics store</span>
                   </div>
                 </div>
               </div>
@@ -846,16 +856,53 @@ export default function BookSessionForm() {
             </div>
           </div>
 
-          {/* Features Card */}
-          <div style={{ background: '#ffffff', borderRadius: '1.25rem', padding: '1.75rem', boxShadow: '0 4px 18px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9' }}>
-            <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary)', margin: '0 0 1rem' }}>Workshop Features</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', fontSize: '0.85rem', color: 'var(--secondary-foreground)' }}>
-              <div>🟢 Access to FDM and SLA printers</div>
-              <div>🟢 Materials and filaments included</div>
-              <div>🟢 Real-time expert guidance</div>
-              <div>🟢 Post-processing station</div>
+          {/* Live Google Reviews Grid Card */}
+          {googleReviewsList.length > 0 && (
+            <div style={{ background: '#ffffff', borderRadius: '1.25rem', padding: '1.75rem', boxShadow: '0 4px 18px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <div>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>What Visitors Say</h4>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--secondary-foreground)', margin: '0.2rem 0 0' }}>Recent Google Reviews for Makerlab Experience Hub</p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#fff7ed', padding: '0.35rem 0.65rem', borderRadius: '20px', border: '1px solid #ffedd5' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#ea580c"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#c2410c' }}>{googleRating.toFixed(1)}</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                {googleReviewsList.map((rev, idx) => (
+                  <div key={idx} style={{ background: '#f8fafc', borderRadius: '0.85rem', padding: '0.9rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#ea580c', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.75rem', overflow: 'hidden' }}>
+                            {rev.profilePhotoUrl ? (
+                              <img src={rev.profilePhotoUrl} alt={rev.authorName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              rev.authorName.charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary)' }}>{rev.authorName}</span>
+                        </div>
+                        <div style={{ display: 'flex', color: '#ea580c' }}>
+                          {Array.from({ length: rev.rating || 5 }).map((_, s) => (
+                            <svg key={s} width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                          ))}
+                        </div>
+                      </div>
+                      <p style={{ fontSize: '0.78rem', color: 'var(--secondary-foreground)', margin: 0, lineHeight: '1.45', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                        "{rev.text}"
+                      </p>
+                    </div>
+                    {rev.relativePublishTimeDescription && (
+                      <span style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.5rem', display: 'block' }}>{rev.relativePublishTimeDescription}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* ========================================================
