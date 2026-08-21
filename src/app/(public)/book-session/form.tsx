@@ -111,6 +111,10 @@ export default function BookSessionForm() {
   const [showTCModal, setShowTCModal] = useState(false)
   const [agreedToTC, setAgreedToTC] = useState(false)
 
+  // Confirm Modal State
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [pendingBookType, setPendingBookType] = useState<'paid' | 'free' | null>(null)
+
   // Paid Voucher Form Fields
   const [voucherCodeInput, setVoucherCodeInput] = useState('')
   const [voucherEmailInput, setVoucherEmailInput] = useState('')
@@ -340,8 +344,20 @@ export default function BookSessionForm() {
       }
     }
     setError('')
-    setAgreedToTC(false)
-    setShowTCModal(true)
+    // Show confirm modal first before T&C
+    setPendingBookType('paid')
+    setShowConfirmModal(true)
+  }
+
+  function handleProceedAfterConfirm() {
+    setShowConfirmModal(false)
+    if (pendingBookType === 'paid') {
+      setAgreedToTC(false)
+      setShowTCModal(true)
+    } else if (pendingBookType === 'free') {
+      handleFreeBookInternal()
+    }
+    setPendingBookType(null)
   }
 
   async function handleConfirmBook() {
@@ -379,6 +395,12 @@ export default function BookSessionForm() {
       return
     }
     setError('')
+    // Show confirm modal first
+    setPendingBookType('free')
+    setShowConfirmModal(true)
+  }
+
+  async function handleFreeBookInternal() {
     setLoading(true)
 
     const formData = new FormData()
@@ -1815,6 +1837,86 @@ export default function BookSessionForm() {
         </div>
 
       </div>
+
+      {/* ── Booking Confirm Modal (Kokonut UI Style) ── */}
+      {showConfirmModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.72)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            animation: 'kokonutFadeIn 0.2s cubic-bezier(0.16,1,0.3,1) forwards'
+          }}
+        >
+          <div
+            style={{
+              background: '#1a1d27',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '1.25rem',
+              padding: '2rem 2.25rem',
+              width: '90%',
+              maxWidth: '420px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.85rem',
+              boxShadow: '0 32px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)',
+              animation: 'kokonutFadeIn 0.22s cubic-bezier(0.16,1,0.3,1) forwards'
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.02em' }}>
+              Confirm
+            </h3>
+            <p style={{ margin: 0, fontSize: '0.93rem', color: '#94a3b8', lineHeight: 1.55 }}>
+              Are you sure you want to confirm this booking reservation? Please review your selected session before proceeding.
+            </p>
+            <div style={{ display: 'flex', gap: '0.65rem', marginTop: '0.5rem', alignItems: 'center', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => { setShowConfirmModal(false); setPendingBookType(null) }}
+                style={{
+                  padding: '0.65rem 1.35rem',
+                  borderRadius: '0.6rem',
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#94a3b8',
+                  fontWeight: 600,
+                  fontSize: '0.92rem',
+                  cursor: 'pointer',
+                  transition: 'color 0.15s ease'
+                }}
+                onMouseOver={e => (e.currentTarget.style.color = '#f8fafc')}
+                onMouseOut={e => (e.currentTarget.style.color = '#94a3b8')}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleProceedAfterConfirm}
+                style={{
+                  padding: '0.65rem 1.6rem',
+                  borderRadius: '0.6rem',
+                  border: '1px solid rgba(255,255,255,0.18)',
+                  background: '#f8fafc',
+                  color: '#0f172a',
+                  fontWeight: 700,
+                  fontSize: '0.92rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                }}
+                onMouseOver={e => { e.currentTarget.style.background = '#e2e8f0' }}
+                onMouseOut={e => { e.currentTarget.style.background = '#f8fafc' }}
+              >
+                Confirm Booking
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Terms and Conditions Modal */}
       {showTCModal && (

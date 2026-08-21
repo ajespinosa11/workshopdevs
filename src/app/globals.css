@@ -2558,3 +2558,310 @@ p, h1, h2, h3, h4, h5, h6, li, td, th {
     font-size: 12px;
   }
 }
+
+/* ── MakerLab Admin Login Styles ────────────────────────────────────────── */
+
+.makerlab-login-wrapper {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f2f4f8;
+  padding: 1.5rem;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  box-sizing: border-box;
+}
+
+.makerlab-login-card {
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  border-radius: 28px;
+  padding: 2.75rem 2.5rem;
+  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.05), 0 4px 16px rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-sizing: border-box;
+}
+
+.makerlab-logo-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.makerlab-logo-text {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #1e293b;
+  text-transform: uppercase;
+}
+
+.makerlab-login-title {
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: center;
+  margin-bottom: 0.35rem;
+  letter-spacing: -0.02em;
+}
+
+.makerlab-login-subtitle {
+  font-size: 0.9rem;
+  color: #64748b;
+  font-weight: 500;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.makerlab-form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.35rem;
+}
+
+.makerlab-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.5rem;
+  text-align: left;
+}
+
+.makerlab-input-wrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.makerlab-input-icon {
+  position: absolute;
+  left: 1.1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px !important;
+  height: 20px !important;
+  color: #94a3b8;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.makerlab-input-field {
+  width: 100%;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 0.85rem 1rem 0.85rem 3rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #1e293b;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.makerlab-input-fieldWithToggle {
+  padding-right: 3rem;
+}
+
+.makerlab-input-field::placeholder {
+  color: #94a3b8;
+}
+
+.makerlab-input-field:hover {
+  background-color: #f1f5f9;
+}
+
+.makerlab-input-field:focus {
+  background-color: #ffffff;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+}
+
+.makerlab-password-toggle {
+  position: absolute;
+  right: 1.1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.makerlab-password-toggle:hover {
+  color: #475569;
+}
+
+.makerlab-password-toggle svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.makerlab-submit-btn {
+  width: 100%;
+  margin-top: 0.85rem;
+  padding: 0.95rem 1.5rem;
+  background-color: #4f46e5;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.35);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+}
+
+.makerlab-submit-btn:hover:not(:disabled) {
+  background-color: #4338ca;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px -5px rgba(79, 70, 229, 0.45);
+}
+
+.makerlab-submit-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.makerlab-submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.makerlab-error-alert {
+  background-color: #fef2f2;
+  border: 1px solid #fee2e2;
+  color: #dc2626;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+/* ── Kokonut UI Animated Loader ────────────────────────────────────────── */
+
+@keyframes kokonutSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes kokonutSpinReverse {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes kokonutPulse {
+  0%, 100% { transform: scale(0.92); opacity: 0.5; }
+  50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+@keyframes kokonutFadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.kokonut-loader-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(9, 12, 20, 0.88);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  animation: kokonutFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.kokonut-loader-inline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  min-height: 280px;
+  width: 100%;
+}
+
+.kokonut-spinner-box {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.kokonut-ring-outer {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  padding: 3px;
+  background: conic-gradient(from 0deg, transparent 0%, #38bdf8 30%, #6366f1 70%, transparent 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: kokonutSpin 1.2s linear infinite;
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+}
+
+.kokonut-ring-inner {
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  padding: 2.5px;
+  background: conic-gradient(from 180deg, transparent 0%, #e0e7ff 40%, #38bdf8 80%, transparent 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: kokonutSpinReverse 1.6s linear infinite;
+  opacity: 0.9;
+}
+
+.kokonut-glow-core {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.9) 0%, rgba(56, 189, 248, 0.4) 60%, transparent 100%);
+  box-shadow: 0 0 24px #6366f1, 0 0 40px #38bdf8;
+  animation: kokonutPulse 2s ease-in-out infinite;
+}
+
+.kokonut-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -0.015em;
+  text-align: center;
+  margin-bottom: 0.35rem;
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+.kokonut-subtitle {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #94a3b8;
+  text-align: center;
+  max-width: 320px;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  line-height: 1.4;
+}

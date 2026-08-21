@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
+import PageTransitionLoader from "@/components/PageTransitionLoader";
+import KokonutLoader from "@/components/KokonutLoader";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -24,8 +27,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} antialiased`}>
-        {children}
+        <Suspense fallback={<KokonutLoader title="Loading..." subtitle="Please wait while we prepare everything for you" />}>
+          <PageTransitionLoader>
+            {children}
+          </PageTransitionLoader>
+        </Suspense>
       </body>
     </html>
   );
 }
+
