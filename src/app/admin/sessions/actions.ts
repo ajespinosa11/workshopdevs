@@ -378,54 +378,71 @@ export async function deleteSession(
     // Collect emails to send BEFORE deleting
     const affectedBookings = existing.bookings
 
-    await prisma.$transaction(async (tx) => {
-      // Restore credits for ALL active bookings (reserved = committed units, checked-in = deducted units)
-      for (const booking of affectedBookings) {
-        const currentVoucher = await tx.voucher.findUnique({
-          where: { id: booking.voucherId }
-        })
-        if (currentVoucher) {
-          const newUnits = currentVoucher.remainingUnits + booking.unitsToDeduct
-          await tx.voucher.update({
-            where: { id: booking.voucherId },
+    await prisma.$transaction(
+      async (tx) => {
+        // Restore credits for ALL active bookings (reserved = committed units, checked-in = deducted units)
+        const voucherAdditions = new Map<string, number>()
+        for (const booking of affectedBookings) {
+          if (booking.voucherId) {
+            voucherAdditions.set(
+              booking.voucherId,
+              (voucherAdditions.get(booking.voucherId) || 0) + (booking.unitsToDeduct || 0)
+            )
+          }
+        }
+
+        for (const [voucherId, addedUnits] of voucherAdditions.entries()) {
+          const currentVoucher = await tx.voucher.findUnique({
+            where: { id: voucherId }
+          })
+          if (currentVoucher) {
+            const newUnits = currentVoucher.remainingUnits + addedUnits
+            await tx.voucher.update({
+              where: { id: voucherId },
+              data: {
+                remainingUnits: newUnits,
+                status: currentVoucher.status === 'FULLY_USED' && newUnits > 0 ? 'ACTIVE' : undefined
+              }
+            })
+          }
+        }
+
+        const bookingIds = affectedBookings.map((b) => b.id)
+
+        if (bookingIds.length > 0) {
+          // Mark bookings as CANCELLED_BY_ADMIN instead of deleting (preserves audit trail)
+          await tx.booking.updateMany({
+            where: { id: { in: bookingIds } },
             data: {
-              remainingUnits: newUnits,
-              status: currentVoucher.status === 'FULLY_USED' && newUnits > 0 ? 'ACTIVE' : undefined
+              status: 'CANCELLED_BY_ADMIN',
+              cancelledAt: new Date(),
             }
+          })
+
+          // Delete associated CreditTransactions
+          await tx.creditTransaction.deleteMany({
+            where: { bookingId: { in: bookingIds } }
+          })
+
+          // Delete associated Attendance
+          await tx.attendance.deleteMany({
+            where: { bookingId: { in: bookingIds } }
           })
         }
 
-        // Mark booking as CANCELLED_BY_ADMIN instead of deleting (preserves audit trail)
-        await tx.booking.update({
-          where: { id: booking.id },
-          data: {
-            status: 'CANCELLED_BY_ADMIN',
-            cancelledAt: new Date(),
-          }
-        })
-
-        // Delete associated CreditTransactions
-        await tx.creditTransaction.deleteMany({
-          where: { bookingId: booking.id }
-        })
-
-        // Delete associated Attendance
+        // Clean up any other attendance records referencing this sessionId
         await tx.attendance.deleteMany({
-          where: { bookingId: booking.id }
+          where: { sessionId }
         })
-      }
 
-      // Clean up any other attendance records referencing this sessionId
-      await tx.attendance.deleteMany({
-        where: { sessionId }
-      })
-
-      // Mark the session as CANCELLED rather than deleting it
-      await tx.workshopSession.update({
-        where: { id: sessionId },
-        data: { status: 'CANCELLED', availableSlots: 0 }
-      })
-    })
+        // Mark the session as CANCELLED rather than deleting it
+        await tx.workshopSession.update({
+          where: { id: sessionId },
+          data: { status: 'CANCELLED', availableSlots: 0 }
+        })
+      },
+      { maxWait: 10000, timeout: 30000 }
+    )
 
     // Send cancellation emails to all affected customers (after transaction succeeds)
     const emailErrors: string[] = []
