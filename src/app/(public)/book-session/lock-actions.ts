@@ -202,12 +202,22 @@ export async function createSoftLockReservation(params: {
       }
     })
 
+    const moduleName = session.module?.name || ''
+    const modUpper = moduleName.toUpperCase()
+    const shopifyVariantId = (modUpper.includes('DESIGN') || modUpper.includes('FUSION'))
+      ? (process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID_BW003 || '46092204245183')
+      : modUpper.includes('PAINT')
+      ? (process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID_BW002 || '46091932762303')
+      : (process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID || '45713497981119')
+
     return {
       success: true,
       registrationId: registration.id,
       bookingReference,
       reservedUntil: reservedUntil.toISOString(),
-      expiresInSeconds: 900
+      expiresInSeconds: 900,
+      shopifyVariantId,
+      moduleName
     }
   })
 }

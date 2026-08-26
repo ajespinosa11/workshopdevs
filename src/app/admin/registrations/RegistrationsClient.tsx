@@ -792,7 +792,7 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
 
   function getModuleColor(name?: string | null) {
     const n = (name || '').toLowerCase()
-    if (n.includes('print') || n.includes('profit') || n.includes('bw001')) return { primary: '#ea580c', light: '#fff7ed', border: '#ffedd5' }
+    if (n.includes('paint') || n.includes('print') || n.includes('profit') || n.includes('bw001')) return { primary: '#ea580c', light: '#fff7ed', border: '#ffedd5' }
     if (n.includes('robot') || n.includes('make-ur')) return { primary: '#6366f1', light: '#eef2ff', border: '#c7d2fe' }
     if (n.includes('free')) return { primary: '#10b981', light: '#ecfdf5', border: '#a7f3d0' }
     return { primary: '#0284c7', light: '#f0f9ff', border: '#bae6fd' }

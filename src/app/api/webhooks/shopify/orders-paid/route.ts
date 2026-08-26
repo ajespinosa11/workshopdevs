@@ -47,20 +47,23 @@ export async function POST(req: NextRequest) {
     // Extract SKU & Quantity from line items
     let sku = 'BW001'
     let quantity = 1
-    let hasBW001 = false
+    let isWorkshopItem = false
 
     if (Array.isArray(payload.line_items) && payload.line_items.length > 0) {
-      const p2pItem = payload.line_items.find((item: any) =>
-        item.sku?.toUpperCase() === 'BW001' || item.name?.toLowerCase().includes('print 2 profit')
-      )
+      const workshopItem = payload.line_items.find((item: any) => {
+        const itemSku = (item.sku || '').toUpperCase()
+        const itemName = (item.name || '').toLowerCase()
+        return itemSku === 'BW001' || itemSku === 'BW002' || itemSku === 'BW003' || itemSku.startsWith('BW') ||
+          itemName.includes('print 2 profit') || itemName.includes('paint your prints') || itemName.includes('design to print') || itemName.includes('fusion') || itemName.includes('workshop')
+      })
 
-      if (p2pItem) {
-        hasBW001 = true
-        if (p2pItem.sku) sku = p2pItem.sku
-        if (p2pItem.quantity) quantity = p2pItem.quantity
+      if (workshopItem) {
+        isWorkshopItem = true
+        if (workshopItem.sku) sku = workshopItem.sku
+        if (workshopItem.quantity) quantity = workshopItem.quantity
 
-        if (!bookingReference && Array.isArray(p2pItem.properties)) {
-          const prop = p2pItem.properties.find(
+        if (!bookingReference && Array.isArray(workshopItem.properties)) {
+          const prop = workshopItem.properties.find(
             (p: any) => p.name?.toLowerCase() === 'booking_reference' || p.name?.toLowerCase() === '_booking_ref'
           )
           if (prop?.value) bookingReference = String(prop.value).trim()
@@ -68,9 +71,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Only process orders that contain the BW001 (Print 2 Profit) SKU
-    if (!hasBW001) {
-      return NextResponse.json({ success: true, message: 'Order skipped: no BW001 SKU found' })
+    // Only process orders that contain workshop SKUs / line items
+    if (!isWorkshopItem) {
+      return NextResponse.json({ success: true, message: 'Order skipped: no Workshop SKU found' })
     }
 
     // Check if order already synced (Idempotency check)

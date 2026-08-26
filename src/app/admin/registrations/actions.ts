@@ -14,6 +14,27 @@ function isRegistrationPaid(reg: any): boolean {
   return false
 }
 
+// Resolve SKU and Shopify variant ID based on session module name
+function getSkuAndVariantId(moduleName: string): { sku: string; variantId: string } {
+  const name = moduleName.toUpperCase()
+  if (name.includes('DESIGN') || name.includes('FUSION') || name.includes('BW003')) {
+    return {
+      sku: 'BW003',
+      variantId: process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID_BW003 || '46092204245183'
+    }
+  }
+  if (name.includes('PAINT')) {
+    return {
+      sku: 'BW002',
+      variantId: process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID_BW002 || '46091932762303'
+    }
+  }
+  return {
+    sku: 'BW001',
+    variantId: process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID || '45713497981119'
+  }
+}
+
 export async function createRegistration(formData: FormData) {
   const customerName = formData.get('customerName') as string
   const customerEmail = formData.get('customerEmail') as string
@@ -47,11 +68,14 @@ export async function createRegistration(formData: FormData) {
     const randomCode = Math.floor(1000 + Math.random() * 9000)
     const bookingReference = `P2P-${dateCode}-${randomCode}`
 
+    const moduleName = session.module?.name || ''
+    const { sku, variantId } = getSkuAndVariantId(moduleName)
+
     const registration = await prisma.workshopRegistration.create({
       data: {
         bookingReference,
         salesChannel: 'SHOPIFY',
-        sku: 'BW001',
+        sku,
         customerName,
         customerEmail,
         customerPhone,
@@ -64,9 +88,8 @@ export async function createRegistration(formData: FormData) {
     })
 
     // Construct Shopify Permalinks URL with cart attributes and notes
-    const shopifyVariantId = process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID || '45713497981119'
     const shopifyDomain = process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN || 'www.makerlab.ph'
-    const permalink = `https://${shopifyDomain}/cart/${shopifyVariantId}:${participantsCount}?attributes[booking_reference]=${bookingReference}&note=${bookingReference}`
+    const permalink = `https://${shopifyDomain}/cart/${variantId}:${participantsCount}?attributes[booking_reference]=${bookingReference}&note=${bookingReference}`
 
     return {
       success: true,
@@ -107,6 +130,7 @@ export async function adminManualBookSlot(formData: FormData) {
     const result = await prisma.$transaction(async (tx) => {
       const session = await tx.workshopSession.findUnique({
         where: { id: sessionId },
+        include: { module: true }
       })
 
       if (!session) throw new Error('Selected workshop session not found.')
@@ -127,12 +151,15 @@ export async function adminManualBookSlot(formData: FormData) {
         bookingReference = `P2P-WALKIN-${dateCode}-${randomCode}`
       }
 
+      // Resolve SKU from session module
+      const { sku: walkinSku } = getSkuAndVariantId(session.module?.name || '')
+
       // Create Registration marked as CONFIRMED (Walk-in payment assumed completed)
       const registration = await tx.workshopRegistration.create({
         data: {
           bookingReference,
           salesChannel,
-          sku: 'BW001',
+          sku: walkinSku,
           customerName,
           customerEmail,
           customerPhone,

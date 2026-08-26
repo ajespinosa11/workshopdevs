@@ -5,9 +5,6 @@ export const dynamic = 'force-dynamic'
 
 export default async function AdminRegistrationsPage() {
   const registrations = await prisma.workshopRegistration.findMany({
-    where: {
-      sku: 'BW001'
-    },
     include: {
       session: {
         include: { module: true }

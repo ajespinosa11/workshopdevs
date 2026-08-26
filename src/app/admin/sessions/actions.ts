@@ -234,13 +234,14 @@ export async function createSession(formData: FormData) {
       }
     })
 
-    // Optionally update the module description if provided
-    if (description && description.trim()) {
-      await prisma.module.update({
-        where: { id: finalModuleId },
-        data: { description: description.trim() }
-      })
-    }
+    // Also sync the module category to match session pricing type (PAID/FREE)
+    await prisma.module.update({
+      where: { id: finalModuleId },
+      data: {
+        category: finalCategory === 'PAID' ? 'PAID' : 'FREE',
+        ...(description && description.trim() ? { description: description.trim() } : {})
+      }
+    })
 
     revalidatePath('/admin/sessions')
     return { success: true, session }
@@ -327,6 +328,14 @@ export async function updateSession(formData: FormData) {
         collaborator: collaborator?.trim() || null
       }
     })
+
+    // Sync parent module category (PAID or FREE)
+    if (updatedCategory) {
+      await prisma.module.update({
+        where: { id: finalModuleId },
+        data: { category: updatedCategory === 'PAID' ? 'PAID' : 'FREE' }
+      })
+    }
 
     revalidatePath('/admin/sessions')
     return { success: true }

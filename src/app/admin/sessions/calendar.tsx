@@ -98,8 +98,16 @@ function FormattedTextarea({
     handleInput()
   }
 
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault()
+    // Extract plain text or clean HTML without wide fixed widths
+    const text = e.clipboardData.getData('text/plain')
+    document.execCommand('insertText', false, text)
+    handleInput()
+  }
+
   return (
-    <div className="input-group">
+    <div className="input-group" style={{ maxWidth: '100%', overflow: 'hidden' }}>
       <label style={{ fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
         <span>
           {label}{' '}
@@ -171,6 +179,20 @@ function FormattedTextarea({
 
       {/* WYSIWYG ContentEditable editor */}
       <style>{`
+        .wysiwyg-editor {
+          word-break: break-word !important;
+          overflow-wrap: break-word !important;
+          white-space: pre-wrap !important;
+          max-width: 100% !important;
+          overflow-x: hidden !important;
+          box-sizing: border-box !important;
+        }
+        .wysiwyg-editor * {
+          max-width: 100% !important;
+          white-space: normal !important;
+          word-break: break-word !important;
+          overflow-wrap: break-word !important;
+        }
         .wysiwyg-editor:empty:before {
           content: attr(data-placeholder);
           color: #94a3b8;
@@ -184,6 +206,7 @@ function FormattedTextarea({
         suppressContentEditableWarning
         className="wysiwyg-editor"
         onInput={handleInput}
+        onPaste={handlePaste}
         data-placeholder={placeholder}
         style={{
           borderRadius: '0 0 0.65rem 0.65rem',
@@ -194,9 +217,14 @@ function FormattedTextarea({
           fontSize: '0.92rem',
           lineHeight: '1.55',
           overflowY: 'auto',
+          overflowX: 'hidden',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
           background: '#fff',
           color: '#0f172a',
           wordBreak: 'break-word',
+          overflowWrap: 'break-word',
+          whiteSpace: 'pre-wrap',
         }}
       />
     </div>
@@ -210,7 +238,16 @@ export function renderFormattedText(text: string | null | undefined) {
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/on\w+="[^"]*"/gi, '')
     .replace(/javascript:/gi, '')
-  return <span dangerouslySetInnerHTML={{ __html: safe }} />
+  return (
+    <div
+      style={{
+        wordBreak: 'break-word',
+        overflowWrap: 'break-word',
+        maxWidth: '100%',
+      }}
+      dangerouslySetInnerHTML={{ __html: safe }}
+    />
+  )
 }
 
 export default function AdminSessionsCalendar({ sessions, modules }: { sessions: SessionData[], modules: any[] }) {
@@ -376,12 +413,20 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     setActionLoading(false)
   }
 
-  // Helper to change selected module and auto-fill its saved description if available
+  // Helper to change selected module and auto-fill its saved description & pricing type
   const handleSelectModule = (modId: string) => {
     setSelectedModuleId(modId)
     const mod = modules.find(m => m.id === modId)
-    if (mod && mod.description) {
-      setNewSessionDesc(mod.description)
+    if (mod) {
+      if (mod.description) {
+        setNewSessionDesc(mod.description)
+      }
+      const mName = mod.name.toUpperCase()
+      if (mod.category === 'PAID' || mName.includes('PAINT') || mName.includes('PRINT') || mName.includes('PROFIT')) {
+        setPricingType('PAID')
+      } else if (mod.category === 'FREE' || mName.includes('FREE')) {
+        setPricingType('FREE')
+      }
     }
   }
 
@@ -389,11 +434,8 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     setActionError('')
     if (modules.length > 0) {
       const initialModId = selectedModuleId || modules[0].id
-      setSelectedModuleId(initialModId)
-      const mod = modules.find(m => m.id === initialModId)
-      if (mod && mod.description) {
-        setNewSessionDesc(mod.description)
-      }
+      // Use handleSelectModule so pricingType is also auto-set from the module's category
+      handleSelectModule(initialModId)
     }
     setShowCreateModal(true)
   }
@@ -454,10 +496,10 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
         const existing = modules.find(m => m.id === targetModId)
         if (existing) {
           const modData = new FormData()
-          modData.append('moduleId', existing.id)
+          modData.append('id', existing.id)
           modData.append('name', existing.name)
           modData.append('description', editDesc)
-          modData.append('category', existing.category || 'FREE')
+          modData.append('category', editPricingType)
           modData.append('units', (existing.units ?? 2).toString())
           await updateModule(modData)
         }
@@ -1096,10 +1138,10 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                       if (mod) {
                         if (mod.description) setEditDesc(mod.description)
                         const mName = mod.name.toUpperCase()
-                        if (mName.includes('FREE')) {
-                          setEditPricingType('FREE')
-                        } else if (mName.includes('PRINT') || mName.includes('PROFIT')) {
+                        if (mod.category === 'PAID' || mName.includes('PAINT') || mName.includes('PRINT') || mName.includes('PROFIT')) {
                           setEditPricingType('PAID')
+                        } else if (mod.category === 'FREE' || mName.includes('FREE')) {
+                          setEditPricingType('FREE')
                         }
                       }
                     }
@@ -1208,9 +1250,9 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                     <label style={{ fontWeight: 600, fontSize: '0.82rem' }}>🌐 Online Seats (Website)</label>
                     <input
                       type="number"
-                      min="1"
+                      min="0"
                       value={editOnlineCapacity}
-                      onChange={(e) => setEditOnlineCapacity(Math.max(1, parseInt(e.target.value, 10) || 0))}
+                      onChange={(e) => setEditOnlineCapacity(Math.max(0, parseInt(e.target.value, 10) || 0))}
                       className="input-field"
                       required
                       style={{ borderRadius: '0.5rem' }}
@@ -1221,9 +1263,9 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                     <label style={{ fontWeight: 600, fontSize: '0.82rem' }}>🏢 Offline / Manual Reservation Seats</label>
                     <input
                       type="number"
-                      min="1"
+                      min="0"
                       value={editOfflineCapacity}
-                      onChange={(e) => setEditOfflineCapacity(Math.max(1, parseInt(e.target.value, 10) || 0))}
+                      onChange={(e) => setEditOfflineCapacity(Math.max(0, parseInt(e.target.value, 10) || 0))}
                       className="input-field"
                       required
                       style={{ borderRadius: '0.5rem' }}
@@ -1489,9 +1531,9 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                     <label style={{ fontWeight: 600, fontSize: '0.82rem' }}>🌐 Online Seats (Website)</label>
                     <input
                       type="number"
-                      min="1"
+                      min="0"
                       value={onlineCapacity}
-                      onChange={(e) => setOnlineCapacity(Math.max(1, parseInt(e.target.value, 10) || 0))}
+                      onChange={(e) => setOnlineCapacity(Math.max(0, parseInt(e.target.value, 10) || 0))}
                       className="input-field"
                       required
                       style={{ borderRadius: '0.5rem' }}
@@ -1502,9 +1544,9 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                     <label style={{ fontWeight: 600, fontSize: '0.82rem' }}>🏢 Offline / Manual Reservation Seats</label>
                     <input
                       type="number"
-                      min="1"
+                      min="0"
                       value={offlineCapacity}
-                      onChange={(e) => setOfflineCapacity(Math.max(1, parseInt(e.target.value, 10) || 0))}
+                      onChange={(e) => setOfflineCapacity(Math.max(0, parseInt(e.target.value, 10) || 0))}
                       className="input-field"
                       required
                       style={{ borderRadius: '0.5rem' }}

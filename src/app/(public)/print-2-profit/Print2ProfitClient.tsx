@@ -52,12 +52,37 @@ function formatTime(timeStr?: string | null) {
 
 function renderFormattedText(text: string | null | undefined) {
   if (!text) return null
-  // Strip dangerous tags — content is HTML from the admin's WYSIWYG editor
+  // Strip dangerous tags and inline width/white-space styles pasted from external documents
   const safe = text
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/on\w+="[^"]*"/gi, '')
     .replace(/javascript:/gi, '')
-  return <span dangerouslySetInnerHTML={{ __html: safe }} />
+    .replace(/width\s*:\s*[^;"']+/gi, 'max-width: 100%')
+    .replace(/white-space\s*:\s*nowrap/gi, 'white-space: normal')
+
+  return (
+    <>
+      <style>{`
+        .formatted-user-text {
+          word-break: break-word !important;
+          overflow-wrap: break-word !important;
+          max-width: 100% !important;
+          overflow-x: hidden !important;
+          box-sizing: border-box !important;
+        }
+        .formatted-user-text * {
+          max-width: 100% !important;
+          white-space: normal !important;
+          word-break: break-word !important;
+          overflow-wrap: break-word !important;
+        }
+      `}</style>
+      <div
+        className="formatted-user-text"
+        dangerouslySetInnerHTML={{ __html: safe }}
+      />
+    </>
+  )
 }
 
 function isSameDay(a: Date, b: Date) {
@@ -588,7 +613,11 @@ export default function Print2ProfitClient({ sessions }: Props) {
                         🤝 In collaboration with: <strong>{session.collaborator}</strong>
                       </div>
                     )}
-                    <div style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.6, wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                    <div style={{
+                      fontSize: '13px', color: '#64748b', lineHeight: 1.6,
+                      wordBreak: 'break-word', overflowWrap: 'break-word',
+                      overflowX: 'hidden', maxWidth: '100%'
+                    }}>
                       {session.module?.description ? renderFormattedText(session.module.description) : 'Hands-on practical workshop session at Makerlab.'}
                     </div>
                   </div>
@@ -803,7 +832,9 @@ export default function Print2ProfitClient({ sessions }: Props) {
                       setModalError(res.error)
                       setSubmitting(false)
                     } else if (res.bookingReference && res.reservedUntil) {
-                      const shopifyVariantId = process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID || '45713497981119'
+                      const modName = (modalSession.module?.name || res.moduleName || '').toUpperCase()
+                      const fallbackVariant = (modName.includes('DESIGN') || modName.includes('FUSION')) ? '46092204245183' : modName.includes('PAINT') ? '46091932762303' : '45713497981119'
+                      const shopifyVariantId = res.shopifyVariantId || fallbackVariant
                       const shopifyDomain = process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN || 'www.makerlab.ph'
                       const url = `https://${shopifyDomain}/cart/${shopifyVariantId}:1?attributes[booking_reference]=${res.bookingReference}&note=${res.bookingReference}`
 
