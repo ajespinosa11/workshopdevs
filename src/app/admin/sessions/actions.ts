@@ -260,6 +260,7 @@ export async function updateSession(formData: FormData) {
   const onlineCapacityStr = formData.get('onlineCapacity') as string
   const offlineCapacityStr = formData.get('offlineCapacity') as string
   const pricingType = formData.get('pricingType') as string
+  const description = formData.get('description') as string | undefined
   const notes = formData.get('notes') as string | undefined
   const collaborator = formData.get('collaborator') as string | undefined
 
@@ -329,13 +330,14 @@ export async function updateSession(formData: FormData) {
       }
     })
 
-    // Sync parent module category (PAID or FREE)
-    if (updatedCategory) {
-      await prisma.module.update({
-        where: { id: finalModuleId },
-        data: { category: updatedCategory === 'PAID' ? 'PAID' : 'FREE' }
-      })
-    }
+    // Sync parent module category (PAID or FREE) and description
+    await prisma.module.update({
+      where: { id: finalModuleId },
+      data: {
+        ...(updatedCategory ? { category: updatedCategory === 'PAID' ? 'PAID' : 'FREE' } : {}),
+        ...(typeof description === 'string' ? { description: description.trim() } : {})
+      }
+    })
 
     revalidatePath('/admin/sessions')
     return { success: true }
@@ -372,6 +374,11 @@ export async function deleteSession(
           where: {
             status: { in: ['RESERVED', 'BALANCE_DUE', 'CHECKED_IN', 'WALKIN_CONFIRMED', 'COMPLETED_CONSUMED'] }
           }
+        },
+        registrations: {
+          where: {
+            status: { notIn: ['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED', 'DUPLICATE_ORDER'] }
+          }
         }
       }
     })
@@ -384,8 +391,29 @@ export async function deleteSession(
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     })
 
-    // Collect emails to send BEFORE deleting
+    // Collect emails to send BEFORE updating DB
     const affectedBookings = existing.bookings
+    const affectedRegistrations = existing.registrations
+
+    // Combine recipients to notify (avoid duplicate emails if same customer is in both)
+    const recipientsMap = new Map<string, { customerName: string; bookingReference: string }>()
+    for (const b of affectedBookings) {
+      recipientsMap.set(b.customerEmail.toLowerCase().trim(), {
+        customerName: b.customerName,
+        bookingReference: b.bookingReference
+      })
+    }
+    for (const r of affectedRegistrations) {
+      if (r.customerEmail) {
+        const key = r.customerEmail.toLowerCase().trim()
+        if (!recipientsMap.has(key)) {
+          recipientsMap.set(key, {
+            customerName: r.customerName || 'Valued Customer',
+            bookingReference: r.bookingReference
+          })
+        }
+      }
+    }
 
     await prisma.$transaction(
       async (tx) => {
@@ -439,6 +467,17 @@ export async function deleteSession(
           })
         }
 
+        // Cancel WorkshopRegistrations associated with this session
+        const regIds = affectedRegistrations.map((r) => r.id)
+        if (regIds.length > 0) {
+          await tx.workshopRegistration.updateMany({
+            where: { id: { in: regIds } },
+            data: {
+              status: 'CANCELLED'
+            }
+          })
+        }
+
         // Clean up any other attendance records referencing this sessionId
         await tx.attendance.deleteMany({
           where: { sessionId }
@@ -453,14 +492,14 @@ export async function deleteSession(
       { maxWait: 10000, timeout: 30000 }
     )
 
-    // Send cancellation emails to all affected customers (after transaction succeeds)
+    // Send cancellation emails to all affected customers (both Bookings & WorkshopRegistrations)
     const emailErrors: string[] = []
-    for (const booking of affectedBookings) {
+    for (const [email, info] of recipientsMap.entries()) {
       try {
         await sendSessionCancellationEmail({
-          to: booking.customerEmail,
-          customerName: booking.customerName,
-          bookingReference: booking.bookingReference,
+          to: email,
+          customerName: info.customerName,
+          bookingReference: info.bookingReference,
           moduleName: existing.module.name,
           sessionDate: sessionDateFormatted,
           startTime: existing.startTime,
@@ -469,15 +508,16 @@ export async function deleteSession(
           customNotes,
         })
       } catch (emailErr: any) {
-        console.error(`Failed to send cancellation email to ${booking.customerEmail}:`, emailErr)
-        emailErrors.push(booking.customerEmail)
+        console.error(`Failed to send cancellation email to ${email}:`, emailErr)
+        emailErrors.push(email)
       }
     }
 
     revalidatePath('/admin/sessions')
+    revalidatePath('/admin/registrations')
     return {
       success: true,
-      cancelledCount: affectedBookings.length,
+      cancelledCount: recipientsMap.size,
       emailErrors,
     }
   } catch (error: any) {

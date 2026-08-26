@@ -201,22 +201,8 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    // Send booking confirmation email with reference code
-    if (financialStatus === 'paid' && registration.customerEmail) {
-      try {
-        const amountFormatted = totalAmount > 0 ? `₱${totalAmount.toFixed(2)}` : undefined
-        await sendBookingConfirmationEmail({
-          to: registration.customerEmail,
-          customerName: registration.customerName,
-          bookingReference: registration.bookingReference,
-          amount: amountFormatted,
-        })
-        console.log(`[Webhook] Booking confirmation email sent to ${registration.customerEmail}`)
-      } catch (emailErr) {
-        // Don't fail the webhook if email fails — just log it
-        console.error('[Webhook] Failed to send booking confirmation email:', emailErr)
-      }
-    }
+    // Note: Automatic Shopify order confirmation email removed per request.
+    // Confirmation emails are sent manually when reserving/confirming the slot.
 
     return NextResponse.json({
       success: true,

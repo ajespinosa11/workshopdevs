@@ -653,7 +653,7 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
       if (!r.sessionId) return
       if (['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED', 'DUPLICATE_ORDER'].includes(r.status)) return
       if (!map.has(r.sessionId)) {
-        if (r.session) {
+        if (r.session && r.session.status !== 'CANCELLED') {
           const cat = r.session.category || ''
           const modName = r.session.module?.name || ''
           const isFree = cat === 'FREE' || cat === 'FREE_KID' || /free/i.test(modName)

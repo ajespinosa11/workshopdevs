@@ -483,6 +483,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     formData.append('onlineCapacity', editOnlineCapacity.toString())
     formData.append('offlineCapacity', editOfflineCapacity.toString())
     formData.append('capacity', (editOnlineCapacity + editOfflineCapacity).toString())
+    formData.append('description', editDesc)
     formData.append('notes', editNotes)
     formData.append('collaborator', editCollaborator)
 
@@ -494,15 +495,15 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
       const targetModId = editModuleId || editSession.module?.id
       if (targetModId) {
         const existing = modules.find(m => m.id === targetModId)
-        if (existing) {
-          const modData = new FormData()
-          modData.append('id', existing.id)
-          modData.append('name', existing.name)
-          modData.append('description', editDesc)
-          modData.append('category', editPricingType)
-          modData.append('units', (existing.units ?? 2).toString())
-          await updateModule(modData)
-        }
+        const modName = editSession.module?.name || existing?.name || 'Workshop'
+        const modUnits = existing?.units ?? editSession.module?.units ?? 2
+        const modData = new FormData()
+        modData.append('id', targetModId)
+        modData.append('name', modName)
+        modData.append('description', editDesc)
+        modData.append('category', editPricingType)
+        modData.append('units', modUnits.toString())
+        await updateModule(modData)
       }
       setEditSession(null)
       router.refresh()

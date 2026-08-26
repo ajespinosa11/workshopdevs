@@ -851,6 +851,8 @@ interface BookingConfirmationParams {
   to: string
   customerName: string
   bookingReference: string
+  moduleName?: string
+  sku?: string
   sessionDate?: string
   sessionTime?: string
   amount?: string
@@ -860,6 +862,8 @@ export async function sendBookingConfirmationEmail({
   to,
   customerName,
   bookingReference,
+  moduleName = 'Workshop Event',
+  sku = 'BW001',
   sessionDate,
   sessionTime,
   amount,
@@ -943,7 +947,7 @@ export async function sendBookingConfirmationEmail({
         <div class="content">
           <div class="greeting">Payment Confirmed, ${firstName}!</div>
           <p class="intro">
-            Thank you for registering for the <strong>Prints 2 Profit Workshop</strong>.
+            Thank you for registering for <strong>${moduleName}</strong>.
             Your payment has been successfully received. Below is your personal <strong>Booking Reference Code</strong> — 
             keep this safe! You'll need it to reserve your seat in our workshop scheduling system.
           </p>
@@ -961,11 +965,11 @@ export async function sendBookingConfirmationEmail({
             <div class="details-title">Order Summary</div>
             <div class="detail-row">
               <span class="detail-label">Workshop</span>
-              <span class="detail-value">Prints 2 Profit</span>
+              <span class="detail-value">${moduleName}</span>
             </div>
             <div class="detail-row">
               <span class="detail-label">SKU</span>
-              <span class="detail-value">BW001</span>
+              <span class="detail-value">${sku}</span>
             </div>
             ${sessionDate ? `
             <div class="detail-row">
@@ -1016,7 +1020,7 @@ export async function sendBookingConfirmationEmail({
         <div class="footer">
           <p>Questions? Contact us at <a href="mailto:makerlab@makerlab.ph">makerlab@makerlab.ph</a></p>
           <p style="margin-top: 8px;">© ${new Date().getFullYear()} MakerLab 3D Workshop. All rights reserved.</p>
-          <p style="margin-top: 8px; color: #cbd5e0;">This email was sent to ${to} because you purchased a Prints 2 Profit workshop.</p>
+          <p style="margin-top: 8px; color: #cbd5e0;">This email was sent to ${to} because you registered for a MakerLab workshop.</p>
         </div>
       </div>
     </body>
@@ -1029,9 +1033,9 @@ export async function sendBookingConfirmationEmail({
   const info = await transporter.sendMail({
     from: fromAddress,
     to,
-    subject: `Your Booking Reference: ${bookingReference} — Prints 2 Profit Workshop`,
+    subject: `Your Booking Reference: ${bookingReference} — ${moduleName}`,
     html: htmlContent,
-    text: `Hi ${firstName},\n\nThank you for registering for Prints 2 Profit!\n\nYour Booking Reference Code is: ${bookingReference}\n\nUse this code to reserve your session slot at: ${bookingUrl}\n\nSee you at the workshop!\nMakerLab Team`,
+    text: `Hi ${firstName},\n\nThank you for registering for ${moduleName}!\n\nYour Booking Reference Code is: ${bookingReference}\n\nUse this code to reserve your session slot at: ${bookingUrl}\n\nSee you at the workshop!\nMakerLab Team`,
   })
 
   if (!useSmtp) {
