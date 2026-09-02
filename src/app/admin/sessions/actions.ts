@@ -166,6 +166,8 @@ export async function createSession(formData: FormData) {
   const notes = formData.get('notes') as string | undefined
   const description = formData.get('description') as string | undefined
   const collaborator = formData.get('collaborator') as string | undefined
+  const priceStr = formData.get('price') as string
+  const submittedPrice = priceStr ? parseFloat(priceStr) : null
 
   let finalModuleId = moduleId
   if (!finalModuleId) {
@@ -235,13 +237,45 @@ export async function createSession(formData: FormData) {
     })
 
     // Also sync the module category to match session pricing type (PAID/FREE)
-    await prisma.module.update({
-      where: { id: finalModuleId },
-      data: {
-        category: finalCategory === 'PAID' ? 'PAID' : 'FREE',
-        ...(description && description.trim() ? { description: description.trim() } : {})
-      }
-    })
+    let updatedSku = moduleItem.sku
+    let updatedShopifyProductId = moduleItem.shopifyProductId
+    let updatedShopifyVariantId = moduleItem.shopifyVariantId
+    let updatedShopifyPermalink = moduleItem.shopifyPermalink
+
+    if (finalCategory === 'PAID' && !moduleItem.shopifyVariantId) {
+      const priceToUse = (submittedPrice !== null && submittedPrice > 0) ? submittedPrice : (moduleItem.price || 999)
+      const { syncWorkshopProductToShopify } = await import('@/lib/shopify')
+      const shopifyRes = await syncWorkshopProductToShopify({
+        title: moduleItem.name,
+        description: description || moduleItem.description || undefined,
+        price: priceToUse,
+        sku: moduleItem.sku || undefined
+      })
+      updatedSku = shopifyRes.sku
+      updatedShopifyProductId = shopifyRes.shopifyProductId
+      updatedShopifyVariantId = shopifyRes.shopifyVariantId
+      updatedShopifyPermalink = shopifyRes.shopifyPermalink
+    } else if (finalCategory === 'PAID' && moduleItem.shopifyVariantId && submittedPrice !== null && submittedPrice > 0 && submittedPrice !== moduleItem.price) {
+      // Price changed for existing Shopify product — sync the variant price
+      const { updateShopifyVariantPrice } = await import('@/lib/shopify')
+      await updateShopifyVariantPrice(moduleItem.shopifyVariantId, submittedPrice)
+    }
+
+    const catValue = finalCategory === 'PAID' ? 'PAID' : 'FREE'
+    const descValue = (description && description.trim()) ? description.trim() : (moduleItem.description || null)
+    const priceValue = (finalCategory === 'PAID' && submittedPrice !== null && submittedPrice > 0) ? submittedPrice : moduleItem.price
+
+    await prisma.$executeRaw`
+      UPDATE "Module"
+      SET category = ${catValue},
+          price = ${priceValue},
+          sku = ${updatedSku},
+          "shopifyProductId" = ${updatedShopifyProductId},
+          "shopifyVariantId" = ${updatedShopifyVariantId},
+          "shopifyPermalink" = ${updatedShopifyPermalink},
+          description = ${descValue}
+      WHERE id = ${finalModuleId}
+    `
 
     revalidatePath('/admin/sessions')
     return { success: true, session }
@@ -263,6 +297,8 @@ export async function updateSession(formData: FormData) {
   const description = formData.get('description') as string | undefined
   const notes = formData.get('notes') as string | undefined
   const collaborator = formData.get('collaborator') as string | undefined
+  const priceStr = formData.get('price') as string
+  const submittedPrice = priceStr ? parseFloat(priceStr) : null
 
   let finalModuleId = moduleId
   if (!finalModuleId) {
@@ -330,12 +366,29 @@ export async function updateSession(formData: FormData) {
       }
     })
 
-    // Sync parent module category (PAID or FREE) and description
+    // Sync parent module category (PAID or FREE), description, and price
+    const priceForModule = (updatedCategory === 'PAID' && submittedPrice !== null && submittedPrice > 0)
+      ? submittedPrice
+      : undefined
+
+    // If price changed and module already has a Shopify variant, push to Shopify
+    if (
+      updatedCategory === 'PAID' &&
+      moduleItem.shopifyVariantId &&
+      submittedPrice !== null &&
+      submittedPrice > 0 &&
+      submittedPrice !== moduleItem.price
+    ) {
+      const { updateShopifyVariantPrice } = await import('@/lib/shopify')
+      await updateShopifyVariantPrice(moduleItem.shopifyVariantId, submittedPrice)
+    }
+
     await prisma.module.update({
       where: { id: finalModuleId },
       data: {
         ...(updatedCategory ? { category: updatedCategory === 'PAID' ? 'PAID' : 'FREE' } : {}),
-        ...(typeof description === 'string' ? { description: description.trim() } : {})
+        ...(typeof description === 'string' ? { description: description.trim() } : {}),
+        ...(priceForModule !== undefined ? { price: priceForModule } : {})
       }
     })
 

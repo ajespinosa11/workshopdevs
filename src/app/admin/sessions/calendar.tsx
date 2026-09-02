@@ -263,6 +263,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
   const [actionError, setActionError] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
   const [pricingType, setPricingType] = useState<'FREE' | 'PAID'>('FREE')
+  const [sessionPrice, setSessionPrice] = useState(999)
   const [freeSubCategory, setFreeSubCategory] = useState<'ADULT' | 'KID'>('ADULT')
   const [notes, setNotes] = useState('')
   const [collaborator, setCollaborator] = useState('')
@@ -272,6 +273,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
   const [editSession, setEditSession] = useState<SessionData | null>(null)
   const [editModuleId, setEditModuleId] = useState('')
   const [editPricingType, setEditPricingType] = useState<'FREE' | 'PAID'>('FREE')
+  const [editPrice, setEditPrice] = useState(999)
   const [editFreeSubCategory, setEditFreeSubCategory] = useState<'ADULT' | 'KID'>('ADULT')
   const [editStartTime, setEditStartTime] = useState('09:00')
   const [editEndTime, setEditEndTime] = useState('11:00')
@@ -366,6 +368,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     formData.append('endTime', endTime)
     formData.append('capacity', capacity.toString())
     formData.append('pricingType', pricingType)
+    formData.append('price', pricingType === 'PAID' ? sessionPrice.toString() : '0')
     formData.append('freeSubCategory', pricingType === 'FREE' ? freeSubCategory : '')
     formData.append('notes', notes)
     formData.append('description', newSessionDesc)
@@ -424,6 +427,9 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
       const mName = mod.name.toUpperCase()
       if (mod.category === 'PAID' || mName.includes('PAINT') || mName.includes('PRINT') || mName.includes('PROFIT')) {
         setPricingType('PAID')
+        if (mod.price && mod.price > 0) {
+          setSessionPrice(mod.price)
+        }
       } else if (mod.category === 'FREE' || mName.includes('FREE')) {
         setPricingType('FREE')
       }
@@ -454,6 +460,13 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
 
     setEditPricingType(isPaid ? 'PAID' : 'FREE')
     setEditFreeSubCategory(catUpper.includes('KID') ? 'KID' : 'ADULT')
+    // Pre-fill price from the module
+    const editMod = modules.find(m => m.id === initialModId)
+    if (isPaid && editMod?.price && editMod.price > 0) {
+      setEditPrice(editMod.price)
+    } else {
+      setEditPrice(999)
+    }
     setEditStartTime(s.startTime)
     setEditEndTime(s.endTime)
     const onCap = typeof s.onlineCapacity === 'number' && s.onlineCapacity >= 0 ? s.onlineCapacity : Math.floor(s.capacity / 2)
@@ -477,6 +490,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     formData.append('sessionId', editSession.id)
     formData.append('moduleId', editModuleId)
     formData.append('pricingType', editPricingType)
+    formData.append('price', editPricingType === 'PAID' ? editPrice.toString() : '0')
     formData.append('freeSubCategory', editPricingType === 'FREE' ? editFreeSubCategory : '')
     formData.append('startTime', editStartTime)
     formData.append('endTime', editEndTime)
@@ -503,6 +517,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
         modData.append('description', editDesc)
         modData.append('category', editPricingType)
         modData.append('units', modUnits.toString())
+        modData.append('price', editPricingType === 'PAID' ? editPrice.toString() : '0')
         await updateModule(modData)
       }
       setEditSession(null)
@@ -1226,6 +1241,27 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                     </label>
                   </div>
                 )}
+                {editPricingType === 'PAID' && (
+                  <div style={{ marginTop: '0.65rem' }}>
+                    <div className="input-group" style={{ margin: 0 }}>
+                      <label style={{ fontWeight: 600, fontSize: '0.88rem', display: 'block', marginBottom: '0.3rem' }}>💰 Workshop Price (₱) *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={editPrice}
+                        onChange={e => setEditPrice(parseFloat(e.target.value) || 0)}
+                        className="input-field"
+                        required
+                        placeholder="e.g. 1500"
+                        style={{ borderRadius: '0.5rem' }}
+                      />
+                      <p style={{ fontSize: '0.78rem', color: '#6366f1', margin: '0.3rem 0 0 0' }}>
+                        🛍️ Updating price syncs directly to Shopify Admin API.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -1505,6 +1541,27 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                       />
                       👦 KID + Guardian (2 Pax)
                     </label>
+                  </div>
+                )}
+                {pricingType === 'PAID' && (
+                  <div style={{ marginTop: '0.65rem' }}>
+                    <div className="input-group" style={{ margin: 0 }}>
+                      <label style={{ fontWeight: 600, fontSize: '0.88rem', display: 'block', marginBottom: '0.3rem' }}>💰 Workshop Price (₱) *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={sessionPrice}
+                        onChange={e => setSessionPrice(parseFloat(e.target.value) || 0)}
+                        className="input-field"
+                        required
+                        placeholder="e.g. 1500"
+                        style={{ borderRadius: '0.5rem' }}
+                      />
+                      <p style={{ fontSize: '0.78rem', color: '#6366f1', marginTop: '0.3rem', margin: '0.3rem 0 0 0' }}>
+                        🛍️ This price will be synced to Shopify when the session is created.
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>

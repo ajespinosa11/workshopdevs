@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 export const revalidate = 172800;
 
 // Makerlab Experience Hub Place ID (from Google Maps CID / Place details)
-const PLACE_ID = 'ChIJQ8zQPqrrtT4R67nCpIonkWc';
+const PLACE_ID = 'ChIJQ8zQPqrPlzMR67nCpIonkWM';
 
 export async function GET() {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;

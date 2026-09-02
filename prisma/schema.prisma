@@ -26,15 +26,20 @@ model StaffUser {
 }
 
 model Module {
-  id            String   @id @default(uuid())
-  name          String
-  description   String?
-  category      String   // FREE, PAID
-  units         Int      // Number of units this module costs
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id               String   @id @default(uuid())
+  name             String
+  description      String?
+  category         String   // FREE, PAID
+  units            Int      // Number of units this module costs
+  price            Float?   @default(0)
+  sku              String?  @unique
+  shopifyProductId String?
+  shopifyVariantId String?
+  shopifyPermalink String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  sessions      WorkshopSession[]
+  sessions         WorkshopSession[]
 }
 
 model Plan {

@@ -14,8 +14,16 @@ function isRegistrationPaid(reg: any): boolean {
   return false
 }
 
-// Resolve SKU and Shopify variant ID based on session module name
-function getSkuAndVariantId(moduleName: string): { sku: string; variantId: string } {
+// Resolve SKU and Shopify variant ID based on session module data or fallback rules
+async function getSkuAndVariantId(session: any): Promise<{ sku: string; variantId: string }> {
+  if (session?.module?.sku && session?.module?.shopifyVariantId) {
+    return {
+      sku: session.module.sku,
+      variantId: session.module.shopifyVariantId
+    }
+  }
+
+  const moduleName = session?.module?.name || ''
   const name = moduleName.toUpperCase()
   if (name.includes('DESIGN') || name.includes('FUSION') || name.includes('BW003')) {
     return {
@@ -30,8 +38,8 @@ function getSkuAndVariantId(moduleName: string): { sku: string; variantId: strin
     }
   }
   return {
-    sku: 'BW001',
-    variantId: process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID || '45713497981119'
+    sku: session?.module?.sku || 'BW001',
+    variantId: session?.module?.shopifyVariantId || process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID || '45713497981119'
   }
 }
 
@@ -68,8 +76,7 @@ export async function createRegistration(formData: FormData) {
     const randomCode = Math.floor(1000 + Math.random() * 9000)
     const bookingReference = `P2P-${dateCode}-${randomCode}`
 
-    const moduleName = session.module?.name || ''
-    const { sku, variantId } = getSkuAndVariantId(moduleName)
+    const { sku, variantId } = await getSkuAndVariantId(session)
 
     const registration = await prisma.workshopRegistration.create({
       data: {

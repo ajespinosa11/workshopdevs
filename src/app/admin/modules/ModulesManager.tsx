@@ -10,6 +10,11 @@ interface Module {
   description: string | null
   category: string
   units: number
+  price?: number | null
+  sku?: string | null
+  shopifyProductId?: string | null
+  shopifyVariantId?: string | null
+  shopifyPermalink?: string | null
   _count: { sessions: number }
 }
 
@@ -22,6 +27,7 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
   const [createDesc, setCreateDesc] = useState('')
   const [createCategory, setCreateCategory] = useState('FREE')
   const [createUnits, setCreateUnits] = useState(2)
+  const [createPrice, setCreatePrice] = useState(999)
   const [createError, setCreateError] = useState('')
   const [createLoading, setCreateLoading] = useState(false)
 
@@ -31,6 +37,7 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
   const [editDesc, setEditDesc] = useState('')
   const [editCategory, setEditCategory] = useState('FREE')
   const [editUnits, setEditUnits] = useState(2)
+  const [editPrice, setEditPrice] = useState(999)
   const [editError, setEditError] = useState('')
   const [editLoading, setEditLoading] = useState(false)
 
@@ -45,7 +52,8 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
 
   const filtered = modules.filter(m => {
     const matchSearch = m.name.toLowerCase().includes(search.toLowerCase()) ||
-      (m.description || '').toLowerCase().includes(search.toLowerCase())
+      (m.description || '').toLowerCase().includes(search.toLowerCase()) ||
+      (m.sku || '').toLowerCase().includes(search.toLowerCase())
     const matchCategory = filterCategory === 'ALL' || m.category === filterCategory
     return matchSearch && matchCategory
   })
@@ -59,11 +67,12 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
     fd.append('description', createDesc)
     fd.append('category', createCategory)
     fd.append('units', createUnits.toString())
+    fd.append('price', createPrice.toString())
     const res = await createModule(fd)
     if (res.error) { setCreateError(res.error) }
     else {
       setShowCreate(false)
-      setCreateName(''); setCreateDesc(''); setCreateCategory('FREE'); setCreateUnits(2)
+      setCreateName(''); setCreateDesc(''); setCreateCategory('FREE'); setCreateUnits(2); setCreatePrice(999)
       router.refresh()
     }
     setCreateLoading(false)
@@ -75,6 +84,7 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
     setEditDesc(m.description || '')
     setEditCategory(m.category)
     setEditUnits(m.units)
+    setEditPrice(m.price || 999)
     setEditError('')
   }
 
@@ -89,6 +99,7 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
     fd.append('description', editDesc)
     fd.append('category', editCategory)
     fd.append('units', editUnits.toString())
+    fd.append('price', editPrice.toString())
     const res = await updateModule(fd)
     if (res.error) { setEditError(res.error) }
     else { setEditModule(null); router.refresh() }
@@ -121,7 +132,7 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
         <div>
           <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: 0 }}>Workshop Modules</h1>
           <p style={{ color: 'var(--admin-text-secondary)', fontSize: '0.95rem', margin: '4px 0 0 0' }}>
-            Manage the academic modules used for workshop sessions.
+            Manage workshop modules, automatic SKU incrementing, and Shopify direct integration.
           </p>
         </div>
         <button
@@ -162,7 +173,7 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
         <input
           type="text"
-          placeholder="Search modules..."
+          placeholder="Search modules or SKU..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="input-field"
@@ -192,59 +203,86 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--admin-border)' }}>
-                {['Module Name', 'Description', 'Category', 'Units Cost', 'Sessions', 'Actions'].map(h => (
+                {['Module Name & SKU', 'Description', 'Category', 'Units / Price', 'Shopify Direct Link', 'Sessions', 'Actions'].map(h => (
                   <th key={h} style={{ padding: '0.85rem 1.25rem', textAlign: 'left', fontWeight: 700, color: 'var(--admin-text-secondary)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.map((m, i) => (
-                <tr key={m.id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--admin-border)' : 'none', transition: 'background 0.15s' }}
-                  onMouseOver={e => (e.currentTarget.style.background = '#fafafa')}
-                  onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
-                >
-                  <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: 'var(--primary)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: categoryColor(m.category), flexShrink: 0 }} />
-                      {m.name}
-                    </div>
-                  </td>
-                  <td style={{ padding: '1rem 1.25rem', color: 'var(--admin-text-secondary)', maxWidth: '280px' }}>
-                    <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.45, fontSize: '0.85rem' }}>
-                      {m.description || <em style={{ opacity: 0.5 }}>No description</em>}
-                    </span>
-                  </td>
-                  <td style={{ padding: '1rem 1.25rem' }}>
-                    <span className={`badge ${categoryBadge(m.category)}`}>{m.category}</span>
-                  </td>
-                  <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: 'var(--accent)' }}>
-                    {m.units} units
-                  </td>
-                  <td style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>
-                    {m._count.sessions}
-                  </td>
-                  <td style={{ padding: '1rem 1.25rem' }}>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button
-                        onClick={() => openEdit(m)}
-                        style={{ padding: '0.35rem 0.85rem', borderRadius: '0.5rem', border: '1.5px solid var(--accent)', color: 'var(--accent)', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', transition: 'all 0.15s' }}
-                        onMouseOver={e => e.currentTarget.style.background = 'rgba(249,115,22,0.06)'}
-                        onMouseOut={e => e.currentTarget.style.background = '#fff'}
-                      >
-                        ✏️ Edit
-                      </button>
-                      <button
-                        onClick={() => { setDeleteTarget(m); setDeleteError('') }}
-                        style={{ padding: '0.35rem 0.85rem', borderRadius: '0.5rem', border: '1.5px solid #ef4444', color: '#ef4444', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', transition: 'all 0.15s' }}
-                        onMouseOver={e => e.currentTarget.style.background = 'rgba(239,68,68,0.05)'}
-                        onMouseOut={e => e.currentTarget.style.background = '#fff'}
-                      >
-                        🗑 Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((m, i) => {
+                const permalinkUrl = m.shopifyPermalink || (m.shopifyVariantId ? `https://www.makerlab.ph/cart/${m.shopifyVariantId}:1` : null)
+                return (
+                  <tr key={m.id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--admin-border)' : 'none', transition: 'background 0.15s' }}
+                    onMouseOver={e => (e.currentTarget.style.background = '#fafafa')}
+                    onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: 'var(--primary)' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: categoryColor(m.category), flexShrink: 0 }} />
+                          {m.name}
+                        </div>
+                        {m.sku && (
+                          <span style={{ fontSize: '0.72rem', background: '#e0e7ff', color: '#3730a3', padding: '0.1rem 0.4rem', borderRadius: '4px', width: 'fit-content', fontWeight: 800 }}>
+                            SKU: {m.sku}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td style={{ padding: '1rem 1.25rem', color: 'var(--admin-text-secondary)', maxWidth: '240px' }}>
+                      <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.45, fontSize: '0.85rem' }}>
+                        {m.description || <em style={{ opacity: 0.5 }}>No description</em>}
+                      </span>
+                    </td>
+                    <td style={{ padding: '1rem 1.25rem' }}>
+                      <span className={`badge ${categoryBadge(m.category)}`}>{m.category}</span>
+                    </td>
+                    <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: 'var(--accent)' }}>
+                      <div>{m.units} units</div>
+                      {m.category === 'PAID' && m.price && m.price > 0 && (
+                        <div style={{ fontSize: '0.75rem', color: '#16a34a' }}>₱{m.price.toLocaleString()}</div>
+                      )}
+                    </td>
+                    <td style={{ padding: '1rem 1.25rem' }}>
+                      {permalinkUrl ? (
+                        <a
+                          href={permalinkUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#4f46e5', fontWeight: 600, fontSize: '0.8rem', textDecoration: 'underline' }}
+                        >
+                          🔗 Shopify Cart Link
+                        </a>
+                      ) : (
+                        <span style={{ color: '#94a3b8', fontSize: '0.78rem' }}>N/A (Free)</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>
+                      {m._count.sessions}
+                    </td>
+                    <td style={{ padding: '1rem 1.25rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          onClick={() => openEdit(m)}
+                          style={{ padding: '0.35rem 0.85rem', borderRadius: '0.5rem', border: '1.5px solid var(--accent)', color: 'var(--accent)', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', transition: 'all 0.15s' }}
+                          onMouseOver={e => e.currentTarget.style.background = 'rgba(249,115,22,0.06)'}
+                          onMouseOut={e => e.currentTarget.style.background = '#fff'}
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
+                          onClick={() => { setDeleteTarget(m); setDeleteError('') }}
+                          style={{ padding: '0.35rem 0.85rem', borderRadius: '0.5rem', border: '1.5px solid #ef4444', color: '#ef4444', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', transition: 'all 0.15s' }}
+                          onMouseOver={e => e.currentTarget.style.background = 'rgba(239,68,68,0.05)'}
+                          onMouseOut={e => e.currentTarget.style.background = '#fff'}
+                        >
+                          🗑 Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}
@@ -268,7 +306,7 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
                 <label style={{ fontWeight: 600 }}>Description</label>
                 <textarea value={createDesc} onChange={e => setCreateDesc(e.target.value)} className="input-field" placeholder="Brief description shown to customers during booking..." style={{ borderRadius: '0.5rem', minHeight: '90px', resize: 'vertical', fontFamily: 'inherit' }} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: createCategory === 'PAID' ? '1fr 1fr 1fr' : '1.5fr 1fr', gap: '1rem' }}>
                 <div className="input-group">
                   <label style={{ fontWeight: 600 }}>Category Type *</label>
                   <select value={createCategory} onChange={e => setCreateCategory(e.target.value)} className="input-field" style={{ borderRadius: '0.5rem', padding: '0.5rem' }}>
@@ -280,7 +318,19 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
                   <label style={{ fontWeight: 600 }}>Units Cost *</label>
                   <input type="number" min="1" value={createUnits} onChange={e => setCreateUnits(parseInt(e.target.value, 10))} className="input-field" required style={{ borderRadius: '0.5rem' }} />
                 </div>
+                {createCategory === 'PAID' && (
+                  <div className="input-group">
+                    <label style={{ fontWeight: 600 }}>Price (₱) *</label>
+                    <input type="number" min="0" step="0.01" value={createPrice} onChange={e => setCreatePrice(parseFloat(e.target.value))} className="input-field" required style={{ borderRadius: '0.5rem' }} />
+                  </div>
+                )}
               </div>
+
+              {createCategory === 'PAID' && (
+                <div style={{ padding: '0.65rem 0.85rem', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '0.5rem', fontSize: '0.8rem', color: '#3730a3' }}>
+                  🛍️ Creating a PAID workshop automatically calculates the next SKU (e.g. <strong>BW004</strong>), syncs the product to Shopify via API, and generates a direct checkout permalink.
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
                 <button type="button" onClick={() => setShowCreate(false)} className="admin-btn-outline" style={{ flex: 1, padding: '0.6rem', borderRadius: '0.5rem' }}>Cancel</button>
                 <button type="submit" disabled={createLoading} style={{ flex: 1, padding: '0.6rem', borderRadius: '0.5rem', background: 'var(--accent)', color: '#fff', border: 'none', fontWeight: 700, cursor: createLoading ? 'not-allowed' : 'pointer' }}>
@@ -310,7 +360,7 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
                 <label style={{ fontWeight: 600 }}>Description</label>
                 <textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} className="input-field" placeholder="Brief description shown to customers during booking..." style={{ borderRadius: '0.5rem', minHeight: '90px', resize: 'vertical', fontFamily: 'inherit' }} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: editCategory === 'PAID' ? '1fr 1fr 1fr' : '1.5fr 1fr', gap: '1rem' }}>
                 <div className="input-group">
                   <label style={{ fontWeight: 600 }}>Category Type *</label>
                   <select value={editCategory} onChange={e => setEditCategory(e.target.value)} className="input-field" style={{ borderRadius: '0.5rem', padding: '0.5rem' }}>
@@ -322,7 +372,18 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
                   <label style={{ fontWeight: 600 }}>Units Cost *</label>
                   <input type="number" min="1" value={editUnits} onChange={e => setEditUnits(parseInt(e.target.value, 10))} className="input-field" required style={{ borderRadius: '0.5rem' }} />
                 </div>
+                {editCategory === 'PAID' && (
+                  <div className="input-group">
+                    <label style={{ fontWeight: 600 }}>Price (₱) *</label>
+                    <input type="number" min="0" step="0.01" value={editPrice} onChange={e => setEditPrice(parseFloat(e.target.value))} className="input-field" required style={{ borderRadius: '0.5rem' }} />
+                  </div>
+                )}
               </div>
+              {editCategory === 'PAID' && (
+                <div style={{ padding: '0.65rem 0.85rem', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '0.5rem', fontSize: '0.8rem', color: '#3730a3' }}>
+                  🛍️ Updating price syncs directly to Shopify Admin API in real time.
+                </div>
+              )}
               {editModule._count.sessions > 0 && (
                 <div style={{ padding: '0.5rem 0.75rem', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.5rem', fontSize: '0.82rem', color: '#92400e' }}>
                   ⚠️ This module is used in <strong>{editModule._count.sessions}</strong> session(s). Changing category or units may affect booking costs.

@@ -204,7 +204,9 @@ export async function createSoftLockReservation(params: {
 
     const moduleName = session.module?.name || ''
     const modUpper = moduleName.toUpperCase()
-    const shopifyVariantId = (modUpper.includes('DESIGN') || modUpper.includes('FUSION'))
+    const shopifyVariantId = session.module?.shopifyVariantId
+      ? session.module.shopifyVariantId
+      : (modUpper.includes('DESIGN') || modUpper.includes('FUSION'))
       ? (process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID_BW003 || '46092204245183')
       : modUpper.includes('PAINT')
       ? (process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID_BW002 || '46091932762303')
