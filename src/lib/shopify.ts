@@ -5,8 +5,8 @@ import { prisma } from '@/lib/prisma'
  * Checks existing Modules and WorkshopRegistrations to ensure no duplicates.
  */
 export async function getNextWorkshopSku(): Promise<string> {
-  const [modules, registrations]: [any[], any[]] = await Promise.all([
-    prisma.$queryRaw`SELECT sku FROM "Module" WHERE sku LIKE 'BW%'`.catch(() => []),
+  const [modules, registrations] = await Promise.all([
+    prisma.$queryRaw`SELECT sku FROM "Module" WHERE sku LIKE 'BW%'`.catch(() => []) as Promise<any[]>,
     prisma.workshopRegistration.findMany({
       where: { sku: { startsWith: 'BW' } },
       select: { sku: true }

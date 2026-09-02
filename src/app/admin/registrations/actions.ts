@@ -159,7 +159,7 @@ export async function adminManualBookSlot(formData: FormData) {
       }
 
       // Resolve SKU from session module
-      const { sku: walkinSku } = getSkuAndVariantId(session.module?.name || '')
+      const { sku: walkinSku } = await getSkuAndVariantId(session)
 
       // Create Registration marked as CONFIRMED (Walk-in payment assumed completed)
       const registration = await tx.workshopRegistration.create({
