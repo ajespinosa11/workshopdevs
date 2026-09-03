@@ -1046,3 +1046,171 @@ export async function sendBookingConfirmationEmail({
   return { success: true, messageId: info.messageId, previewUrl }
 }
 
+interface SessionRescheduledEmailParams {
+  to: string
+  customerName: string
+  bookingReference?: string
+  moduleName: string
+  oldSessionDate: string
+  oldStartTime: string
+  oldEndTime: string
+  newSessionDate: string
+  newStartTime: string
+  newEndTime: string
+  customNotes?: string
+}
+
+export async function sendSessionRescheduledEmail({
+  to,
+  customerName,
+  bookingReference,
+  moduleName,
+  oldSessionDate,
+  oldStartTime,
+  oldEndTime,
+  newSessionDate,
+  newStartTime,
+  newEndTime,
+  customNotes,
+}: SessionRescheduledEmailParams) {
+  let transporter: nodemailer.Transporter
+
+  const useSmtp = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS
+  let previewUrl = ''
+
+  if (useSmtp) {
+    const host = process.env.SMTP_HOST?.replace(/^["']|["']$/g, '').trim()
+    const portStr = process.env.SMTP_PORT?.toString().replace(/^["']|["']$/g, '').trim()
+    const secureStr = process.env.SMTP_SECURE?.toString().replace(/^["']|["']$/g, '').trim()
+    const user = process.env.SMTP_USER?.replace(/^["']|["']$/g, '').trim()
+    const pass = process.env.SMTP_PASS?.replace(/^["']|["']$/g, '').replace(/\s+/g, '')
+
+    transporter = nodemailer.createTransport({
+      host,
+      port: parseInt(portStr || '587', 10),
+      secure: secureStr === 'true',
+      auth: { user, pass },
+    })
+  } else {
+    console.log('Generating Ethereal SMTP test account for reschedule email...')
+    const testAccount = await nodemailer.createTestAccount()
+    transporter = nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false,
+      auth: { user: testAccount.user, pass: testAccount.pass },
+    })
+  }
+
+  const hostUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Workshop Session Rescheduled</title>
+      <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f7fafc; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #e2e8f0; }
+        .header { background: linear-gradient(135deg, #0f2540 0%, #1a3a5c 100%); padding: 30px; text-align: center; color: #ffffff; }
+        .header-badge { display: inline-block; background: rgba(249, 115, 22, 0.25); color: #fdba74; border-radius: 20px; padding: 4px 14px; font-size: 12px; font-weight: 700; letter-spacing: 1px; margin-bottom: 10px; border: 1px solid rgba(249, 115, 22, 0.4); }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 800; }
+        .content { padding: 36px 30px; color: #2d3748; line-height: 1.6; }
+        .greeting { font-size: 18px; font-weight: 700; color: #0f2540; margin-bottom: 12px; }
+        .card { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .card-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; color: #64748b; margin-bottom: 12px; }
+        .info-row { display: flex; justify-content: space-between; border-bottom: 1px solid #edf2f7; padding: 8px 0; font-size: 14px; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: #718096; }
+        .info-value { color: #1a202c; font-weight: 600; text-align: right; }
+        .highlight-box { background-color: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 18px; margin-bottom: 24px; }
+        .highlight-title { color: #1e40af; font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+        .highlight-text { color: #1e3a8a; font-size: 14px; margin: 0; }
+        .old-date { text-decoration: line-through; color: #ef4444; }
+        .new-date { color: #16a34a; font-weight: 800; }
+        .cta-container { text-align: center; margin-top: 28px; }
+        .cta-button { display: inline-block; background-color: #0f2540; color: #ffffff !important; text-decoration: none; padding: 12px 28px; font-weight: 700; border-radius: 6px; font-size: 15px; }
+        .footer { background-color: #f7fafc; padding: 20px 30px; border-top: 1px solid #edf2f7; font-size: 12px; color: #a0aec0; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="header-badge">DATE RESCHEDULED</div>
+          <h1>Workshop Schedule Update</h1>
+        </div>
+        <div class="content">
+          <p class="greeting">Hello, ${customerName}!</p>
+          <p>Please be informed that the date for your scheduled workshop <strong>${moduleName}</strong> has been updated by the Makerlab team.</p>
+
+          <div class="highlight-box">
+            <div class="highlight-title">🗓️ New Workshop Date & Time</div>
+            <p class="highlight-text">
+              <strong>New Schedule:</strong> <span class="new-date">${newSessionDate} (${newStartTime} – ${newEndTime})</span><br/>
+              <span style="font-size: 12px; opacity: 0.85;">Original Schedule: <span class="old-date">${oldSessionDate} (${oldStartTime} – ${oldEndTime})</span></span>
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Reservation Details</div>
+            ${bookingReference ? `
+            <div class="info-row">
+              <span class="info-label">Booking Reference:</span>
+              <span class="info-value">${bookingReference}</span>
+            </div>` : ''}
+            <div class="info-row">
+              <span class="info-label">Workshop:</span>
+              <span class="info-value">${moduleName}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Venue:</span>
+              <span class="info-value">Makerlab Experience Hub, 2nd Floor, Ayala Malls Manila Bay</span>
+            </div>
+          </div>
+
+          ${customNotes ? `
+          <div style="background-color: #fff7ed; border: 1px dashed #fdba74; border-radius: 8px; padding: 14px; margin-bottom: 20px; color: #c2410c; font-size: 14px;">
+            <strong>Note from Organizer:</strong><br/>
+            ${customNotes}
+          </div>
+          ` : ''}
+
+          <p>Your booking has automatically been moved to the new date. If this new date does not work for you, please contact us or view your booking status online.</p>
+
+          <div class="cta-container">
+            <a href="${hostUrl}/booking-status" class="cta-button">View My Booking Status</a>
+          </div>
+        </div>
+        <div class="footer">
+          <p>This is an automated notification. If you have questions, please contact Makerlab Experience Hub.</p>
+          <p>&copy; ${new Date().getFullYear()} Makerlab Workshop. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  const mailOptions = {
+    from: process.env.SMTP_FROM || '"Makerlab Experience Hub" <noreply@makerlab.ph>',
+    to,
+    subject: `Workshop Rescheduled: ${moduleName} is now on ${newSessionDate}`,
+    html: htmlContent,
+  }
+
+  const info = await transporter.sendMail(mailOptions)
+
+  if (!useSmtp) {
+    previewUrl = nodemailer.getTestMessageUrl(info) || ''
+    console.log(`[Ethereal Email Sent] Reschedule Email Preview URL: ${previewUrl}`)
+  }
+
+  return {
+    success: true,
+    messageId: info.messageId,
+    previewUrl,
+  }
+}
+
+

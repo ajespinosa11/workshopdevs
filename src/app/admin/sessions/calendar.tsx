@@ -282,8 +282,10 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
   const [editCapacity, setEditCapacity] = useState(20)
   const [editNotes, setEditNotes] = useState('')
   const [editCollaborator, setEditCollaborator] = useState('')
+  const [editSessionDate, setEditSessionDate] = useState('')
   const [editDesc, setEditDesc] = useState('')
   const [editError, setEditError] = useState('')
+  const [editReschedSuccess, setEditReschedSuccess] = useState('')
   const [editLoading, setEditLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
@@ -451,6 +453,11 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     const initialModId = s.module?.id || (modules.length > 0 ? modules[0].id : '')
     setEditModuleId(initialModId)
 
+    const sDateObj = new Date(s.sessionDate)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const dateStr = `${sDateObj.getUTCFullYear()}-${pad(sDateObj.getUTCMonth() + 1)}-${pad(sDateObj.getUTCDate())}`
+    setEditSessionDate(dateStr)
+
     const catUpper = (s.category || '').toUpperCase()
     const modNameUpper = (s.module?.name || '').toUpperCase()
 
@@ -478,6 +485,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     setEditCollaborator(s.collaborator || '')
     setEditDesc(s.module?.description || '')
     setEditError('')
+    setEditReschedSuccess('')
   }
 
   async function handleEditSubmit(e: React.FormEvent) {
@@ -485,10 +493,12 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
     if (!editSession) return
     setEditLoading(true)
     setEditError('')
+    setEditReschedSuccess('')
 
     const formData = new FormData()
     formData.append('sessionId', editSession.id)
     formData.append('moduleId', editModuleId)
+    formData.append('sessionDate', editSessionDate)
     formData.append('pricingType', editPricingType)
     formData.append('price', editPricingType === 'PAID' ? editPrice.toString() : '0')
     formData.append('freeSubCategory', editPricingType === 'FREE' ? editFreeSubCategory : '')
@@ -520,8 +530,19 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
         modData.append('price', editPricingType === 'PAID' ? editPrice.toString() : '0')
         await updateModule(modData)
       }
-      setEditSession(null)
-      router.refresh()
+
+      if ((res as any).isRescheduled) {
+        const count = (res as any).rescheduledCount ?? 0
+        setEditReschedSuccess(`Workshop rescheduled successfully! ${count} customer notification email${count !== 1 ? 's' : ''} sent.`)
+        setTimeout(() => {
+          setEditSession(null)
+          setEditReschedSuccess('')
+          router.refresh()
+        }, 2200)
+      } else {
+        setEditSession(null)
+        router.refresh()
+      }
     }
     setEditLoading(false)
   }
@@ -1121,6 +1142,26 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
 
             <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
               {editError && <div style={{ padding: '0.6rem 0.85rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.5rem', fontSize: '0.85rem', borderLeft: '3px solid #ef4444' }}>{editError}</div>}
+              {editReschedSuccess && <div style={{ padding: '0.65rem 0.85rem', background: '#f0fdf4', color: '#15803d', borderRadius: '0.5rem', fontSize: '0.85rem', borderLeft: '3px solid #22c55e', fontWeight: 600 }}>{editReschedSuccess}</div>}
+
+              {/* Reschedule Date Input */}
+              <div className="input-group" style={{ background: '#f0f9ff', padding: '0.9rem 1rem', borderRadius: '0.75rem', border: '1.5px solid #bae6fd' }}>
+                <label style={{ fontWeight: 700, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem', fontSize: '0.9rem' }}>
+                  📅 Reschedule Workshop Date
+                </label>
+                <input
+                  type="date"
+                  value={editSessionDate}
+                  onChange={(e) => setEditSessionDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="input-field"
+                  required
+                  style={{ borderRadius: '0.5rem', background: '#ffffff', fontWeight: 600, border: '1px solid #7dd3fc', padding: '0.55rem 0.75rem' }}
+                />
+                <p style={{ fontSize: '0.78rem', color: '#0284c7', margin: '0.35rem 0 0 0', lineHeight: 1.4, fontWeight: 500 }}>
+                  📧 Changing this date or the session time will automatically send an email notification to all registered attendees informing them of the new date.
+                </p>
+              </div>
 
               <div className="input-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>

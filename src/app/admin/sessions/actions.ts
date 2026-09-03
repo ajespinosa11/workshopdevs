@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { sendSessionCancellationEmail } from '@/lib/email'
+import { sendSessionCancellationEmail, sendSessionRescheduledEmail } from '@/lib/email'
 
 export async function createModule(formData: FormData) {
   const name = formData.get('name') as string
@@ -288,6 +288,7 @@ export async function createSession(formData: FormData) {
 export async function updateSession(formData: FormData) {
   const sessionId = formData.get('sessionId') as string
   const moduleId = formData.get('moduleId') as string
+  const sessionDateStr = formData.get('sessionDate') as string
   const startTime = formData.get('startTime') as string
   const endTime = formData.get('endTime') as string
   const capacityStr = formData.get('capacity') as string
@@ -330,15 +331,31 @@ export async function updateSession(formData: FormData) {
     const moduleItem = await prisma.module.findUnique({ where: { id: finalModuleId } })
     if (!moduleItem) return { error: 'Selected event module does not exist.' }
 
+    // Parse target date if provided, otherwise keep existing session date
+    let targetSessionDate = existing.sessionDate
+    if (sessionDateStr && sessionDateStr.trim()) {
+      targetSessionDate = new Date(`${sessionDateStr}T12:00:00.000Z`)
+      const today = new Date()
+      today.setUTCHours(0, 0, 0, 0)
+      if (targetSessionDate < today) {
+        return { error: 'Cannot reschedule a session to a past date.' }
+      }
+    }
+
     const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
     const startMin = toMin(startTime)
     let endMin = toMin(endTime)
     if (endMin <= startMin) endMin += 24 * 60
     const durationHours = Math.max(1, Math.round((endMin - startMin) / 60))
 
-    // Overlap check, excluding this session itself
-    const overlapError = await checkOverlap(existing.sessionDate, startTime, endTime, sessionId)
+    // Overlap check on target session date, excluding this session itself
+    const overlapError = await checkOverlap(targetSessionDate, startTime, endTime, sessionId)
     if (overlapError) return { error: overlapError }
+
+    // Check if the date or time actually changed (for customer notifications)
+    const isDateChanged = targetSessionDate.toISOString().split('T')[0] !== existing.sessionDate.toISOString().split('T')[0]
+    const isTimeChanged = startTime !== existing.startTime || endTime !== existing.endTime
+    const isRescheduled = isDateChanged || isTimeChanged
 
     // Preserve taken slots; recalculate available
     const takenSlots = existing.capacity - existing.availableSlots
@@ -354,6 +371,7 @@ export async function updateSession(formData: FormData) {
       data: {
         moduleId: finalModuleId,
         ...(updatedCategory ? { category: updatedCategory } : {}),
+        sessionDate: targetSessionDate,
         startTime,
         endTime,
         durationHours,
@@ -392,8 +410,86 @@ export async function updateSession(formData: FormData) {
       }
     })
 
+    let rescheduledCount = 0
+    const emailErrors: string[] = []
+
+    // If the session schedule was rescheduled, send email notifications to all active attendees
+    if (isRescheduled) {
+      const sessionWithAttendees = await prisma.workshopSession.findUnique({
+        where: { id: sessionId },
+        include: {
+          module: true,
+          bookings: {
+            where: {
+              status: { notIn: ['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'CANCELLED_BY_ADMIN', 'REFUNDED'] }
+            }
+          },
+          registrations: {
+            where: {
+              status: { notIn: ['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED', 'DUPLICATE_ORDER'] }
+            }
+          }
+        }
+      })
+
+      if (sessionWithAttendees) {
+        const formatOpts: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
+        const oldDateFormatted = new Date(existing.sessionDate).toLocaleDateString('en-US', formatOpts)
+        const newDateFormatted = new Date(targetSessionDate).toLocaleDateString('en-US', formatOpts)
+
+        const recipientsMap = new Map<string, { customerName: string; bookingReference?: string }>()
+        for (const b of sessionWithAttendees.bookings) {
+          if (b.customerEmail) {
+            recipientsMap.set(b.customerEmail.toLowerCase().trim(), {
+              customerName: b.customerName,
+              bookingReference: b.bookingReference
+            })
+          }
+        }
+        for (const r of sessionWithAttendees.registrations) {
+          if (r.customerEmail) {
+            const key = r.customerEmail.toLowerCase().trim()
+            if (!recipientsMap.has(key)) {
+              recipientsMap.set(key, {
+                customerName: r.customerName || 'Valued Customer',
+                bookingReference: r.bookingReference
+              })
+            }
+          }
+        }
+
+        for (const [email, info] of recipientsMap.entries()) {
+          try {
+            await sendSessionRescheduledEmail({
+              to: email,
+              customerName: info.customerName,
+              bookingReference: info.bookingReference,
+              moduleName: sessionWithAttendees.module.name,
+              oldSessionDate: oldDateFormatted,
+              oldStartTime: existing.startTime,
+              oldEndTime: existing.endTime,
+              newSessionDate: newDateFormatted,
+              newStartTime: startTime,
+              newEndTime: endTime,
+              customNotes: notes || undefined
+            })
+            rescheduledCount++
+          } catch (emailErr: any) {
+            console.error(`Failed to send reschedule notification to ${email}:`, emailErr)
+            emailErrors.push(email)
+          }
+        }
+      }
+    }
+
     revalidatePath('/admin/sessions')
-    return { success: true }
+    revalidatePath('/admin/registrations')
+    return {
+      success: true,
+      isRescheduled,
+      rescheduledCount,
+      emailErrors
+    }
   } catch (error: any) {
     console.error('Failed to update session:', error)
     return { error: error.message || 'Failed to update session.' }
