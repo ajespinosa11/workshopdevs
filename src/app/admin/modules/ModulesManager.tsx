@@ -328,7 +328,7 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
 
               {createCategory === 'PAID' && (
                 <div style={{ padding: '0.65rem 0.85rem', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '0.5rem', fontSize: '0.8rem', color: '#3730a3' }}>
-                  🛍️ Creating a PAID workshop automatically calculates the next SKU (e.g. <strong>BW004</strong>), syncs the product to Shopify via API, and generates a direct checkout permalink.
+                  🛍️ Creating a PAID workshop automatically calculates the next SKU (e.g. <strong>BW001</strong>), syncs the product to Shopify via API, and generates a direct checkout permalink.
                 </div>
               )}
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>

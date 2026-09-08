@@ -13,7 +13,7 @@ export async function getNextWorkshopSku(): Promise<string> {
     }).catch(() => [])
   ])
 
-  let maxNum = 3 // Defaults at BW003 if starting fresh
+  let maxNum = 0 // Defaults at 0 so sequence starts at BW001 if no SKUs exist
 
   const skuList = [
     ...modules.map((m: any) => m.sku),
