@@ -89,6 +89,7 @@ export default function CustomersClient({ customers, metrics: serverMetrics, mod
     'PENDING_SCHEDULE_CONFIRMATION',
     'RESERVED',
     'RESCHEDULING_REQUESTED',
+    'STAGING',
     'CHECKED_IN',
     'WALKIN_CONFIRMED'
   ], [])
@@ -276,6 +277,9 @@ export default function CustomersClient({ customers, metrics: serverMetrics, mod
     }
     if (['RESCHEDULED'].includes(status)) {
       return <span style={{ padding: '0.15rem 0.5rem', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700, background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }}>Rescheduled</span>
+    }
+    if (['STAGING'].includes(status)) {
+      return <span style={{ padding: '0.15rem 0.5rem', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700, background: '#faf5ff', color: '#9333ea', border: '1px solid #e9d5ff' }}>📥 Staged for Reschedule</span>
     }
     if (['AWAITING_PAYMENT', 'PAYMENT_PENDING', 'PAID_FOR_ADMIN_VERIFICATION'].includes(status)) {
       return <span style={{ padding: '0.15rem 0.5rem', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700, background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a' }}>⏳ Pending</span>

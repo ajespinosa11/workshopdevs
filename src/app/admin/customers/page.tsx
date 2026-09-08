@@ -54,7 +54,8 @@ export default async function AdminCustomersPage() {
     'PAID_FOR_ADMIN_VERIFICATION',
     'PENDING_SCHEDULE_CONFIRMATION',
     'RESERVED',
-    'RESCHEDULING_REQUESTED'
+    'RESCHEDULING_REQUESTED',
+    'STAGING'
   ]
 
   // Group by customer email

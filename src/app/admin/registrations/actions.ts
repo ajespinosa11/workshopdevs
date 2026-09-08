@@ -596,3 +596,200 @@ export async function adminManualVerifyPayment(
     return { error: error.message || 'Failed to verify payment.' }
   }
 }
+
+/**
+ * Move a registration to the Staging Area.
+ * Restores/frees slots on the customer's originally chosen workshop session date.
+ */
+export async function adminMoveToStaging(
+  registrationId: string,
+  reason: string,
+  staffId?: string
+) {
+  if (!registrationId) return { error: 'Registration ID is required.' }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const reg = await tx.workshopRegistration.findUnique({
+        where: { id: registrationId },
+        include: { session: true }
+      })
+
+      if (!reg) throw new Error('Registration not found.')
+
+      if (['CHECKED_IN', 'ATTENDED', 'WALKIN_CONFIRMED'].includes(reg.status)) {
+        throw new Error('Checked-in customers cannot be moved to staging.')
+      }
+
+      const oldSessionId = reg.sessionId
+
+      // 1. If currently linked to a session, release/restore slots to that session
+      if (oldSessionId) {
+        const oldSession = await tx.workshopSession.findUnique({ where: { id: oldSessionId } })
+        if (oldSession) {
+          const restoredSlots = oldSession.availableSlots + reg.participantsCount
+          await tx.workshopSession.update({
+            where: { id: oldSessionId },
+            data: {
+              availableSlots: restoredSlots,
+              status: 'OPEN'
+            }
+          })
+        }
+      }
+
+      // Validate staff user if provided
+      const validStaff = staffId ? await tx.staffUser.findUnique({ where: { id: staffId } }) : null
+      const actualStaffId = validStaff ? validStaff.id : null
+
+      const timestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      const origDateStr = reg.session?.sessionDate ? new Date(reg.session.sessionDate).toLocaleDateString('en-US') : 'N/A'
+      const stagingNote = `\n[Staged for Reschedule ${timestamp}]: Original session was ${origDateStr}. Reason: ${reason || 'No available date for rescheduling'}`
+      const newNotes = reg.notes ? `${reg.notes}${stagingNote}` : stagingNote.trim()
+
+      // 2. Update registration status to STAGING
+      await tx.workshopRegistration.update({
+        where: { id: registrationId },
+        data: {
+          status: 'STAGING',
+          notes: newNotes
+        }
+      })
+
+      // 3. Create Audit Trail entry
+      await tx.auditTrail.create({
+        data: {
+          registrationId,
+          performedByStaffId: actualStaffId,
+          action: 'MOVED_TO_STAGING',
+          details: `Moved to Staging Area. Restored ${reg.participantsCount} slot(s) to original session date (${origDateStr}). Reason: ${reason || 'Awaiting reschedule date availability'}`
+        }
+      })
+    })
+
+    revalidatePath('/admin/registrations')
+    revalidatePath('/admin/sessions')
+    revalidatePath('/admin/customers')
+    return { success: true }
+
+  } catch (error: any) {
+    console.error('Failed to move registration to staging:', error)
+    return { error: error.message || 'Failed to move registration to staging.' }
+  }
+}
+
+/**
+ * Reschedule a registration directly from the Staging Area to a target workshop session.
+ * Deducts slots from the target workshop session date.
+ */
+export async function adminRescheduleFromStaging(
+  registrationId: string,
+  newSessionId: string,
+  reason: string,
+  staffId?: string
+) {
+  if (!registrationId || !newSessionId) {
+    return { error: 'Registration ID and target session are required.' }
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const reg = await tx.workshopRegistration.findUnique({
+        where: { id: registrationId },
+        include: { session: true }
+      })
+
+      if (!reg) throw new Error('Registration not found.')
+
+      const oldSessionId = reg.sessionId
+
+      // Check target session capacity
+      const newSession = await tx.workshopSession.findUnique({ where: { id: newSessionId } })
+      if (!newSession) throw new Error('Target session not found.')
+
+      if (newSession.availableSlots < reg.participantsCount) {
+        throw new Error(`Target session does not have enough capacity. Remaining slots: ${newSession.availableSlots}`)
+      }
+
+      // If reg was holding slots on oldSessionId (though in STAGING slots should have been freed), restore just in case
+      if (oldSessionId && reg.status !== 'STAGING') {
+        const oldSession = await tx.workshopSession.findUnique({ where: { id: oldSessionId } })
+        if (oldSession) {
+          await tx.workshopSession.update({
+            where: { id: oldSessionId },
+            data: {
+              availableSlots: oldSession.availableSlots + reg.participantsCount,
+              status: 'OPEN'
+            }
+          })
+        }
+      }
+
+      // Deduct capacity from target session
+      const updatedSlots = Math.max(0, newSession.availableSlots - reg.participantsCount)
+      await tx.workshopSession.update({
+        where: { id: newSessionId },
+        data: {
+          availableSlots: updatedSlots,
+          status: updatedSlots === 0 ? 'FULL' : 'OPEN'
+        }
+      })
+
+      // Validate staff user
+      const validStaff = staffId ? await tx.staffUser.findUnique({ where: { id: staffId } }) : null
+      const actualStaffId = validStaff ? validStaff.id : null
+
+      // Record reschedule history log
+      if (oldSessionId) {
+        try {
+          const logData: any = {
+            registration: { connect: { id: registrationId } },
+            originalSessionId: oldSessionId,
+            newSessionId,
+            reason: reason || 'Rescheduled from Staging Area',
+          }
+          if (actualStaffId) {
+            logData.processedByStaff = { connect: { id: actualStaffId } }
+          }
+          await tx.rescheduleLog.create({ data: logData })
+        } catch (logErr) {
+          console.warn('[adminRescheduleFromStaging] RescheduleLog warning:', logErr)
+        }
+      }
+
+      const timestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      const reschedNote = `\n[Rescheduled from Staging ${timestamp}]: Assigned to session ${newSession.sessionDate.toISOString().slice(0, 10)}. Note: ${reason || 'None'}`
+      const newNotes = reg.notes ? `${reg.notes}${reschedNote}` : reschedNote.trim()
+
+      // Update registration record to RESCHEDULED with new sessionId
+      await tx.workshopRegistration.update({
+        where: { id: registrationId },
+        data: {
+          sessionId: newSessionId,
+          status: 'RESCHEDULED',
+          notes: newNotes
+        }
+      })
+
+      // Audit trail entry
+      await tx.auditTrail.create({
+        data: {
+          registrationId,
+          performedByStaffId: actualStaffId,
+          action: 'RESCHEDULED_FROM_STAGING',
+          details: `Rescheduled from Staging Area to session date ${newSession.sessionDate.toISOString().slice(0, 10)}. Reason: ${reason || 'Session date selected'}`
+        }
+      })
+    })
+
+    revalidatePath('/admin/registrations')
+    revalidatePath('/admin/sessions')
+    revalidatePath('/admin/customers')
+    return { success: true }
+
+  } catch (error: any) {
+    console.error('Failed to reschedule registration from staging:', error)
+    return { error: error.message || 'Failed to reschedule registration from staging.' }
+  }
+}
+

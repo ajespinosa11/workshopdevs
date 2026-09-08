@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { adminReserveSlot, adminRescheduleRegistration, adminManualBookSlot, sendReservationConfirmationEmail, adminManualVerifyPayment } from './actions'
+import { adminReserveSlot, adminRescheduleRegistration, adminManualBookSlot, sendReservationConfirmationEmail, adminManualVerifyPayment, adminMoveToStaging, adminRescheduleFromStaging } from './actions'
 import { updateRegistrationStatus } from './status-actions'
 import { exportToCSV, exportToExcel } from '@/utils/exportUtils'
 
@@ -80,7 +80,7 @@ const S = {
   // ── Stat Cards ──
   statGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
     gap: '0.875rem',
     marginBottom: '1.25rem',
   },
@@ -458,7 +458,7 @@ function PrimaryBtn({ onClick, disabled, children, color = '#6366f1' }: { onClic
 
 /* ─── Main Component ─────────────────────────────────────────────────────── */
 export default function RegistrationsClient({ registrations, openSessions }: RegistrationsClientProps) {
-  const [activeTab, setActiveTab] = useState<'VERIFICATION' | 'RESERVED' | 'ALL'>('VERIFICATION')
+  const [activeTab, setActiveTab] = useState<'VERIFICATION' | 'RESERVED' | 'STAGING' | 'ALL'>('VERIFICATION')
   
   // Event Directory States
   const [dirTab, setDirTab] = useState<'UPCOMING' | 'TODAY' | 'PAST'>('UPCOMING')
@@ -481,7 +481,8 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
   const [overrideReason, setOverrideReason] = useState('')
   const [rescheduleSessionId, setRescheduleSessionId] = useState('')
   const [rescheduleReason, setRescheduleReason] = useState('')
-  const [modalType, setModalType] = useState<'RESERVE' | 'RESCHEDULE' | 'STATUS' | 'WALK_IN' | 'VERIFY_PAYMENT' | null>(null)
+  const [stagingReason, setStagingReason] = useState('')
+  const [modalType, setModalType] = useState<'RESERVE' | 'RESCHEDULE' | 'STATUS' | 'WALK_IN' | 'VERIFY_PAYMENT' | 'MOVE_TO_STAGING' | 'RESCHEDULE_FROM_STAGING' | null>(null)
   const [newStatus, setNewStatus] = useState('')
   const [statusNotes, setStatusNotes] = useState('')
   
@@ -806,6 +807,8 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
       case 'CHECKED_IN':
       case 'WALKIN_CONFIRMED':
         return <span style={S.chip('#f0fdf4', '#16a34a', '#bbf7d0')}>✓ Verified</span>
+      case 'STAGING':
+        return <span style={S.chip('#faf5ff', '#9333ea', '#e9d5ff')}>✓ Paid (Staged)</span>
       case 'AWAITING_PAYMENT':
       case 'PAYMENT_PENDING':
         return <span style={S.chip('#fffbeb', '#d97706', '#fde68a')}>⏳ Awaiting</span>
@@ -827,6 +830,8 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
         return <span style={S.chip('#f0fdf4', '#16a34a', '#bbf7d0')}>Checked In</span>
       case 'RESCHEDULED':
         return <span style={S.chip('#eff6ff', '#2563eb', '#bfdbfe')}>Rescheduled</span>
+      case 'STAGING':
+        return <span style={S.chip('#faf5ff', '#9333ea', '#e9d5ff')}>📥 Staged for Reschedule</span>
       case 'PAID_FOR_ADMIN_VERIFICATION':
         return <span style={S.chip('#fffbeb', '#d97706', '#fde68a')}>Pending Review</span>
       case 'CANCELLED':
@@ -853,6 +858,26 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
       const res = await adminRescheduleRegistration(selectedReg.id, rescheduleSessionId, rescheduleReason, 'admin-user')
       if (res.error) { setErrorMsg(res.error) } else { setModalType(null); setSelectedReg(null) }
     } catch (e: any) { setErrorMsg(e.message || 'Failed to reschedule.') }
+    finally { setLoading(false) }
+  }
+
+  const handleMoveToStaging = async () => {
+    if (!selectedReg) return
+    setLoading(true); setErrorMsg('')
+    try {
+      const res = await adminMoveToStaging(selectedReg.id, stagingReason, 'admin-user')
+      if (res.error) { setErrorMsg(res.error) } else { setModalType(null); setSelectedReg(null); setStagingReason('') }
+    } catch (e: any) { setErrorMsg(e.message || 'Failed to move to staging.') }
+    finally { setLoading(false) }
+  }
+
+  const handleRescheduleFromStaging = async () => {
+    if (!selectedReg || !rescheduleSessionId) return
+    setLoading(true); setErrorMsg('')
+    try {
+      const res = await adminRescheduleFromStaging(selectedReg.id, rescheduleSessionId, rescheduleReason, 'admin-user')
+      if (res.error) { setErrorMsg(res.error) } else { setModalType(null); setSelectedReg(null); setRescheduleSessionId(''); setRescheduleReason('') }
+    } catch (e: any) { setErrorMsg(e.message || 'Failed to reschedule from staging.') }
     finally { setLoading(false) }
   }
 
@@ -898,10 +923,15 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
     filteredOpenSessions.find(s => s.id === walkInSessionId) || filteredOpenSessions[0] || openSessions[0],
     [filteredOpenSessions, openSessions, walkInSessionId])
 
+  const stagedRegistrations = useMemo(() => {
+    return registrations.filter(r => r.status === 'STAGING')
+  }, [registrations])
+
   const statCards = [
     { label: 'Pending Verification', icon: '⏳', value: summaryCounts.pendingVerification, sub: 'Awaiting staff confirmation', color: '#f59e0b', tab: 'VERIFICATION' as const },
     { label: 'Awaiting Payment', icon: '💳', value: summaryCounts.awaitingPayment, sub: 'Orders pending checkout', color: '#8b5cf6', tab: 'VERIFICATION' as const },
     { label: 'Reserved / Confirmed', icon: '✓', value: summaryCounts.reservedConfirmed, sub: 'Slots locked & reserved', color: '#10b981', tab: 'RESERVED' as const },
+    { label: 'Staging Area', icon: '📥', value: stagedRegistrations.length, sub: 'Paid customers to reschedule', color: '#9333ea', tab: 'STAGING' as const },
     { label: 'Total Registrations', icon: '📋', value: summaryCounts.total, sub: 'All channel records', color: '#6366f1', tab: 'ALL' as const },
   ]
 
@@ -1162,7 +1192,153 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
 
         {/* ── RIGHT PANEL: Selected Event Detail & Customer Registration Table ── */}
         <div>
-          {!selectedSessionData ? (
+          {activeTab === 'STAGING' ? (
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+              {/* Tab Bar Navigation */}
+              <div style={{ ...S.tabBar, marginBottom: '1.25rem' }}>
+                {([
+                  ['VERIFICATION', `Pending Verification (${summaryCounts.pendingVerification})`],
+                  ['RESERVED', `Reserved / Confirmed (${summaryCounts.reservedConfirmed})`],
+                  ['STAGING', `Staging Area (${stagedRegistrations.length})`],
+                  ['ALL', `All Session Records (${summaryCounts.total})`],
+                ] as const).map(([tab, label]) => (
+                  <button key={tab} onClick={() => setActiveTab(tab)} style={S.tab(activeTab === tab)}>{label}</button>
+                ))}
+              </div>
+
+              {/* Staging Header Banner */}
+              <div style={{ background: 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)', border: '1px solid #e9d5ff', borderRadius: '12px', padding: '1rem 1.25rem', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ maxWidth: '650px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                    <span style={{ fontSize: '1.2rem' }}>📥</span>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#581c87', margin: 0 }}>Staging Area — Customers Pending Reschedule</h3>
+                  </div>
+                  <p style={{ fontSize: '0.78rem', color: '#6b21a8', margin: 0, lineHeight: 1.45 }}>
+                    This staging area holds paid customers who requested a reschedule when no suitable dates were available. Moving them here restored their original session slots. Select any customer to assign a newly available session.
+                  </p>
+                </div>
+                <div style={{ background: '#ffffff', border: '1.5px solid #d8b4fe', borderRadius: '10px', padding: '0.5rem 1rem', textAlign: 'center', boxShadow: '0 2px 8px rgba(147,51,234,0.1)' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#9333ea', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Staged Customers</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#581c87', lineHeight: 1 }}>{stagedRegistrations.length}</div>
+                </div>
+              </div>
+
+              {/* Search Filter for Staging */}
+              <div style={{ display: 'flex', gap: '0.65rem', marginBottom: '1rem' }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Search staged customer name, email, phone, booking ref..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  style={{ ...S.filterInput, flex: 1 }}
+                />
+                {searchTerm && (
+                  <button onClick={() => setSearchTerm('')} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem' }}>✕ Clear</button>
+                )}
+              </div>
+
+              {/* Staging Table */}
+              <div style={S.tableWrap}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead style={S.thead}>
+                      <tr>
+                        {['Booking Reference', 'Customer Info', 'Paid Channel / Order', 'Status & Notes', 'Actions'].map(h => (
+                          <th key={h} style={{ ...S.th, textAlign: h === 'Actions' ? 'right' : 'left' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stagedRegistrations.filter(r => {
+                        if (!searchTerm) return true
+                        const q = searchTerm.toLowerCase()
+                        return [r.customerName, r.customerEmail, r.customerPhone, r.bookingReference, r.notes].some((v: any) => v?.toLowerCase().includes(q))
+                      }).length === 0 ? (
+                        <tr>
+                          <td colSpan={5} style={{ textAlign: 'center', padding: '3.5rem 1rem' }}>
+                            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🎉</div>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#475569' }}>No customers currently in Staging</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>All paid rescheduling requests have been assigned to active workshop dates.</div>
+                          </td>
+                        </tr>
+                      ) : (
+                        stagedRegistrations
+                          .filter(r => {
+                            if (!searchTerm) return true
+                            const q = searchTerm.toLowerCase()
+                            return [r.customerName, r.customerEmail, r.customerPhone, r.bookingReference, r.notes].some((v: any) => v?.toLowerCase().includes(q))
+                          })
+                          .map(r => {
+                            const ch = S.channelTag(r.salesChannel)
+                            return (
+                              <tr key={r.id} style={{ ...S.tdRow, background: hoveredRow === r.id ? '#fdf4ff' : 'transparent' }} onMouseEnter={() => setHoveredRow(r.id)} onMouseLeave={() => setHoveredRow(null)}>
+                                <td style={S.td}>
+                                  <button onClick={() => setDrawerBooking(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'monospace', fontWeight: 800, fontSize: '0.76rem', color: '#9333ea', textDecoration: 'underline', textDecorationColor: '#e9d5ff', display: 'block', marginBottom: '0.35rem', padding: 0 }}>
+                                    {r.bookingReference}
+                                  </button>
+                                  <span style={S.chip(ch.bg, ch.text, ch.border)}>{r.salesChannel}</span>
+                                </td>
+
+                                <td style={S.td}>
+                                  <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.82rem' }}>{r.customerName}</div>
+                                  <div style={{ color: '#64748b', fontSize: '0.72rem' }}>{r.customerEmail}</div>
+                                  <div style={{ color: '#94a3b8', fontSize: '0.72rem' }}>{r.customerPhone}</div>
+                                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.25rem' }}>👤 {r.participantsCount} participant(s)</div>
+                                </td>
+
+                                <td style={S.td}>
+                                  {r.shopifyOrder ? (
+                                    <>
+                                      <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.78rem' }}>#{r.shopifyOrder.shopifyOrderNumber}</div>
+                                      <div style={{ color: '#16a34a', fontSize: '0.72rem', fontWeight: 700 }}>₱{r.shopifyOrder.totalAmount?.toFixed(2)}</div>
+                                    </>
+                                  ) : (
+                                    <div style={{ color: '#64748b', fontSize: '0.76rem', fontWeight: 600 }}>{r.salesChannel}</div>
+                                  )}
+                                </td>
+
+                                <td style={S.td}>
+                                  {renderReservationChip(r.status)}
+                                  {r.notes && (
+                                    <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.35rem', whiteSpace: 'pre-wrap', maxHeight: '50px', overflowY: 'auto', background: '#f8fafc', padding: '0.35rem 0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                      {r.notes}
+                                    </div>
+                                  )}
+                                </td>
+
+                                <td style={{ ...S.td, textAlign: 'right' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
+                                    <button
+                                      onClick={() => {
+                                        setSelectedReg(r);
+                                        setRescheduleSessionId(openSessions[0]?.id || '');
+                                        setRescheduleReason('');
+                                        setErrorMsg('');
+                                        setModalType('RESCHEDULE_FROM_STAGING');
+                                      }}
+                                      style={{ ...S.primaryBtn, background: 'linear-gradient(135deg, #9333ea 0%, #7c3aed 100%)', boxShadow: '0 4px 12px rgba(147,51,234,0.3)', padding: '0.45rem 0.85rem', fontSize: '0.73rem' }}
+                                    >
+                                      🗓️ Assign Session & Reschedule
+                                    </button>
+                                    <button onClick={() => setActionMenuOpenId(actionMenuOpenId === r.id ? null : r.id)} style={S.menuBtn}>⋯</button>
+                                    {actionMenuOpenId === r.id && (
+                                      <div style={S.dropdownMenu}>
+                                        <button onClick={() => { setDrawerBooking(r); setActionMenuOpenId(null) }} style={S.dropdownItem}>👁️ View Details</button>
+                                        <button onClick={() => { setSelectedReg(r); setNewStatus(r.status); setStatusNotes(''); setErrorMsg(''); setModalType('STATUS'); setActionMenuOpenId(null) }} style={S.dropdownItem}>⚙️ Update Status</button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            )
+                          })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          ) : !selectedSessionData ? (
             <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '4rem 2rem', textAlign: 'center', color: '#94a3b8' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>👈</div>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#475569' }}>Select a Workshop Session</div>
@@ -1260,11 +1436,12 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                 )
               })()}
 
-              {/* Tab Bar (Verification / Reserved / All) */}
+              {/* Tab Bar (Verification / Reserved / Staging / All) */}
               <div style={S.tabBar}>
                 {([
                   ['VERIFICATION', `Pending Verification (${selectedSessionData.pendingCount})`],
                   ['RESERVED', `Reserved / Confirmed (${selectedSessionData.reservedCount})`],
+                  ['STAGING', `Staging Area (${stagedRegistrations.length})`],
                   ['ALL', `All Session Records (${selectedSessionData.totalCount})`],
                 ] as const).map(([tab, label]) => (
                   <button key={tab} onClick={() => setActiveTab(tab)} style={S.tab(activeTab === tab)}>{label}</button>
@@ -1436,6 +1613,7 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                                         {[
                                           { icon: '👁️', label: 'View Details', onClick: () => { setDrawerBooking(r); setActionMenuOpenId(null) } },
                                           ...(!['CHECKED_IN', 'ATTENDED', 'WALKIN_CONFIRMED'].includes(r.status) ? [{ icon: '🔄', label: 'Reschedule', onClick: () => { setSelectedReg(r); setRescheduleSessionId(openSessions[0]?.id || ''); setRescheduleReason(''); setErrorMsg(''); setModalType('RESCHEDULE'); setActionMenuOpenId(null) } }] : []),
+                                          ...(!['CHECKED_IN', 'ATTENDED', 'WALKIN_CONFIRMED', 'CANCELLED', 'REFUNDED', 'STAGING'].includes(r.status) ? [{ icon: '📥', label: 'Move to Staging', onClick: () => { setSelectedReg(r); setStagingReason(''); setErrorMsg(''); setModalType('MOVE_TO_STAGING'); setActionMenuOpenId(null) } }] : []),
                                           { icon: '⚙️', label: 'Update Status', onClick: () => { setSelectedReg(r); setNewStatus(r.status); setStatusNotes(''); setErrorMsg(''); setModalType('STATUS'); setActionMenuOpenId(null) } },
                                           {
                                             icon: sendingEmailId === r.id ? '⏳' : '📧',
@@ -1946,6 +2124,87 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                 } catch (e: any) { setErrorMsg(e.message || 'Failed to verify.') }
                 finally { setLoading(false) }
               }} disabled={loading} color="#10b981">{loading ? 'Verifying...' : 'Mark as Paid & Verified'}</PrimaryBtn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MOVE TO STAGING MODAL ── */}
+      {modalType === 'MOVE_TO_STAGING' && selectedReg && (
+        <div style={S.modalOverlay}>
+          <div style={S.modal}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem', marginBottom: '1rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#9333ea' }}>📥 Move Customer to Staging Area</h3>
+                <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.15rem' }}>Place paid customer into staging for future rescheduling.</p>
+              </div>
+              <button onClick={() => setModalType(null)} style={{ ...S.menuBtn, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            </div>
+            <div style={{ ...S.infoBlock, marginBottom: '1rem' }}>
+              <InfoRow label="Customer">{selectedReg.customerName}</InfoRow>
+              <InfoRow label="Ref #">{selectedReg.bookingReference}</InfoRow>
+              <InfoRow label="Participants">{selectedReg.participantsCount}</InfoRow>
+              {selectedReg.session && (
+                <InfoRow label="Original Session">{new Date(selectedReg.session.sessionDate).toLocaleDateString('en-US')} ({selectedReg.session.startTime} – {selectedReg.session.endTime})</InfoRow>
+              )}
+            </div>
+            <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '8px', padding: '0.75rem 0.9rem', marginBottom: '1rem', fontSize: '0.75rem', color: '#6b21a8' }}>
+              <strong>💡 Slot Deduction Note:</strong> Moving this paid customer to Staging will restore/free <strong>{selectedReg.participantsCount} slot(s)</strong> back to their original workshop date, so another customer can book that date.
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={S.modalLabel}>Reason for Staging (Optional)</label>
+              <textarea
+                rows={2}
+                placeholder="e.g. Customer requested rescheduling, no available dates fit customer schedule..."
+                value={stagingReason}
+                onChange={e => setStagingReason(e.target.value)}
+                style={{ ...S.modalInput, resize: 'none' }}
+              />
+            </div>
+            {errorMsg && <div style={{ ...S.errorBox, marginBottom: '1rem' }}>{errorMsg}</div>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.85rem' }}>
+              <GhostBtn onClick={() => { setModalType(null); setSelectedReg(null); setErrorMsg('') }}>Cancel</GhostBtn>
+              <PrimaryBtn onClick={handleMoveToStaging} disabled={loading} color="#9333ea">{loading ? 'Moving...' : 'Confirm Move to Staging'}</PrimaryBtn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── RESCHEDULE FROM STAGING MODAL ── */}
+      {modalType === 'RESCHEDULE_FROM_STAGING' && selectedReg && (
+        <div style={S.modalOverlay}>
+          <div style={S.modal}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem', marginBottom: '1rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>🗓️ Reschedule Customer from Staging</h3>
+                <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.15rem' }}>Assign a new workshop session date to this staged customer.</p>
+              </div>
+              <button onClick={() => setModalType(null)} style={{ ...S.menuBtn, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            </div>
+            <div style={{ ...S.infoBlock, marginBottom: '1rem' }}>
+              <InfoRow label="Customer">{selectedReg.customerName}</InfoRow>
+              <InfoRow label="Ref #">{selectedReg.bookingReference}</InfoRow>
+              <InfoRow label="Participants">{selectedReg.participantsCount}</InfoRow>
+            </div>
+            <div style={{ marginBottom: '0.75rem' }}>
+              <label style={S.modalLabel}>Select Target Workshop Session *</label>
+              <select value={rescheduleSessionId} onChange={e => setRescheduleSessionId(e.target.value)} style={S.modalInput}>
+                <option value="">-- Select an open session --</option>
+                {openSessions.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {new Date(s.sessionDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} ({s.startTime} – {s.endTime}) — [{s.availableSlots} slots left]
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={S.modalLabel}>Reschedule Notes / Reason (Optional)</label>
+              <textarea rows={2} placeholder="Reason or confirmation notes..." value={rescheduleReason} onChange={e => setRescheduleReason(e.target.value)} style={{ ...S.modalInput, resize: 'none' }} />
+            </div>
+            {errorMsg && <div style={{ ...S.errorBox, marginBottom: '1rem' }}>{errorMsg}</div>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.85rem' }}>
+              <GhostBtn onClick={() => { setModalType(null); setSelectedReg(null); setErrorMsg('') }}>Cancel</GhostBtn>
+              <PrimaryBtn onClick={handleRescheduleFromStaging} disabled={loading || !rescheduleSessionId} color="#7c3aed">{loading ? 'Assigning...' : 'Assign Session & Deduct Slot'}</PrimaryBtn>
             </div>
           </div>
         </div>

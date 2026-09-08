@@ -16,8 +16,8 @@ export async function updateRegistrationStatus(registrationId: string, status: s
 
     const oldStatus = reg.status
 
-    // Handle slot release if status moves to CANCELLED or REFUNDED from RESERVED/CONFIRMED
-    if (['RESERVED', 'CONFIRMED', 'RESCHEDULED'].includes(oldStatus) && ['CANCELLED', 'REFUNDED', 'DUPLICATE_ORDER'].includes(status)) {
+    // Handle slot release if status moves to CANCELLED, REFUNDED, DUPLICATE_ORDER, or STAGING from RESERVED/CONFIRMED/RESCHEDULED
+    if (['RESERVED', 'CONFIRMED', 'RESCHEDULED'].includes(oldStatus) && ['CANCELLED', 'REFUNDED', 'DUPLICATE_ORDER', 'STAGING'].includes(status)) {
       if (reg.sessionId) {
         const session = await prisma.workshopSession.findUnique({ where: { id: reg.sessionId } })
         if (session) {
