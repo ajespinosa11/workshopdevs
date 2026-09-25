@@ -35,6 +35,77 @@ export async function getNextWorkshopSku(): Promise<string> {
 }
 
 /**
+ * In-memory cache for dynamically fetched Shopify access tokens.
+ */
+let cachedToken: {
+  token: string
+  expiresAt: number
+} | null = null
+
+/**
+ * Retrieves a valid Shopify Admin API access token.
+ * 1. Uses explicit SHOPIFY_ADMIN_API_ACCESS_TOKEN or SHOPIFY_ACCESS_TOKEN if configured.
+ * 2. If SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET are configured, fetches (and caches)
+ *    a token via the OAuth client_credentials grant automatically.
+ */
+export async function getShopifyAccessToken(): Promise<string> {
+  // If static token is provided, prioritize it
+  const staticToken = (process.env.SHOPIFY_ADMIN_API_ACCESS_TOKEN || process.env.SHOPIFY_ACCESS_TOKEN || '').trim()
+  if (staticToken) return staticToken
+
+  const clientId = (process.env.SHOPIFY_CLIENT_ID || process.env.SHOPIFY_API_KEY || '').trim()
+  const clientSecret = (process.env.SHOPIFY_CLIENT_SECRET || process.env.SHOPIFY_API_SECRET || '').trim()
+  const shopDomain = (process.env.SHOPIFY_SHOP_DOMAIN || 'makerlab-electronics-ph.myshopify.com').trim().replace(/^https?:\/\//, '')
+
+  if (!clientId || !clientSecret) {
+    return ''
+  }
+
+  // Return cached token if valid (with 60-second buffer)
+  if (cachedToken && cachedToken.expiresAt > Date.now() + 60000) {
+    return cachedToken.token
+  }
+
+  try {
+    const tokenUrl = `https://${shopDomain}/admin/oauth/access_token`
+    const body = new URLSearchParams({
+      grant_type: 'client_credentials',
+      client_id: clientId,
+      client_secret: clientSecret
+    })
+
+    const res = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: body.toString()
+    })
+
+    if (!res.ok) {
+      const errText = await res.text()
+      console.error(`[Shopify OAuth Token Error] ${res.status}:`, errText)
+      return ''
+    }
+
+    const data = await res.json()
+    if (data.access_token) {
+      const expiresInSec = typeof data.expires_in === 'number' ? data.expires_in : 86400
+      cachedToken = {
+        token: data.access_token,
+        expiresAt: Date.now() + expiresInSec * 1000
+      }
+      console.log(`[Shopify OAuth] Successfully retrieved new access token (expires in ${expiresInSec}s)`)
+      return data.access_token
+    }
+  } catch (err) {
+    console.error('[Shopify OAuth Token Exception]', err)
+  }
+
+  return ''
+}
+
+/**
  * Constructs permalink URL for a Shopify variant ID
  */
 export function buildShopifyPermalink(variantId: string, quantity: number = 1): string {
@@ -60,7 +131,7 @@ export async function syncWorkshopProductToShopify(params: {
 }> {
   const sku = params.sku || await getNextWorkshopSku()
   const shopDomain = (process.env.SHOPIFY_SHOP_DOMAIN || 'makerlab-electronics-ph.myshopify.com').trim()
-  const accessToken = (process.env.SHOPIFY_ADMIN_API_ACCESS_TOKEN || process.env.SHOPIFY_ACCESS_TOKEN || '').trim()
+  const accessToken = await getShopifyAccessToken()
 
   if (!accessToken) {
     console.warn('[Shopify Integration] SHOPIFY_ADMIN_API_ACCESS_TOKEN is missing. Generated SKU fallback without live API call.')
@@ -143,7 +214,7 @@ export async function syncWorkshopProductToShopify(params: {
  */
 export async function updateShopifyVariantPrice(variantId: string, price: number): Promise<boolean> {
   const shopDomain = (process.env.SHOPIFY_SHOP_DOMAIN || 'makerlab-electronics-ph.myshopify.com').trim()
-  const accessToken = (process.env.SHOPIFY_ADMIN_API_ACCESS_TOKEN || process.env.SHOPIFY_ACCESS_TOKEN || '').trim()
+  const accessToken = await getShopifyAccessToken()
 
   if (!accessToken || !variantId) return false
 

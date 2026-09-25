@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { createSoftLockReservation, checkReservationStatus, cancelSoftLockReservation } from '@/app/(public)/book-session/lock-actions'
+import { validateDiscountCode, redeemDiscountBooking } from './discount-actions'
 
 interface Session {
   id: string
@@ -12,7 +13,7 @@ interface Session {
   availableSlots: number
   capacity: number
   status: string
-  module?: { name: string; description?: string | null } | null
+  module?: { name: string; description?: string | null; sku?: string | null } | null
   collaborator?: string | null
 }
 
@@ -165,6 +166,19 @@ export default function Print2ProfitClient({ sessions }: Props) {
   const [customerPhone, setCustomerPhone] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [modalError, setModalError] = useState('')
+
+  // Discount / Voucher Code States
+  const [discountCodeInput, setDiscountCodeInput] = useState('')
+  const [appliedDiscount, setAppliedDiscount] = useState<{
+    code: string
+    eventName: string
+    discountType: string
+    discountAmount: number
+    message: string
+  } | null>(null)
+  const [validatingDiscount, setValidatingDiscount] = useState(false)
+  const [discountError, setDiscountError] = useState('')
+  const [discountSuccessMsg, setDiscountSuccessMsg] = useState('')
 
   // Reservation Timer & Polling States
   const [activeBookingRef, setActiveBookingRef] = useState<string | null>(null)
@@ -624,13 +638,14 @@ export default function Print2ProfitClient({ sessions }: Props) {
 
                   {(() => {
                     const isFree = (session.module?.name || '').toLowerCase().includes('free')
+                    const isNegosyo = (session.module?.sku || '').toUpperCase() === 'BW007' || (session.module?.name || '').toLowerCase().includes('negosyo')
 
                     return (
                       <>
                         {[
                           ['🕐', 'Time Slot', `${formatTime(session.startTime)} – ${formatTime(session.endTime)}`],
                           ['👥', 'Slots Available', `${session.availableSlots} of ${session.capacity} remaining`],
-                          ['💳', 'Investment', isFree ? 'FREE (₱0)' : '₱3,500 per participant'],
+                          ['💳', 'Investment', isFree ? 'FREE (₱0)' : isNegosyo ? '₱3,500 per participant (or 100% Free with Voucher)' : '₱3,500 per participant'],
                           ['📍', 'Location', 'Makerlab Experience Hub, Ayala Malls Manila Bay'],
                         ].map(([icon, label, value]) => (
                           <div key={label} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
@@ -765,6 +780,10 @@ export default function Print2ProfitClient({ sessions }: Props) {
                 }
                 setShowModal(false)
                 setModalMode('FORM')
+                setAppliedDiscount(null)
+                setDiscountCodeInput('')
+                setDiscountError('')
+                setDiscountSuccessMsg('')
               }}
               style={{
                 position: 'absolute', top: '20px', right: '20px',
@@ -939,23 +958,267 @@ export default function Print2ProfitClient({ sessions }: Props) {
                         }}
                       />
                     </div>
+
+                    {/* ── DISCOUNT / VOUCHER CODE SECTION — BW007 (Negosyo Package) ONLY ── */}
+                    {(() => {
+                      const _sku = ((modalSession?.module as any)?.sku || '').toUpperCase()
+                      const _mname = (modalSession?.module?.name || '').toLowerCase()
+                      const isNegosyoSession = _sku === 'BW007' || _mname.includes('negosyo')
+                      return isNegosyoSession
+                    })() && (
+                    <div style={{
+                      background: '#f8fafc',
+                      border: '1px dashed #cbd5e1',
+                      borderRadius: '16px',
+                      padding: '16px',
+                      marginTop: '4px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          <span>🎟️</span> Discount / Voucher Code
+                        </label>
+                        <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Grand Opening Offer</span>
+                      </div>
+
+                      {appliedDiscount ? (
+                        <div style={{
+                          background: '#f0fdf4',
+                          border: '1.5px solid #86efac',
+                          borderRadius: '12px',
+                          padding: '12px 14px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '10px'
+                        }}>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontSize: '14px' }}>✨</span>
+                              <strong style={{ color: '#15803d', fontFamily: 'monospace', fontSize: '14px', letterSpacing: '1px' }}>
+                                {appliedDiscount.code}
+                              </strong>
+                              <span style={{ background: '#dcfce7', color: '#166534', fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px' }}>
+                                APPLIED
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#166534', marginTop: '2px', fontWeight: 600 }}>
+                              {appliedDiscount.message}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAppliedDiscount(null)
+                              setDiscountCodeInput('')
+                              setDiscountSuccessMsg('')
+                              setDiscountError('')
+                            }}
+                            style={{
+                              background: '#fee2e2',
+                              border: 'none',
+                              color: '#dc2626',
+                              borderRadius: '8px',
+                              padding: '6px 10px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <div>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <input
+                              type="text"
+                              value={discountCodeInput}
+                              onChange={(e) => {
+                                setDiscountCodeInput(e.target.value.toUpperCase())
+                                setDiscountError('')
+                              }}
+                              placeholder="e.g. NEGOSYO-XXXXXX"
+                              disabled={validatingDiscount || submitting}
+                              style={{
+                                flex: 1,
+                                padding: '10px 14px',
+                                borderRadius: '10px',
+                                border: discountError ? '1.5px solid #f87171' : '1px solid #cbd5e1',
+                                fontSize: '13px',
+                                textTransform: 'uppercase',
+                                fontFamily: 'monospace',
+                                fontWeight: 700,
+                                letterSpacing: '0.5px',
+                                outline: 'none',
+                                background: '#ffffff'
+                              }}
+                            />
+                            <button
+                              type="button"
+                              disabled={!discountCodeInput.trim() || validatingDiscount || submitting}
+                              onClick={async () => {
+                                if (!discountCodeInput.trim()) return
+                                setValidatingDiscount(true)
+                                setDiscountError('')
+                                setDiscountSuccessMsg('')
+                                try {
+                                  const res = await validateDiscountCode(
+                                    discountCodeInput,
+                                    modalSession?.module?.name,
+                                    (modalSession?.module as any)?.sku
+                                  )
+                                  if (res.error) {
+                                    setDiscountError(res.error)
+                                    setAppliedDiscount(null)
+                                  } else if (res.success) {
+                                    setAppliedDiscount({
+                                      code: res.code!,
+                                      eventName: res.eventName!,
+                                      discountType: res.discountType!,
+                                      discountAmount: res.discountAmount || 3500,
+                                      message: res.message!
+                                    })
+                                    setDiscountSuccessMsg(res.message!)
+                                  }
+                                } catch (e: any) {
+                                  setDiscountError(e.message || 'Failed to validate discount code.')
+                                } finally {
+                                  setValidatingDiscount(false)
+                                }
+                              }}
+                              style={{
+                                padding: '10px 16px',
+                                borderRadius: '10px',
+                                border: 'none',
+                                background: discountCodeInput.trim() ? '#0f2540' : '#cbd5e1',
+                                color: '#ffffff',
+                                fontSize: '13px',
+                                fontWeight: 700,
+                                cursor: discountCodeInput.trim() ? 'pointer' : 'not-allowed',
+                                transition: 'all 0.2s ease',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {validatingDiscount ? 'Checking...' : 'Apply Code'}
+                            </button>
+                          </div>
+
+                          {discountError && (
+                            <div style={{ color: '#dc2626', fontSize: '12px', fontWeight: 600, marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span>⚠️</span> {discountError}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    )}
+
+                    {/* Pricing Summary */}
+                    <div style={{
+                      background: '#f1f5f9',
+                      borderRadius: '12px',
+                      padding: '12px 16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                      fontSize: '13px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+                        <span>Workshop Registration:</span>
+                        <span style={{ textDecoration: appliedDiscount ? 'line-through' : 'none', fontWeight: 600 }}>₱3,500</span>
+                      </div>
+                      {appliedDiscount && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a', fontWeight: 700 }}>
+                          <span>Voucher Discount (100% OFF):</span>
+                          <span>-₱3,500</span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #cbd5e1', paddingTop: '6px', color: '#0f172a', fontWeight: 800, fontSize: '15px' }}>
+                        <span>Total Due:</span>
+                        <span style={{ color: appliedDiscount ? '#16a34a' : '#ea580c' }}>
+                          {appliedDiscount ? 'FREE (₱0)' : '₱3,500'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                      width: '100%', padding: '16px 24px',
-                      background: submitting ? '#94a3b8' : '#ea580c', color: '#ffffff',
-                      border: 'none', borderRadius: '16px', fontWeight: 800, fontSize: '16px',
-                      cursor: submitting ? 'not-allowed' : 'pointer',
-                      boxShadow: submitting ? 'none' : '0 8px 24px rgba(234, 88, 12, 0.25)',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    {submitting ? 'Reserving slot...' : 'Confirm & Pay — ₱3,500'}
-                  </button>
+                  {appliedDiscount ? (
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={async () => {
+                        if (submitting) return
+
+                        if (!customerFirstName.trim() || !customerLastName.trim() || !customerEmail.trim() || !customerPhone.trim()) {
+                          setModalError('Please fill in all required fields.')
+                          return
+                        }
+
+                        const phoneDigits = customerPhone.replace(/\D/g, '')
+                        if (phoneDigits.length !== 11) {
+                          setModalError('Phone number must be exactly 11 digits (e.g. 09171234567).')
+                          return
+                        }
+
+                        setSubmitting(true)
+                        setModalError('')
+
+                        try {
+                          const res = await redeemDiscountBooking({
+                            discountCode: appliedDiscount.code,
+                            sessionId: modalSession.id,
+                            customerFirstName: customerFirstName.trim(),
+                            customerLastName: customerLastName.trim(),
+                            customerEmail: customerEmail.trim(),
+                            customerPhone: phoneDigits
+                          })
+
+                          if ('error' in res && res.error) {
+                            setModalError(res.error)
+                            setSubmitting(false)
+                          } else if ('bookingReference' in res && res.bookingReference) {
+                            setActiveBookingRef(res.bookingReference)
+                            setModalMode('SUCCESS')
+                            setSubmitting(false)
+                          } else {
+                            setModalError('Failed to redeem voucher. Please try again.')
+                            setSubmitting(false)
+                          }
+                        } catch (err: any) {
+                          console.error(err)
+                          setModalError(err.message || 'An unexpected error occurred while redeeming.')
+                          setSubmitting(false)
+                        }
+                      }}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        width: '100%', padding: '16px 24px',
+                        background: submitting ? '#94a3b8' : '#16a34a', color: '#ffffff',
+                        border: 'none', borderRadius: '16px', fontWeight: 800, fontSize: '16px',
+                        cursor: submitting ? 'not-allowed' : 'pointer',
+                        boxShadow: submitting ? 'none' : '0 8px 24px rgba(22, 163, 74, 0.3)',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {submitting ? 'Redeeming Voucher...' : '🎉 Claim Voucher & Reserve Seat (FREE)'}
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        width: '100%', padding: '16px 24px',
+                        background: submitting ? '#94a3b8' : '#ea580c', color: '#ffffff',
+                        border: 'none', borderRadius: '16px', fontWeight: 800, fontSize: '16px',
+                        cursor: submitting ? 'not-allowed' : 'pointer',
+                        boxShadow: submitting ? 'none' : '0 8px 24px rgba(234, 88, 12, 0.25)',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {submitting ? 'Reserving slot...' : 'Confirm & Pay — ₱3,500'}
+                    </button>
+                  )}
                 </form>
               </>
             )}
@@ -1068,10 +1331,10 @@ export default function Print2ProfitClient({ sessions }: Props) {
                 </div>
 
                 <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
-                  Payment Confirmed!
+                  {appliedDiscount ? 'Voucher Redeemed! 🎟️' : 'Booking Confirmed!'}
                 </h3>
                 <p style={{ fontSize: '14px', color: '#475569', marginBottom: '20px', lineHeight: 1.5 }}>
-                  Thank you, <strong>{customerFirstName}</strong>! Your workshop slot has been officially reserved.
+                  Thank you, <strong>{customerFirstName}</strong>! {appliedDiscount ? 'Your Grand Opening voucher has been successfully redeemed and your slot is secured — FREE of charge!' : 'Your workshop slot has been officially reserved.'}
                 </p>
 
                 <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '16px', padding: '16px', textAlign: 'left', fontSize: '13px', marginBottom: '20px' }}>
@@ -1101,6 +1364,10 @@ export default function Print2ProfitClient({ sessions }: Props) {
                   onClick={() => {
                     setShowModal(false)
                     setModalMode('FORM')
+                    setAppliedDiscount(null)
+                    setDiscountCodeInput('')
+                    setDiscountError('')
+                    setDiscountSuccessMsg('')
                   }}
                   style={{
                     width: '100%', padding: '14px 24px', borderRadius: '16px',
@@ -1247,6 +1514,10 @@ export default function Print2ProfitClient({ sessions }: Props) {
                   setCustomerLastName('')
                   setCustomerEmail('')
                   setCustomerPhone('')
+                  setDiscountCodeInput('')
+                  setAppliedDiscount(null)
+                  setDiscountError('')
+                  setDiscountSuccessMsg('')
                   setModalMode('FORM')
                   setShowModal(true)
                 }}
