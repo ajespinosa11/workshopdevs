@@ -115,6 +115,54 @@ export function buildShopifyPermalink(variantId: string, quantity: number = 1): 
 }
 
 /**
+ * Returns pre-defined SKU and Variant ID details for known standard workshop titles.
+ */
+export function getStandardWorkshopDetails(title: string): { sku: string; variantId: string; permalink: string } | null {
+  const name = (title || '').toUpperCase()
+  if (name.includes('PAINT')) {
+    const variantId = process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID_BW002 || '46091932762303'
+    return {
+      sku: 'BW002',
+      variantId,
+      permalink: buildShopifyPermalink(variantId)
+    }
+  }
+  if (name.includes('DESIGN') || name.includes('FUSION')) {
+    const variantId = process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID_BW003 || '46092204245183'
+    return {
+      sku: 'BW003',
+      variantId,
+      permalink: buildShopifyPermalink(variantId)
+    }
+  }
+  if (name.includes('NEGOSYO')) {
+    const variantId = '50499798958271'
+    return {
+      sku: 'BW007',
+      variantId,
+      permalink: buildShopifyPermalink(variantId)
+    }
+  }
+  if (name.includes('SLICER')) {
+    const variantId = '46215280001215'
+    return {
+      sku: 'BW004',
+      variantId,
+      permalink: buildShopifyPermalink(variantId)
+    }
+  }
+  if (name.includes('PRINTS 2 PROFIT') || name.includes('PRINT 2 PROFIT') || name.includes('PRINT2PROFIT')) {
+    const variantId = process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID || '46133187444927'
+    return {
+      sku: 'BW001',
+      variantId,
+      permalink: buildShopifyPermalink(variantId)
+    }
+  }
+  return null
+}
+
+/**
  * Creates a Product & Variant on Shopify Admin via API if access token is configured.
  * If credentials are not present, generates a fallback SKU and placeholder variant link gracefully.
  */
@@ -129,13 +177,24 @@ export async function syncWorkshopProductToShopify(params: {
   shopifyVariantId: string | null
   shopifyPermalink: string
 }> {
-  const sku = params.sku || await getNextWorkshopSku()
+  const standard = getStandardWorkshopDetails(params.title)
+  const sku = params.sku || standard?.sku || await getNextWorkshopSku()
+
+  if (standard && (!params.sku || params.sku === standard.sku)) {
+    return {
+      sku: standard.sku,
+      shopifyProductId: null,
+      shopifyVariantId: standard.variantId,
+      shopifyPermalink: standard.permalink
+    }
+  }
+
   const shopDomain = (process.env.SHOPIFY_SHOP_DOMAIN || 'makerlab-electronics-ph.myshopify.com').trim()
   const accessToken = await getShopifyAccessToken()
 
   if (!accessToken) {
     console.warn('[Shopify Integration] SHOPIFY_ADMIN_API_ACCESS_TOKEN is missing. Generated SKU fallback without live API call.')
-    const fallbackVariantId = process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID_BW003 || '46092204245183'
+    const fallbackVariantId = standard?.variantId || process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID || '46133187444927'
     return {
       sku,
       shopifyProductId: null,
@@ -189,7 +248,8 @@ export async function syncWorkshopProductToShopify(params: {
     const variant = product?.variants?.[0]
     const variantId = variant?.id ? String(variant.id) : null
     const productId = product?.id ? String(product.id) : null
-    const permalink = variantId ? buildShopifyPermalink(variantId) : buildShopifyPermalink('46092204245183')
+    const fallbackVariant = standard?.variantId || process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID || '46133187444927'
+    const permalink = variantId ? buildShopifyPermalink(variantId) : buildShopifyPermalink(fallbackVariant)
 
     return {
       sku,
@@ -199,7 +259,7 @@ export async function syncWorkshopProductToShopify(params: {
     }
   } catch (err: any) {
     console.error('[Shopify Integration Exception]', err)
-    const fallbackVariantId = process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID_BW003 || '46092204245183'
+    const fallbackVariantId = standard?.variantId || process.env.NEXT_PUBLIC_SHOPIFY_VARIANT_ID || '46133187444927'
     return {
       sku,
       shopifyProductId: null,
