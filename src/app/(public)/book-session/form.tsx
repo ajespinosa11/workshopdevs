@@ -1639,7 +1639,14 @@ export default function BookSessionForm() {
                                 style={{ marginTop: '2px' }}
                               />
                               <div>
-                                <strong style={{ color: 'var(--primary)' }}>{new Date(s.sessionDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</strong>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2px' }}>
+                                  <strong style={{ color: 'var(--primary)' }}>{new Date(s.sessionDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</strong>
+                                  {s.module?.name && (
+                                    <span style={{ fontSize: '0.72rem', background: '#f1f5f9', color: '#475569', padding: '0.1rem 0.45rem', borderRadius: '4px', fontWeight: 600 }}>
+                                      {s.module.name}
+                                    </span>
+                                  )}
+                                </div>
                                 <div style={{ fontSize: '0.8rem', color: 'var(--secondary-foreground)', marginTop: '2px' }}>⏰ {formatTime(s.startTime)} - {formatTime(s.endTime)}</div>
                               </div>
                             </label>

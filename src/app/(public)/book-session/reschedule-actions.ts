@@ -76,17 +76,36 @@ export async function getAvailableRescheduleSessions(formData: FormData) {
     return { error: 'Rescheduling is only allowed at least 48 hours before the workshop start time.' }
   }
 
-  // Find future open sessions
+  // Determine if this booking is for a FREE workshop
+  const isFreeSession =
+    ['FREE', 'FREE_KID'].includes(bookingObj.session.category) ||
+    bookingObj.session.module?.name?.toLowerCase().includes('free')
+
+  // Find future open sessions matching the same workshop category/module
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
+  const whereClause: any = {
+    id: { not: bookingObj.sessionId },
+    sessionDate: { gte: today },
+    status: 'OPEN',
+    availableSlots: { gt: 0 },
+  }
+
+  if (isFreeSession) {
+    whereClause.OR = [
+      { category: 'FREE' },
+      { category: 'FREE_KID' },
+      { category: { not: 'PAID' }, module: { name: { contains: 'Free', mode: 'insensitive' } } }
+    ]
+  } else {
+    // For paid sessions, restrict to the same module or category to prevent free/cross-module jumping
+    whereClause.category = bookingObj.session.category
+    whereClause.moduleId = bookingObj.session.moduleId
+  }
+
   const sessions = await prisma.workshopSession.findMany({
-    where: {
-      id: { not: bookingObj.sessionId },
-      sessionDate: { gte: today },
-      status: 'OPEN',
-      availableSlots: { gt: 0 },
-    },
+    where: whereClause,
     include: { module: true },
     orderBy: { sessionDate: 'asc' }
   })
@@ -205,6 +224,26 @@ export async function rescheduleBookingAction(formData: FormData) {
   const newHoursUntil = (newSessionStart.getTime() - Date.now()) / (1000 * 60 * 60)
   if (newHoursUntil < 48) {
     return { error: 'Cannot reschedule to a session less than 48 hours away.' }
+  }
+
+  // Enforce workshop category and module compatibility
+  const originalIsFree =
+    ['FREE', 'FREE_KID'].includes(bookingObj.session.category) ||
+    bookingObj.session.module?.name?.toLowerCase().includes('free')
+  const newIsFree =
+    ['FREE', 'FREE_KID'].includes(newSession.category) ||
+    newSession.module?.name?.toLowerCase().includes('free')
+
+  if (originalIsFree && !newIsFree) {
+    return { error: 'Free workshop bookings can only be rescheduled to other Free workshop sessions.' }
+  }
+
+  if (!originalIsFree && newIsFree) {
+    return { error: 'Paid workshop bookings cannot be downgraded to a free session via self-service rescheduling.' }
+  }
+
+  if (!originalIsFree && bookingObj.session.moduleId !== newSession.moduleId) {
+    return { error: 'Workshop sessions can only be rescheduled to the same workshop module.' }
   }
 
   // Perform the reschedule in a transaction
