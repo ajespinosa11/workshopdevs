@@ -4,6 +4,9 @@ import { useState, useMemo } from 'react'
 import { adminReserveSlot, adminRescheduleRegistration, adminManualBookSlot, sendReservationConfirmationEmail, adminManualVerifyPayment, adminMoveToStaging, adminRescheduleFromStaging } from './actions'
 import { updateRegistrationStatus } from './status-actions'
 import { exportToCSV, exportToExcel } from '@/utils/exportUtils'
+import AdminStatusBadge from '@/components/admin/AdminStatusBadge'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
+import AdminStatCard from '@/components/admin/AdminStatCard'
 
 interface RegistrationsClientProps {
   registrations: any[]
@@ -938,44 +941,40 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
   return (
     <div style={S.page}>
       {/* ── Page Header ── */}
-      <div style={S.header}>
-        <div>
-          <div style={S.breadcrumb}>
-            <span>Workshop Management</span>
-            <span style={{ color: '#334155' }}>/</span>
-            <span style={S.breadcrumbActive}>Booking Verification</span>
-          </div>
-          <h1 style={S.h1}>Shopify & StoreHub Verification Dashboard</h1>
-          <p style={S.subtitle}>
-            Manage incoming online and POS workshop reservations, verify payment status, and lock participant slots across high-volume event schedules.
-          </p>
-        </div>
-        <button
-          onClick={() => { setErrorMsg(''); setWalkInStep(1); setModalType('WALK_IN') }}
-          style={S.primaryBtn}
-          onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-1px)', e.currentTarget.style.boxShadow = '0 6px 20px rgba(99,102,241,0.45)')}
-          onMouseLeave={e => (e.currentTarget.style.transform = '', e.currentTarget.style.boxShadow = '0 4px 16px rgba(99,102,241,0.35)')}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Manual Walk-in Booking
-        </button>
-      </div>
+      <AdminPageHeader
+        title="Registrations & Booking Verification"
+        subtitle="Manage incoming online and POS workshop reservations, verify payment status, and lock participant slots across high-volume event schedules."
+        breadcrumbs={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Core Operations' },
+          { label: 'Registrations' }
+        ]}
+        actions={
+          <button
+            onClick={() => { setErrorMsg(''); setWalkInStep(1); setModalType('WALK_IN') }}
+            style={S.primaryBtn}
+            onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-1px)', e.currentTarget.style.boxShadow = '0 6px 20px rgba(99,102,241,0.45)')}
+            onMouseLeave={e => (e.currentTarget.style.transform = '', e.currentTarget.style.boxShadow = '0 4px 16px rgba(99,102,241,0.35)')}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Manual Walk-in Booking
+          </button>
+        }
+      />
 
       {/* ── Stat Cards Summary Banner ── */}
       <div style={S.statGrid}>
         {statCards.map(({ label, icon, value, sub, color, tab }) => (
-          <div
+          <AdminStatCard
             key={label}
+            title={label}
+            value={value}
+            subValue={sub}
+            color={color}
+            active={activeTab === tab}
             onClick={() => { setActiveTab(tab); if (tab === 'ALL') clearFilters() }}
-            style={S.statCard(activeTab === tab, color)}
-            onMouseEnter={e => { if (activeTab !== tab) (e.currentTarget as HTMLDivElement).style.borderColor = `${color}60` }}
-            onMouseLeave={e => { if (activeTab !== tab) (e.currentTarget as HTMLDivElement).style.borderColor = '#e2e8f0' }}
-          >
-            <div style={S.statIcon(color)}>{icon}</div>
-            <div style={S.statLabel(color)}>{label}</div>
-            <div style={S.statNumber}>{value}</div>
-            <div style={S.statSub}>{sub}</div>
-          </div>
+            icon={<span style={{ fontSize: '0.95rem' }}>{icon}</span>}
+          />
         ))}
       </div>
 
@@ -1578,10 +1577,22 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                               </td>
 
                               {/* 4. Payment Status */}
-                              <td style={S.td}>{renderPaymentChip(r.status)}</td>
+                              <td style={S.td}>
+                                {['PAID_FOR_ADMIN_VERIFICATION', 'RESERVED', 'CONFIRMED', 'CHECKED_IN', 'WALKIN_CONFIRMED'].includes(r.status) ? (
+                                  <AdminStatusBadge status="PAID" size="sm" />
+                                ) : r.status === 'STAGING' ? (
+                                  <AdminStatusBadge status="STAGING" size="sm" />
+                                ) : ['AWAITING_PAYMENT', 'PAYMENT_PENDING'].includes(r.status) ? (
+                                  <AdminStatusBadge status="AWAITING_PAYMENT" size="sm" />
+                                ) : (
+                                  <AdminStatusBadge status={r.status} size="sm" />
+                                )}
+                              </td>
 
                               {/* 5. Reservation Status */}
-                              <td style={S.td}>{renderReservationChip(r.status)}</td>
+                              <td style={S.td}>
+                                <AdminStatusBadge status={r.status} size="sm" />
+                              </td>
 
                               {/* 6. Actions */}
                               <td style={{ ...S.td, textAlign: 'right' }}>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createDiscountCode, toggleDiscountCodeStatus, deleteDiscountCode, deleteDiscountEvent } from './actions'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
 
 interface DiscountCode {
   id: string
@@ -172,12 +173,15 @@ export default function DiscountsManager({ discountCodes }: { discountCodes: Dis
     <div className="flex flex-col gap-6">
       
       {/* Header */}
-      <div>
-        <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: 0 }}>Discount Code System</h1>
-        <p style={{ color: 'var(--admin-text-secondary)', fontSize: '0.95rem', margin: '4px 0 0 0' }}>
-          Organize discounts by marketing events. Batch generate up to 50 codes per campaign and mark them redeemed when customers walk in.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Discount Code System"
+        subtitle="Organize discounts by marketing events. Batch generate up to 50 codes per campaign and mark them redeemed when customers walk in."
+        breadcrumbs={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Audience & Subscriptions' },
+          { label: 'Discount Codes' }
+        ]}
+      />
 
       {/* Row 1: Generator & Events Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '1.5rem', alignItems: 'stretch' }}>

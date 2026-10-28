@@ -4,6 +4,9 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createModule, createSession, updateSession, deleteSession, updateModule } from './actions'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
+import AdminStatCard from '@/components/admin/AdminStatCard'
+import AdminStatusBadge from '@/components/admin/AdminStatusBadge'
 
 export const CANCELLATION_REASONS = [
   'Instructor Unavailability',
@@ -667,44 +670,58 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
 
   return (
     <div className="flex flex-col gap-6">
+      <AdminPageHeader
+        title="Events & Session Calendar"
+        subtitle="Schedule workshop dates, monitor online and walk-in capacities, and review attendee rosters."
+        breadcrumbs={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Core Operations' },
+          { label: 'Events & Calendar' }
+        ]}
+        actions={
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={openScheduleModal}
+              className="admin-btn-primary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 0.95rem', borderRadius: '0.5rem', fontWeight: 600, fontSize: '0.8125rem' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Create Session
+            </button>
+            <button
+              onClick={() => { setModuleName(''); setModuleDesc(''); setModuleCategory('FREE'); setModuleUnits(2); setShowModuleModal(true) }}
+              className="admin-btn-outline"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 0.95rem', borderRadius: '0.5rem', fontWeight: 600, fontSize: '0.8125rem' }}
+            >
+              + New Module
+            </button>
+          </div>
+        }
+      />
+
       {/* Stats row */}
-      <div className="admin-stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-        <div className="admin-stat-card">
-          <div className="admin-stat-icon-wrapper admin-stat-icon-orange">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8" y1="2" x2="8" y2="6" />
-            </svg>
-          </div>
-          <div className="admin-stat-info">
-            <div className="admin-stat-value">{totalSessions}</div>
-            <div className="admin-stat-label">Upcoming Sessions</div>
-          </div>
-        </div>
-        <div className="admin-stat-card">
-          <div className="admin-stat-icon-wrapper admin-stat-icon-blue">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-            </svg>
-          </div>
-          <div className="admin-stat-info">
-            <div className="admin-stat-value">{totalBookings}</div>
-            <div className="admin-stat-label">Total Bookings</div>
-          </div>
-        </div>
-        <div className="admin-stat-card">
-          <div className="admin-stat-icon-wrapper admin-stat-icon-orange">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-          </div>
-          <div className="admin-stat-info">
-            <div className="admin-stat-value">{totalAvailable}</div>
-            <div className="admin-stat-label">Available Slots</div>
-          </div>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.875rem' }}>
+        <AdminStatCard
+          title="Upcoming Sessions"
+          value={totalSessions}
+          subValue="Active schedules"
+          color="#0f2540"
+          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /></svg>}
+        />
+        <AdminStatCard
+          title="Total Bookings"
+          value={totalBookings}
+          subValue="Enrolled pax"
+          color="#6366f1"
+          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /></svg>}
+        />
+        <AdminStatCard
+          title="Available Slots"
+          value={totalAvailable}
+          subValue="Open studio seats"
+          color="#f97316"
+          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>}
+        />
       </div>
 
       {/* Calendar + Detail panel */}
@@ -982,12 +999,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
 
                   {/* Bottom Actions Row: Status Badge, Edit & View Bookings */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed #e2e8f0' }}>
-                    <span className={`badge ${
-                      s.status === 'OPEN' ? 'badge-green' :
-                      s.status === 'FULL' ? 'badge-yellow' : 'badge-gray'
-                    }`} style={{ fontSize: '0.7rem' }}>
-                      {s.status}
-                    </span>
+                    <AdminStatusBadge status={s.status} size="sm" />
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button
                         onClick={() => openEditModal(s)}
@@ -1091,13 +1103,7 @@ export default function AdminSessionsCalendar({ sessions, modules }: { sessions:
                         </div>
                       </div>
                       <div>
-                        <span className={`badge ${
-                          booking.status === 'RESERVED' || booking.status === 'CONFIRMED' ? 'badge-green' :
-                          booking.status === 'PAID_FOR_ADMIN_VERIFICATION' ? 'badge-yellow' :
-                          booking.status === 'PENDING_CHECKOUT' ? 'badge-blue' : 'badge-gray'
-                        }`}>
-                          {booking.status.replace(/_/g, ' ')}
-                        </span>
+                        <AdminStatusBadge status={booking.status} size="sm" />
                       </div>
                     </div>
                   ))}

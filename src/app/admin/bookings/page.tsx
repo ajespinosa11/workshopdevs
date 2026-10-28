@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { autoCancelExpiredBookings } from '@/lib/booking-utils'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
+import AdminStatusBadge from '@/components/admin/AdminStatusBadge'
 
 export default async function AdminBookingsPage() {
   await autoCancelExpiredBookings()
@@ -18,14 +20,19 @@ export default async function AdminBookingsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-1" style={{ fontSize: '2rem', fontWeight: 800 }}>Manage Bookings</h1>
-        <p style={{ color: 'var(--admin-text-secondary)', fontSize: '0.95rem' }}>View, track, and manage all scheduled workshop seat reservations and check-in statuses.</p>
-      </div>
+      <AdminPageHeader
+        title="Manage Bookings"
+        subtitle="View, track, and manage all scheduled workshop seat reservations and check-in statuses."
+        breadcrumbs={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Workshops & Programs' },
+          { label: 'Bookings' }
+        ]}
+      />
       
       <div className="admin-card-table">
         <div className="admin-card-table-header">
-          <div className="admin-table-title">All Bookings</div>
+          <div className="admin-table-title">All Bookings ({bookings.length})</div>
           <div className="admin-table-actions">
             <button className="admin-btn-outline">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -82,13 +89,7 @@ export default async function AdminBookingsPage() {
                   </td>
                   <td style={{ fontWeight: 600 }}>{b.unitsToDeduct} units</td>
                   <td>
-                    <span className={`badge ${
-                      b.status === 'CHECKED_IN' || b.status === 'WALKIN_CONFIRMED' ? 'badge-green' : 
-                      b.status === 'RESERVED' ? 'badge-blue' : 
-                      b.status === 'CANCELLED_BY_CUSTOMER' ? 'badge-red' : 'badge-gray'
-                    }`}>
-                      {b.status.replace(/_/g, ' ')}
-                    </span>
+                    <AdminStatusBadge status={b.status} size="sm" />
                   </td>
                   <td style={{ color: 'var(--admin-text-secondary)', fontSize: '0.85rem' }}>
                     {new Date(b.createdAt).toLocaleDateString(undefined, {

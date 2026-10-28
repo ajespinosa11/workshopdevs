@@ -2,6 +2,9 @@
 
 import { useState, useMemo } from 'react'
 import { exportToCSV, exportToExcel } from '@/utils/exportUtils'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
+import AdminStatCard from '@/components/admin/AdminStatCard'
+import AdminStatusBadge from '@/components/admin/AdminStatusBadge'
 
 interface Registration {
   id: string
@@ -269,22 +272,7 @@ export default function CustomersClient({ customers, metrics: serverMetrics, mod
 
   // Badge render helpers
   const renderStatusBadge = (status: string) => {
-    if (['CHECKED_IN', 'ATTENDED', 'WALKIN_CONFIRMED'].includes(status)) {
-      return <span style={{ padding: '0.15rem 0.5rem', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>✓ Checked In</span>
-    }
-    if (['RESERVED', 'CONFIRMED'].includes(status)) {
-      return <span style={{ padding: '0.15rem 0.5rem', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700, background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe' }}>Confirmed</span>
-    }
-    if (['RESCHEDULED'].includes(status)) {
-      return <span style={{ padding: '0.15rem 0.5rem', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700, background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }}>Rescheduled</span>
-    }
-    if (['STAGING'].includes(status)) {
-      return <span style={{ padding: '0.15rem 0.5rem', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700, background: '#faf5ff', color: '#9333ea', border: '1px solid #e9d5ff' }}>📥 Staged for Reschedule</span>
-    }
-    if (['AWAITING_PAYMENT', 'PAYMENT_PENDING', 'PAID_FOR_ADMIN_VERIFICATION'].includes(status)) {
-      return <span style={{ padding: '0.15rem 0.5rem', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700, background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a' }}>⏳ Pending</span>
-    }
-    return <span style={{ padding: '0.15rem 0.5rem', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>Cancelled</span>
+    return <AdminStatusBadge status={status} size="sm" />
   }
 
   return (
@@ -297,66 +285,50 @@ export default function CustomersClient({ customers, metrics: serverMetrics, mod
         </div>
       )}
 
+      {/* ═══ Header ═══ */}
+      <AdminPageHeader
+        title="Customer Directory & Profiles"
+        subtitle="View lifetime booking histories, calculate customer repeat rates, and export subscriber lists."
+        breadcrumbs={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Audience & Subscriptions' },
+          { label: 'Customers' }
+        ]}
+      />
+
       {/* ═══ 1. CONCISE SUMMARY KPI CARDS BAR ═══ */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-        
-        {/* KPI 1: Unique Customers */}
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '0.9rem 1.1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#eef2ff', border: '1px solid #c7d2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.15rem', flexShrink: 0 }}>
-            👥
-          </div>
-          <div>
-            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total Customers</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.2, marginTop: '0.1rem' }}>{metrics.totalCustomers.toLocaleString()}</div>
-          </div>
-        </div>
-
-        {/* KPI 2: Paid Customers */}
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '0.9rem 1.1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fff7ed', border: '1px solid #ffedd5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.15rem', flexShrink: 0 }}>
-            🍊
-          </div>
-          <div>
-            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Paid Customers</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.2, marginTop: '0.1rem' }}>{(metrics.paidCustomers ?? 0).toLocaleString()}</div>
-          </div>
-        </div>
-
-        {/* KPI 3: Free Workshop Customers */}
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '0.9rem 1.1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#f0fdf4', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.15rem', flexShrink: 0 }}>
-            🎁
-          </div>
-          <div>
-            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Free Customers</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.2, marginTop: '0.1rem' }}>{(metrics.freeCustomers ?? 0).toLocaleString()}</div>
-          </div>
-        </div>
-
-        {/* KPI 4: Repeat Customers */}
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '0.9rem 1.1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#f0f9ff', border: '1px solid #bae6fd', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.15rem', flexShrink: 0 }}>
-            🔄
-          </div>
-          <div>
-            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Repeat Bookers</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.2, marginTop: '0.1rem' }}>
-              {metrics.repeatCustomers} <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#0284c7' }}>({metrics.repeatRate}%)</span>
-            </div>
-          </div>
-        </div>
-
-        {/* KPI 5: Total Lifetime Sales */}
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '0.9rem 1.1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#faf5ff', border: '1px solid #e9d5ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.15rem', flexShrink: 0 }}>
-            💎
-          </div>
-          <div>
-            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#9333ea', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Lifetime Sales</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.2, marginTop: '0.1rem' }}>₱{metrics.totalRevenue.toLocaleString()}</div>
-          </div>
-        </div>
-
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.875rem' }}>
+        <AdminStatCard
+          title="Total Customers"
+          value={metrics.totalCustomers.toLocaleString()}
+          color="#6366f1"
+          icon={<span>👥</span>}
+        />
+        <AdminStatCard
+          title="Paid Customers"
+          value={(metrics.paidCustomers ?? 0).toLocaleString()}
+          color="#ea580c"
+          icon={<span>🍊</span>}
+        />
+        <AdminStatCard
+          title="Free Customers"
+          value={(metrics.freeCustomers ?? 0).toLocaleString()}
+          color="#16a34a"
+          icon={<span>🎁</span>}
+        />
+        <AdminStatCard
+          title="Repeat Bookers"
+          value={metrics.repeatCustomers}
+          subValue={`(${metrics.repeatRate}%)`}
+          color="#0284c7"
+          icon={<span>🔄</span>}
+        />
+        <AdminStatCard
+          title="Lifetime Sales"
+          value={`₱${metrics.totalRevenue.toLocaleString()}`}
+          color="#9333ea"
+          icon={<span>💎</span>}
+        />
       </div>
 
       {/* ═══ 2. COMPACT & RESPONSIVE FILTER TOOLBAR ═══ */}

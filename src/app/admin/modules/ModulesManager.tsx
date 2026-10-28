@@ -3,6 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createModule, updateModule, deleteModule } from './actions'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
+import AdminStatCard from '@/components/admin/AdminStatCard'
+import AdminStatusBadge from '@/components/admin/AdminStatusBadge'
 
 interface Module {
   id: string
@@ -128,45 +131,57 @@ export default function ModulesManager({ modules }: { modules: Module[] }) {
     <div className="flex flex-col gap-6">
 
       {/* ── Header bar ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: 0 }}>Workshop Modules</h1>
-          <p style={{ color: 'var(--admin-text-secondary)', fontSize: '0.95rem', margin: '4px 0 0 0' }}>
-            Manage workshop modules, automatic SKU incrementing, and Shopify direct integration.
-          </p>
-        </div>
-        <button
-          onClick={() => { setShowCreate(true); setCreateError('') }}
-          style={{
-            padding: '0.6rem 1.25rem', background: 'var(--accent)', color: '#fff',
-            border: 'none', borderRadius: '0.65rem', fontWeight: 700, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem',
-            boxShadow: '0 2px 8px rgba(249,115,22,0.2)'
-          }}
-        >
-          <span style={{ fontSize: '1.1rem' }}>+</span> New Module
-        </button>
-      </div>
+      <AdminPageHeader
+        title="Workshop Modules"
+        subtitle="Manage workshop curriculum, automatic SKU incrementing, and direct pricing."
+        breadcrumbs={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Workshops & Programs' },
+          { label: 'Course Modules' }
+        ]}
+        actions={
+          <button
+            onClick={() => { setShowCreate(true); setCreateError('') }}
+            style={{
+              padding: '0.55rem 1.1rem',
+              background: 'var(--accent)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '0.5rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              fontSize: '0.8125rem',
+              boxShadow: '0 2px 8px rgba(249,115,22,0.2)'
+            }}
+          >
+            <span style={{ fontSize: '1rem' }}>+</span> New Module
+          </button>
+        }
+      />
 
       {/* ── Stats ── */}
-      <div className="admin-stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-        {[
-          { label: 'Total Modules', value: modules.length, color: 'orange' },
-          { label: 'Free Workshops', value: modules.filter(m => m.category === 'FREE').length, color: 'green' },
-          { label: 'Paid Workshops', value: modules.filter(m => m.category === 'PAID').length, color: 'blue' },
-        ].map(stat => (
-          <div key={stat.label} className="admin-stat-card">
-            <div className={`admin-stat-icon-wrapper admin-stat-icon-${stat.color}`}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
-              </svg>
-            </div>
-            <div className="admin-stat-info">
-              <div className="admin-stat-value">{stat.value}</div>
-              <div className="admin-stat-label">{stat.label}</div>
-            </div>
-          </div>
-        ))}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.875rem' }}>
+        <AdminStatCard
+          title="Total Modules"
+          value={modules.length}
+          color="#0f2540"
+          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></svg>}
+        />
+        <AdminStatCard
+          title="Free Workshops"
+          value={modules.filter(m => m.category === 'FREE').length}
+          color="#16a34a"
+          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>}
+        />
+        <AdminStatCard
+          title="Paid Workshops"
+          value={modules.filter(m => m.category === 'PAID').length}
+          color="#6366f1"
+          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10" /><path d="M12 6v12M15 9.5H10a2.5 2.5 0 0 0 0 5h4a2.5 2.5 0 0 1 0 5H9" /></svg>}
+        />
       </div>
 
       {/* ── Search + Filter bar ── */}

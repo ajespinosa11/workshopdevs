@@ -3,6 +3,8 @@ import { markAsPaid } from './actions'
 import SyncButton from './SyncButton'
 import SendEmailButton from './SendEmailButton'
 import PlanFilterBar from './PlanFilterBar'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
+import AdminStatusBadge from '@/components/admin/AdminStatusBadge'
 
 interface Props {
   searchParams: Promise<{ planId?: string }>
@@ -26,16 +28,21 @@ export default async function AdminRequests({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-1" style={{ fontSize: '2rem', fontWeight: 800 }}>Plan Requests</h1>
-        <p style={{ color: 'var(--admin-text-secondary)', fontSize: '0.95rem' }}>View, manage, and approve customer subscription requests.</p>
-      </div>
+      <AdminPageHeader
+        title="Plan Requests"
+        subtitle="View, manage, and approve customer subscription requests."
+        breadcrumbs={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Audience & Subscriptions' },
+          { label: 'Plan Requests' }
+        ]}
+      />
       
       <div className="admin-card-table">
         <div className="admin-card-table-header" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 }}>
             <div className="admin-table-title">
-              {planId ? `Filtered: ${plans.find(p => p.id === planId)?.name ?? 'Plan'}` : 'All Plan Requests'}
+              {planId ? `Filtered: ${plans.find(p => p.id === planId)?.name ?? 'Plan'}` : `All Plan Requests (${requests.length})`}
             </div>
             {/* Plan Filter Pills */}
             <PlanFilterBar plans={plans} activePlanId={planId} />
@@ -103,12 +110,7 @@ export default async function AdminRequests({ searchParams }: Props) {
                     <td>{req.selectedPlan.name}</td>
                     <td style={{ fontWeight: 600 }}>₱{req.selectedPlan.price.toLocaleString()}</td>
                     <td>
-                      <span className={`badge ${
-                        req.status === 'PAID' ? 'badge-green' : 
-                        req.status === 'PENDING_PAYMENT' ? 'badge-yellow' : 'badge-red'
-                      }`}>
-                        {req.status.replace('_', ' ')}
-                      </span>
+                      <AdminStatusBadge status={req.status} size="sm" />
                     </td>
                     <td>
                       {req.emailSentAt ? (

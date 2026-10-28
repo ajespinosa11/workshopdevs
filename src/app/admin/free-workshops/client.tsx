@@ -4,6 +4,9 @@ import { useState, useMemo } from 'react'
 import { updateRegistrationStatus } from '../registrations/status-actions'
 import { adminManualBookSlot } from '../registrations/actions'
 import { updateBookingStatus } from '../check-in/actions'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
+import AdminStatCard from '@/components/admin/AdminStatCard'
+import AdminStatusBadge from '@/components/admin/AdminStatusBadge'
 
 interface FreeSession {
   id: string
@@ -233,16 +236,7 @@ export default function FreeWorkshopsClient({ reservations, sessions, openSessio
 
   // Status Chip Renderer
   const renderStatusBadge = (status: string) => {
-    if (['CHECKED_IN', 'ATTENDED', 'WALKIN_CONFIRMED'].includes(status)) {
-      return <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.68rem', fontWeight: 700, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>✓ Checked In</span>
-    }
-    if (['RESERVED', 'CONFIRMED'].includes(status)) {
-      return <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.68rem', fontWeight: 700, background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe' }}>Confirmed</span>
-    }
-    if (['RESCHEDULED'].includes(status)) {
-      return <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.68rem', fontWeight: 700, background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }}>Rescheduled</span>
-    }
-    return <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.68rem', fontWeight: 700, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>Cancelled</span>
+    return <AdminStatusBadge status={status} size="sm" />
   }
 
   // Session Badge Renderer
@@ -294,54 +288,68 @@ export default function FreeWorkshopsClient({ reservations, sessions, openSessio
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', fontFamily: "'Inter', sans-serif" }}>
       
-      {/* ═══ Top Action Bar ═══ */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.25rem' }}>
-        <button
-          onClick={() => {
-            setShowWalkInModal(true)
-            setWalkInStep(1)
-            setWalkInError('')
-          }}
-          style={{
-            background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '10px',
-            padding: '0.65rem 1.25rem',
-            fontSize: '0.82rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
-        >
-          <span>+</span> Manual Walk-in Booking
-        </button>
-      </div>
+      {/* ═══ Top Header ═══ */}
+      <AdminPageHeader
+        title="Free Workshops Console"
+        subtitle="Schedule zero-cost workshop dates, verify participant slots, and process walk-ins for adult and kids sessions."
+        breadcrumbs={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Workshops & Programs' },
+          { label: 'Free Workshops' }
+        ]}
+        actions={
+          <button
+            onClick={() => {
+              setShowWalkInModal(true)
+              setWalkInStep(1)
+              setWalkInError('')
+            }}
+            style={{
+              background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '0.55rem 1.1rem',
+              fontSize: '0.8125rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem'
+            }}
+          >
+            <span>+</span> Manual Walk-in Booking
+          </button>
+        }
+      />
 
       {/* ═══ Summary Cards ═══ */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1rem 1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-          <div style={{ fontSize: '0.67rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>TOTAL RESERVATIONS</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: '4px', color: '#0f172a' }}>{summaryCounts.total}</div>
-        </div>
-
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1rem 1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-          <div style={{ fontSize: '0.67rem', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.05em' }}>CONFIRMED / ACTIVE</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: '4px', color: '#4f46e5' }}>{summaryCounts.active}</div>
-        </div>
-
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1rem 1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-          <div style={{ fontSize: '0.67rem', fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>CHECKED IN / ATTENDED</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: '4px', color: '#16a34a' }}>{summaryCounts.checkedIn}</div>
-        </div>
-
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1rem 1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-          <div style={{ fontSize: '0.67rem', fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.05em' }}>CANCELLED</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: '4px', color: '#dc2626' }}>{summaryCounts.cancelled}</div>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.875rem' }}>
+        <AdminStatCard
+          title="Total Reservations"
+          value={summaryCounts.total}
+          color="#0f2540"
+          icon={<span style={{ fontSize: '0.9rem' }}>📋</span>}
+        />
+        <AdminStatCard
+          title="Confirmed / Active"
+          value={summaryCounts.active}
+          color="#4f46e5"
+          icon={<span style={{ fontSize: '0.9rem' }}>✓</span>}
+        />
+        <AdminStatCard
+          title="Checked In / Attended"
+          value={summaryCounts.checkedIn}
+          color="#16a34a"
+          icon={<span style={{ fontSize: '0.9rem' }}>🎟️</span>}
+        />
+        <AdminStatCard
+          title="Cancelled"
+          value={summaryCounts.cancelled}
+          color="#dc2626"
+          icon={<span style={{ fontSize: '0.9rem' }}>✕</span>}
+        />
       </div>
 
       {/* ═══ MASTER-DETAIL FLEX LAYOUT (35% CALENDAR / 65% TABLE) ═══ */}

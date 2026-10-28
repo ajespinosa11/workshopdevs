@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { validateCheckInDetails, processCheckIn, updateBookingStatus } from './actions'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
+import AdminStatusBadge from '@/components/admin/AdminStatusBadge'
 
 /* ── Types ──────────────────────────────────────────────────── */
 type RecordData = {
@@ -79,13 +81,7 @@ function checkInWindow(sessionDate: string, startTime: string) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  if (['CHECKED_IN', 'ATTENDED', 'COMPLETED', 'WALKIN_CONFIRMED'].includes(status))
-    return <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.68rem', fontWeight: 800, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>✓ Checked In</span>
-  if (['RESERVED', 'CONFIRMED', 'RESCHEDULED'].includes(status))
-    return <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.68rem', fontWeight: 800, background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe' }}>Confirmed</span>
-  if (status === 'BALANCE_DUE')
-    return <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.68rem', fontWeight: 800, background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a' }}>Balance Due</span>
-  return <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.68rem', fontWeight: 800, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>{status.replace(/_/g, ' ')}</span>
+  return <AdminStatusBadge status={status} size="sm" />
 }
 
 /* ── Main Component ─────────────────────────────────────────── */
@@ -250,19 +246,22 @@ export default function AdminCheckInClient({ sessions }: { sessions: Session[] }
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: "'Inter', sans-serif", padding: '1.5rem' }}>
+    <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: "'Inter', sans-serif" }}>
       {/* ── Header ── */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>
-          Workshop Management / Check-In Console
-        </div>
-        <h1 style={{ fontSize: '1.55rem', fontWeight: 900, margin: 0, background: 'linear-gradient(135deg, #0f172a 0%, #4f46e5 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', letterSpacing: '-0.02em' }}>
-          Check-In Console
-        </h1>
-        <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0.3rem 0 0', maxWidth: 540, lineHeight: 1.5 }}>
-          Search by booking reference to check in a customer, or use the roster calendar to manage today's sessions.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Check-In Console"
+        subtitle="Search by booking reference to check in a customer, or use the roster calendar to manage today's sessions."
+        breadcrumbs={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Core Operations' },
+          { label: 'Check-In Console' }
+        ]}
+        badge={
+          <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.125rem 0.5rem', borderRadius: '9999px', background: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0' }}>
+            Desk Live
+          </span>
+        }
+      />
 
       {/* ── Two-column layout ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '420px 1fr', gap: '1.5rem', alignItems: 'start' }}>
