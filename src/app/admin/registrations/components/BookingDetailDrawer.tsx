@@ -57,7 +57,17 @@ const drawer: React.CSSProperties = {
 }
 
 export default function BookingDetailDrawer({ booking, onClose, onReserve }: BookingDetailDrawerProps) {
+  const [copied, setCopied] = React.useState(false)
+
   if (!booking) return null
+
+  const handleCopy = () => {
+    if (booking?.bookingReference) {
+      navigator.clipboard.writeText(booking.bookingReference)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
 
   return (
     <div
@@ -68,16 +78,38 @@ export default function BookingDetailDrawer({ booking, onClose, onReserve }: Boo
       aria-modal="true"
       aria-label="Booking detail drawer"
     >
-      <div style={drawer}>
+      <div className="admin-drawer-enter" style={drawer}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem' }}>
           <div>
             <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.2rem' }}>
               Booking Reference
             </div>
-            <h3 style={{ fontSize: '1.2rem', fontFamily: 'monospace', fontWeight: 800, color: '#6366f1', letterSpacing: '-0.01em' }}>
-              {booking.bookingReference}
-            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h3 style={{ fontSize: '1.2rem', fontFamily: 'monospace', fontWeight: 800, color: '#6366f1', letterSpacing: '-0.01em', margin: 0 }}>
+                {booking.bookingReference}
+              </h3>
+              <button
+                onClick={handleCopy}
+                title="Copy reference code"
+                style={{
+                  background: copied ? '#ecfdf5' : '#f8fafc',
+                  border: `1px solid ${copied ? '#a7f3d0' : '#e2e8f0'}`,
+                  borderRadius: '6px',
+                  color: copied ? '#059669' : '#64748b',
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  padding: '0.2rem 0.5rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {copied ? '✓ Copied' : '📋 Copy'}
+              </button>
+            </div>
           </div>
           <button
             onClick={onClose}

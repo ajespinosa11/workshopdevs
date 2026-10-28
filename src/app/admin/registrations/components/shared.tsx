@@ -147,8 +147,8 @@ export const S_shared = {
   modal: {
     background: '#ffffff',
     border: '1px solid #e2e8f0',
-    borderRadius: '20px',
-    boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+    borderRadius: '18px',
+    boxShadow: '0 24px 64px -12px rgba(15,23,42,0.22), 0 0 0 1px rgba(15,23,42,0.04)',
     padding: '1.75rem',
     width: '100%',
     maxWidth: '640px',

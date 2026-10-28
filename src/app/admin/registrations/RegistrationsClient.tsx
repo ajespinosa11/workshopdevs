@@ -71,37 +71,55 @@ const S = {
   },
   tabBar: {
     display: 'flex',
-    gap: '0.25rem',
+    gap: '0.35rem',
     marginBottom: '0.85rem',
     background: '#ffffff',
     border: '1px solid #e2e8f0',
     borderRadius: '12px',
-    padding: '0.25rem',
+    padding: '0.3rem',
     boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    overflowX: 'auto' as const,
   },
   tab: (active: boolean) => ({
-    padding: '0.45rem 0.9rem',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.45rem',
+    padding: '0.45rem 0.85rem',
     borderRadius: '8px',
     fontSize: '0.74rem',
     fontWeight: 700,
     border: 'none',
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    background: active ? '#6366f1' : 'transparent',
+    transition: 'all 0.18s ease',
+    background: active ? '#4f46e5' : 'transparent',
     color: active ? '#ffffff' : '#64748b',
-    boxShadow: active ? '0 2px 6px rgba(99,102,241,0.25)' : 'none',
+    boxShadow: active ? '0 2px 8px rgba(79,70,229,0.28)' : 'none',
+    whiteSpace: 'nowrap' as const,
+  } as React.CSSProperties),
+  tabBadge: (active: boolean) => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: '18px',
+    height: '18px',
+    padding: '0 0.35rem',
+    borderRadius: '9999px',
+    fontSize: '0.65rem',
+    fontWeight: 800,
+    background: active ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
+    color: active ? '#ffffff' : '#475569',
   } as React.CSSProperties),
   reserveBtn: (can: boolean) => ({
-    padding: '0.35rem 0.75rem',
+    padding: '0.38rem 0.8rem',
     borderRadius: '8px',
     fontSize: '0.72rem',
     fontWeight: 700,
     border: 'none',
     cursor: can ? 'pointer' : 'not-allowed',
-    background: can ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : '#f1f5f9',
+    background: can ? 'linear-gradient(135deg, #4f46e5, #6366f1)' : '#f1f5f9',
     color: can ? '#fff' : '#94a3b8',
-    boxShadow: can ? '0 2px 8px rgba(99,102,241,0.25)' : 'none',
-    transition: 'all 0.2s ease',
+    boxShadow: can ? '0 2px 8px rgba(79,70,229,0.22)' : 'none',
+    transition: 'all 0.18s ease',
     whiteSpace: 'nowrap' as const,
   } as React.CSSProperties),
 }
@@ -638,13 +656,19 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
             <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
               <div style={{ ...S.tabBar, marginBottom: '1.25rem' }}>
                 {([
-                  ['VERIFICATION', `Pending Verification (${summaryCounts.pendingVerification})`],
-                  ['RESERVED', `Reserved / Confirmed (${summaryCounts.reservedConfirmed})`],
-                  ['STAGING', `Staging Area (${stagedRegistrations.length})`],
-                  ['ALL', `All Session Records (${summaryCounts.total})`],
-                ] as const).map(([tab, label]) => (
-                  <button key={tab} onClick={() => setActiveTab(tab)} style={S.tab(activeTab === tab)}>{label}</button>
-                ))}
+                  ['VERIFICATION', 'Pending Verification', summaryCounts.pendingVerification],
+                  ['RESERVED', 'Reserved / Confirmed', summaryCounts.reservedConfirmed],
+                  ['STAGING', 'Staging Area', stagedRegistrations.length],
+                  ['ALL', 'All Session Records', summaryCounts.total],
+                ] as const).map(([tab, label, count]) => {
+                  const isActive = activeTab === tab
+                  return (
+                    <button key={tab} onClick={() => setActiveTab(tab)} style={S.tab(isActive)}>
+                      <span>{label}</span>
+                      <span style={S.tabBadge(isActive)}>{count}</span>
+                    </button>
+                  )
+                })}
               </div>
 
               {/* Staging Banner */}
@@ -809,58 +833,80 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                 const walkInLeft = Math.max(0, offlineCap - selectedSessionData.walkInReservedCount)
                 const totalLeft = Math.max(0, s.capacity - selectedSessionData.reservedCount)
 
+                const totalPct = s.capacity > 0 ? Math.min(100, Math.round((selectedSessionData.reservedCount / s.capacity) * 100)) : 0
+
                 return (
-                  <div style={{ background: color.light, border: `1px solid ${color.border}`, borderRadius: '16px', padding: '1rem 1.25rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' as const, gap: '1rem' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color.primary }} />
-                        <span style={{ fontSize: '0.68rem', fontWeight: 800, color: color.primary, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                          {s.module?.name || s.module?.title || 'Workshop'}
-                        </span>
+                  <div style={{ background: color.light, border: `1px solid ${color.border}`, borderRadius: '16px', padding: '1.15rem 1.25rem', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' as const, gap: '1rem', marginBottom: '0.85rem' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color.primary }} />
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, color: color.primary, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            {s.module?.name || s.module?.title || 'Workshop'}
+                          </span>
+                        </div>
+                        <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                          {sDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                        </h2>
+                        <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '0.15rem' }}>
+                          ⏰ {s.startTime} – {s.endTime} {s.collaborator ? `• Partner: ${s.collaborator}` : ''}
+                        </div>
                       </div>
-                      <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                        {sDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-                      </h2>
-                      <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '0.15rem' }}>
-                        ⏰ {s.startTime} – {s.endTime} {s.collaborator ? `• Partner: ${s.collaborator}` : ''}
+                      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                        {/* Online */}
+                        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.45rem 0.8rem', textAlign: 'right', minWidth: '105px' }}>
+                          <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.04em' }}>🌐 Online</div>
+                          <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                            {selectedSessionData.onlineReservedCount} <span style={{ fontSize: '0.72rem', fontWeight: 500, color: '#64748b' }}>/ {onlineCap}</span>
+                          </div>
+                          <div style={{ fontSize: '0.65rem', color: onlineLeft === 0 ? '#dc2626' : '#2563eb', fontWeight: 700 }}>
+                            {onlineLeft === 0 ? 'Full' : `${onlineLeft} left`}
+                          </div>
+                        </div>
+                        {/* Walk-In */}
+                        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.45rem 0.8rem', textAlign: 'right', minWidth: '105px' }}>
+                          <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.04em' }}>🏢 Walk-In</div>
+                          <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                            {selectedSessionData.walkInReservedCount} <span style={{ fontSize: '0.72rem', fontWeight: 500, color: '#64748b' }}>/ {offlineCap}</span>
+                          </div>
+                          <div style={{ fontSize: '0.65rem', color: walkInLeft === 0 ? '#dc2626' : '#7c3aed', fontWeight: 700 }}>
+                            {walkInLeft === 0 ? 'Full' : `${walkInLeft} left`}
+                          </div>
+                        </div>
+                        {/* Total */}
+                        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.45rem 0.8rem', textAlign: 'right', minWidth: '105px' }}>
+                          <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>📊 Total</div>
+                          <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                            {selectedSessionData.reservedCount} <span style={{ fontSize: '0.72rem', fontWeight: 500, color: '#64748b' }}>/ {s.capacity}</span>
+                          </div>
+                          <div style={{ fontSize: '0.65rem', color: totalLeft === 0 ? '#dc2626' : '#16a34a', fontWeight: 700 }}>
+                            {totalLeft === 0 ? 'Fully Booked' : `${totalLeft} left`}
+                          </div>
+                        </div>
+                        {/* Pending */}
+                        <div style={{ textAlign: 'right', paddingLeft: '0.25rem', minWidth: '90px' }}>
+                          <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pending Lock</div>
+                          <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#d97706' }}>{selectedSessionData.pendingCount}</div>
+                          <div style={{ fontSize: '0.65rem', color: '#64748b' }}>Awaiting admin</div>
+                        </div>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                      {/* Online */}
-                      <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '0.4rem 0.75rem', textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.04em' }}>🌐 Online (Website)</div>
-                        <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
-                          {selectedSessionData.onlineReservedCount} <span style={{ fontSize: '0.72rem', fontWeight: 500, color: '#64748b' }}>/ {onlineCap}</span>
-                        </div>
-                        <div style={{ fontSize: '0.65rem', color: onlineLeft === 0 ? '#dc2626' : '#2563eb', fontWeight: 700 }}>
-                          {onlineLeft === 0 ? 'Online Full' : `${onlineLeft} online left`}
-                        </div>
+                    {/* Capacity progress track */}
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: '#64748b', fontWeight: 600, marginBottom: '0.3rem' }}>
+                        <span>Overall Capacity Filled</span>
+                        <span style={{ fontWeight: 800, color: totalPct >= 100 ? '#dc2626' : color.primary }}>{totalPct}%</span>
                       </div>
-                      {/* Walk-In */}
-                      <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '0.4rem 0.75rem', textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.04em' }}>🏢 Walk-In / Manual</div>
-                        <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
-                          {selectedSessionData.walkInReservedCount} <span style={{ fontSize: '0.72rem', fontWeight: 500, color: '#64748b' }}>/ {offlineCap}</span>
-                        </div>
-                        <div style={{ fontSize: '0.65rem', color: walkInLeft === 0 ? '#dc2626' : '#7c3aed', fontWeight: 700 }}>
-                          {walkInLeft === 0 ? 'Walk-In Full' : `${walkInLeft} walk-in left`}
-                        </div>
-                      </div>
-                      {/* Total */}
-                      <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '0.4rem 0.75rem', textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>📊 Total Capacity</div>
-                        <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
-                          {selectedSessionData.reservedCount} <span style={{ fontSize: '0.72rem', fontWeight: 500, color: '#64748b' }}>/ {s.capacity}</span>
-                        </div>
-                        <div style={{ fontSize: '0.65rem', color: totalLeft === 0 ? '#dc2626' : '#16a34a', fontWeight: 700 }}>
-                          {totalLeft === 0 ? 'Fully Booked' : `${totalLeft} total left`}
-                        </div>
-                      </div>
-                      {/* Pending */}
-                      <div style={{ textAlign: 'right', paddingLeft: '0.25rem' }}>
-                        <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pending Review</div>
-                        <div style={{ fontSize: '1rem', fontWeight: 800, color: '#d97706' }}>{selectedSessionData.pendingCount}</div>
-                        <div style={{ fontSize: '0.65rem', color: '#64748b' }}>Awaiting lock</div>
+                      <div style={{ width: '100%', height: '6px', background: 'rgba(0,0,0,0.06)', borderRadius: '9999px', overflow: 'hidden' }}>
+                        <div
+                          style={{
+                            height: '100%',
+                            width: `${totalPct}%`,
+                            background: totalPct >= 100 ? '#dc2626' : color.primary,
+                            borderRadius: '9999px',
+                            transition: 'width 0.3s ease',
+                          }}
+                        />
                       </div>
                     </div>
                   </div>
@@ -870,26 +916,43 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
               {/* Tab Bar */}
               <div style={S.tabBar}>
                 {([
-                  ['VERIFICATION', `Pending Verification (${selectedSessionData.pendingCount})`],
-                  ['RESERVED', `Reserved / Confirmed (${selectedSessionData.reservedCount})`],
-                  ['STAGING', `Staging Area (${stagedRegistrations.length})`],
-                  ['ALL', `All Session Records (${selectedSessionData.totalCount})`],
-                ] as const).map(([tab, label]) => (
-                  <button key={tab} onClick={() => setActiveTab(tab)} style={S.tab(activeTab === tab)}>{label}</button>
-                ))}
+                  ['VERIFICATION', 'Pending Verification', selectedSessionData.pendingCount],
+                  ['RESERVED', 'Reserved / Confirmed', selectedSessionData.reservedCount],
+                  ['STAGING', 'Staging Area', stagedRegistrations.length],
+                  ['ALL', 'All Session Records', selectedSessionData.totalCount],
+                ] as const).map(([tab, label, count]) => {
+                  const isActive = activeTab === tab
+                  return (
+                    <button key={tab} onClick={() => setActiveTab(tab)} style={S.tab(isActive)}>
+                      <span>{label}</span>
+                      <span style={S.tabBadge(isActive)}>{count}</span>
+                    </button>
+                  )
+                })}
               </div>
 
               {/* Filter & Export Bar */}
               <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', alignItems: 'center', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '0.75rem', marginBottom: '0.85rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                <input
-                  type="text"
-                  placeholder="🔍 Search customer, ref #, email, order #..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  style={{ ...S_shared.filterInput, flex: '2 1 200px' }}
-                  onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')}
-                  onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
-                />
+                <div style={{ position: 'relative', flex: '2 1 200px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+                    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search customer, ref #, email, order #..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    style={{ ...S_shared.filterInput, paddingLeft: '2rem' }}
+                    onFocus={e => {
+                      e.currentTarget.style.borderColor = '#6366f1'
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.12)'
+                    }}
+                    onBlur={e => {
+                      e.currentTarget.style.borderColor = '#e2e8f0'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  />
+                </div>
                 <select
                   value={channelFilter}
                   onChange={e => setChannelFilter(e.target.value)}
@@ -913,16 +976,18 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                   <button
                     onClick={() => handleExportSessionRecords('excel')}
                     title="Export Session Records to Excel"
-                    style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '0.45rem 0.75rem', fontSize: '0.73rem', fontWeight: 700, color: '#15803d', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '0.45rem 0.75rem', fontSize: '0.73rem', fontWeight: 700, color: '#15803d', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   >
-                    📊 Export Excel
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    Export Excel
                   </button>
                   <button
                     onClick={() => handleExportSessionRecords('csv')}
                     title="Export Session Records to CSV"
-                    style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.45rem 0.75rem', fontSize: '0.73rem', fontWeight: 700, color: '#475569', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.45rem 0.75rem', fontSize: '0.73rem', fontWeight: 700, color: '#475569', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   >
-                    📄 Export CSV
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export CSV
                   </button>
                 </div>
               </div>
@@ -937,12 +1002,15 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
               {/* Customer Registrations Table */}
               <div style={S_shared.tableWrap}>
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
                     <thead style={S_shared.thead}>
                       <tr>
-                        {['Booking Reference', 'Customer', 'Booking Channel', 'Payment Status', 'Reservation Status', 'Actions'].map(h => (
-                          <th key={h} style={{ ...S_shared.th, textAlign: h === 'Actions' ? 'right' : 'left' }}>{h}</th>
-                        ))}
+                        <th style={{ ...S_shared.th, width: '180px' }}>Booking Reference</th>
+                        <th style={{ ...S_shared.th, minWidth: '220px' }}>Customer</th>
+                        <th style={{ ...S_shared.th, width: '160px' }}>Booking Channel</th>
+                        <th style={{ ...S_shared.th, width: '140px' }}>Payment Status</th>
+                        <th style={{ ...S_shared.th, width: '140px' }}>Reservation Status</th>
+                        <th style={{ ...S_shared.th, width: '160px', textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -962,11 +1030,18 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                           const isPaid = ['PAID_FOR_ADMIN_VERIFICATION', 'RESERVED', 'CONFIRMED'].includes(r.status)
                           const canReserve = isPaid && !isFull && !isReservedOrConfirmed
                           const ch = S_shared.channelTag(r.salesChannel)
+                          const isHovered = hoveredRow === r.id
 
                           return (
                             <tr
                               key={r.id}
-                              style={{ ...S_shared.tdRow, background: hoveredRow === r.id ? '#f8fafc' : 'transparent' }}
+                              tabIndex={0}
+                              style={{
+                                ...S_shared.tdRow,
+                                background: isHovered ? '#f0f4ff' : 'transparent',
+                                borderLeft: isHovered ? '3px solid #6366f1' : '3px solid transparent',
+                                outline: 'none',
+                              }}
                               onMouseEnter={() => setHoveredRow(r.id)}
                               onMouseLeave={() => setHoveredRow(null)}
                             >
@@ -974,7 +1049,21 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                               <td style={S_shared.td}>
                                 <button
                                   onClick={() => setDrawerBooking(r)}
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'monospace', fontWeight: 800, fontSize: '0.76rem', color: '#6366f1', textDecoration: 'underline', textDecorationColor: '#c7d2fe', textUnderlineOffset: '3px', display: 'block', marginBottom: '0.35rem', padding: 0 }}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    fontFamily: 'monospace',
+                                    fontWeight: 800,
+                                    fontSize: '0.78rem',
+                                    color: '#4f46e5',
+                                    textDecoration: 'underline',
+                                    textDecorationColor: '#c7d2fe',
+                                    textUnderlineOffset: '3px',
+                                    display: 'block',
+                                    marginBottom: '0.35rem',
+                                    padding: 0,
+                                  }}
                                 >
                                   {r.bookingReference}
                                 </button>
@@ -983,10 +1072,10 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
 
                               {/* 2. Customer */}
                               <td style={S_shared.td}>
-                                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.8rem' }}>{r.customerName}</div>
-                                <div style={{ color: '#64748b', fontSize: '0.7rem', marginTop: '0.1rem' }}>{r.customerEmail}</div>
+                                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.82rem' }}>{r.customerName}</div>
+                                <div style={{ color: '#64748b', fontSize: '0.72rem', marginTop: '0.1rem' }}>{r.customerEmail}</div>
                                 <div style={{ color: '#94a3b8', fontSize: '0.7rem' }}>{r.customerPhone}</div>
-                                <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                                   <span>👤</span> {r.participantsCount} participant(s)
                                 </div>
                               </td>
@@ -996,12 +1085,12 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                                 {r.shopifyOrder ? (
                                   <>
                                     <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.78rem' }}>#{r.shopifyOrder.shopifyOrderNumber}</div>
-                                    <div style={{ color: '#16a34a', fontSize: '0.7rem', fontWeight: 700, marginTop: '0.1rem' }}>₱{r.shopifyOrder.totalAmount?.toFixed(2)}</div>
+                                    <div style={{ color: '#16a34a', fontSize: '0.72rem', fontWeight: 700, marginTop: '0.1rem' }}>₱{r.shopifyOrder.totalAmount?.toFixed(2)}</div>
                                   </>
                                 ) : r.salesChannel === 'SHOPIFY' ? (
-                                  <div style={{ color: '#f59e0b', fontWeight: 600, fontSize: '0.76rem' }}>Shopify (Order Pending)</div>
+                                  <div style={{ color: '#d97706', fontWeight: 600, fontSize: '0.76rem' }}>Shopify (Order Pending)</div>
                                 ) : r.salesChannel === 'STOREHUB' ? (
-                                  <div style={{ color: '#8b5cf6', fontWeight: 600, fontSize: '0.76rem' }}>StoreHub POS</div>
+                                  <div style={{ color: '#7c3aed', fontWeight: 600, fontSize: '0.76rem' }}>StoreHub POS</div>
                                 ) : (
                                   <div style={{ color: '#64748b', fontWeight: 600, fontSize: '0.76rem' }}>Walk-in / On-Site</div>
                                 )}

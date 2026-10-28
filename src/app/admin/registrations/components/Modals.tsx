@@ -13,9 +13,15 @@ interface ReserveModalProps {
 
 export function ReserveModal({ registration, loading, errorMsg, onClose, onConfirm }: ReserveModalProps) {
   return (
-    <div style={S_shared.modalOverlay} role="dialog" aria-modal="true">
-      <div style={{ ...S_shared.modal, maxWidth: '440px' }}>
-        <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.3rem' }}>
+    <div
+      style={S_shared.modalOverlay}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="reserve-modal-title"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="admin-modal-enter" style={{ ...S_shared.modal, maxWidth: '440px' }}>
+        <h3 id="reserve-modal-title" style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.3rem' }}>
           Verify &amp; Reserve Workshop Slot
         </h3>
         <p style={{ fontSize: '0.74rem', color: '#64748b', marginBottom: '1rem' }}>
@@ -64,14 +70,20 @@ export function RescheduleModal({
   onConfirm,
 }: RescheduleModalProps) {
   return (
-    <div style={S_shared.modalOverlay} role="dialog" aria-modal="true">
-      <div style={S_shared.modal}>
+    <div
+      style={S_shared.modalOverlay}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="reschedule-modal-title"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="admin-modal-enter" style={S_shared.modal}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem', marginBottom: '1rem' }}>
           <div>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>Reschedule Workshop Booking</h3>
+            <h3 id="reschedule-modal-title" style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>Reschedule Workshop Booking</h3>
             <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.15rem' }}>Move this booking to a different session.</p>
           </div>
-          <button onClick={onClose} style={{ ...S_shared.menuBtn, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          <button onClick={onClose} aria-label="Close modal" style={{ ...S_shared.menuBtn, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
         </div>
         <div style={{ ...S_shared.infoBlock, marginBottom: '1rem' }}>
           <InfoRow label="Customer">{registration.customerName}</InfoRow>
@@ -127,14 +139,20 @@ interface StatusModalProps {
 
 export function StatusModal({ registration, newStatus, setNewStatus, statusNotes, setStatusNotes, loading, errorMsg, onClose, onConfirm }: StatusModalProps) {
   return (
-    <div style={S_shared.modalOverlay} role="dialog" aria-modal="true">
-      <div style={S_shared.modal}>
+    <div
+      style={S_shared.modalOverlay}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="status-modal-title"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="admin-modal-enter" style={S_shared.modal}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem', marginBottom: '1rem' }}>
           <div>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>Update Booking Status</h3>
+            <h3 id="status-modal-title" style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>Update Booking Status</h3>
             <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.15rem' }}>Manually override or update registration status.</p>
           </div>
-          <button onClick={onClose} style={{ ...S_shared.menuBtn, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          <button onClick={onClose} aria-label="Close modal" style={{ ...S_shared.menuBtn, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
         </div>
         <div style={{ ...S_shared.infoBlock, marginBottom: '1rem' }}>
           <InfoRow label="Customer">{registration.customerName}</InfoRow>
@@ -191,14 +209,20 @@ interface VerifyPaymentModalProps {
 
 export function VerifyPaymentModal({ registration, manualOrderNumber, setManualOrderNumber, manualAmount, setManualAmount, loading, errorMsg, onClose, onConfirm }: VerifyPaymentModalProps) {
   return (
-    <div style={S_shared.modalOverlay} role="dialog" aria-modal="true">
-      <div style={S_shared.modal}>
+    <div
+      style={S_shared.modalOverlay}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="verify-payment-modal-title"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="admin-modal-enter" style={S_shared.modal}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem', marginBottom: '1rem' }}>
           <div>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>✅ Manually Verify Payment</h3>
+            <h3 id="verify-payment-modal-title" style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>Manually Verify Payment</h3>
             <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.15rem' }}>Verify payment when online webhook was bypassed.</p>
           </div>
-          <button onClick={onClose} style={{ ...S_shared.menuBtn, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          <button onClick={onClose} aria-label="Close modal" style={{ ...S_shared.menuBtn, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
         </div>
         <div style={{ ...S_shared.infoBlock, marginBottom: '1rem' }}>
           <InfoRow label="Customer">{registration.customerName}</InfoRow>
@@ -250,14 +274,20 @@ interface MoveToStagingModalProps {
 
 export function MoveToStagingModal({ registration, stagingReason, setStagingReason, loading, errorMsg, onClose, onConfirm }: MoveToStagingModalProps) {
   return (
-    <div style={S_shared.modalOverlay} role="dialog" aria-modal="true">
-      <div style={S_shared.modal}>
+    <div
+      style={S_shared.modalOverlay}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="staging-modal-title"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="admin-modal-enter" style={S_shared.modal}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem', marginBottom: '1rem' }}>
           <div>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#9333ea' }}>📥 Move Customer to Staging Area</h3>
+            <h3 id="staging-modal-title" style={{ fontSize: '1.05rem', fontWeight: 800, color: '#9333ea' }}>Move Customer to Staging Area</h3>
             <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.15rem' }}>Place paid customer into staging for future rescheduling.</p>
           </div>
-          <button onClick={onClose} style={{ ...S_shared.menuBtn, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          <button onClick={onClose} aria-label="Close modal" style={{ ...S_shared.menuBtn, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
         </div>
         <div style={{ ...S_shared.infoBlock, marginBottom: '1rem' }}>
           <InfoRow label="Customer">{registration.customerName}</InfoRow>
@@ -270,7 +300,7 @@ export function MoveToStagingModal({ registration, stagingReason, setStagingReas
           )}
         </div>
         <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '8px', padding: '0.75rem 0.9rem', marginBottom: '1rem', fontSize: '0.75rem', color: '#6b21a8' }}>
-          <strong>💡 Slot Deduction Note:</strong> Moving this paid customer to Staging will restore/free{' '}
+          <strong>Slot Deduction Note:</strong> Moving this paid customer to Staging will restore/free{' '}
           <strong>{registration.participantsCount} slot(s)</strong> back to their original workshop date, so another customer can book that date.
         </div>
         <div style={{ marginBottom: '1rem' }}>
@@ -321,14 +351,20 @@ export function RescheduleFromStagingModal({
   onConfirm,
 }: RescheduleFromStagingModalProps) {
   return (
-    <div style={S_shared.modalOverlay} role="dialog" aria-modal="true">
-      <div style={S_shared.modal}>
+    <div
+      style={S_shared.modalOverlay}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="reschedule-staging-modal-title"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="admin-modal-enter" style={S_shared.modal}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem', marginBottom: '1rem' }}>
           <div>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>🗓️ Reschedule Customer from Staging</h3>
+            <h3 id="reschedule-staging-modal-title" style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>Reschedule Customer from Staging</h3>
             <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.15rem' }}>Assign a new workshop session date to this staged customer.</p>
           </div>
-          <button onClick={onClose} style={{ ...S_shared.menuBtn, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          <button onClick={onClose} aria-label="Close modal" style={{ ...S_shared.menuBtn, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
         </div>
         <div style={{ ...S_shared.infoBlock, marginBottom: '1rem' }}>
           <InfoRow label="Customer">{registration.customerName}</InfoRow>
@@ -375,10 +411,16 @@ interface SuccessModalProps {
 
 export function SuccessModal({ booking, onClose }: SuccessModalProps) {
   return (
-    <div style={S_shared.modalOverlay} role="dialog" aria-modal="true">
-      <div style={{ ...S_shared.modal, textAlign: 'center', maxWidth: '380px' }}>
+    <div
+      style={S_shared.modalOverlay}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="success-modal-title"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="admin-modal-enter" style={{ ...S_shared.modal, textAlign: 'center', maxWidth: '380px' }}>
         <div style={S_shared.successCheck}>✓</div>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.35rem' }}>Booking Confirmed!</h3>
+        <h3 id="success-modal-title" style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.35rem' }}>Booking Confirmed!</h3>
         <p style={{ fontSize: '0.74rem', color: '#64748b', marginBottom: '1.25rem' }}>Slot reservation completed successfully.</p>
         <div style={{ ...S_shared.infoBlock, textAlign: 'left', marginBottom: '1.25rem' }}>
           <InfoRow label="Booking Ref">{booking.bookingReference}</InfoRow>
