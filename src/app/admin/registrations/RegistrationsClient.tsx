@@ -138,9 +138,11 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
   const dirPageSize = 12
 
   // ── Registration Filter States ──
+  const [searchScope, setSearchScope] = useState<'SESSION' | 'GLOBAL'>('SESSION')
   const [searchTerm, setSearchTerm] = useState('')
   const [channelFilter, setChannelFilter] = useState<string>('ALL')
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('ALL')
+  const [isVerificationQueueMode, setIsVerificationQueueMode] = useState<boolean>(false)
 
   // ── Modal / Drawer States ──
   const [drawerBooking, setDrawerBooking] = useState<any>(null)
@@ -184,14 +186,29 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
   // ── Global keyboard shortcuts ──
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept shortcuts when typing in inputs/textareas
+      const target = e.target as HTMLElement | null
+      const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')
+
       if (e.key === 'Escape') {
         if (drawerBooking) { setDrawerBooking(null); return }
         if (modalType) { setModalType(null); setSelectedReg(null); setErrorMsg(''); return }
+        if (actionMenuOpenId) { setActionMenuOpenId(null); return }
+        if (isVerificationQueueMode) { setIsVerificationQueueMode(false); return }
+        if (searchScope === 'GLOBAL') { setSearchScope('SESSION'); return }
+      }
+
+      if (e.key === '/' && !isInput) {
+        e.preventDefault()
+        const searchInput = document.getElementById('registration-search-input')
+        if (searchInput) {
+          searchInput.focus()
+        }
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [drawerBooking, modalType])
+  }, [drawerBooking, modalType, actionMenuOpenId, isVerificationQueueMode, searchScope])
 
   // ── Derived Data: Session Master List ──
   const sessionList = useMemo((): SessionEntry[] => {
@@ -306,6 +323,39 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
       return true
     })
   }, [selectedSessionRegs, activeTab, searchTerm, channelFilter, paymentStatusFilter])
+
+  // ── Global Search Query across ALL registrations ──
+  const globalSearchResults = useMemo(() => {
+    if (searchScope !== 'GLOBAL') return []
+    return registrations.filter(r => {
+      if (['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED', 'DUPLICATE_ORDER'].includes(r.status)) return false
+      if (channelFilter !== 'ALL' && r.salesChannel !== channelFilter) return false
+      if (paymentStatusFilter !== 'ALL') {
+        if (paymentStatusFilter === 'PAID' && !['PAID_FOR_ADMIN_VERIFICATION', 'RESERVED', 'CONFIRMED'].includes(r.status)) return false
+        if (paymentStatusFilter === 'PENDING' && !['AWAITING_PAYMENT', 'PAYMENT_PENDING'].includes(r.status)) return false
+      }
+      if (!searchTerm) return true
+      const q = searchTerm.toLowerCase()
+      const modName = r.session?.module?.name || r.session?.module?.title || ''
+      return [r.customerName, r.customerEmail, r.customerPhone, r.bookingReference, r.shopifyOrder?.shopifyOrderNumber, modName]
+        .some((v: any) => v?.toLowerCase().includes(q))
+    })
+  }, [registrations, searchScope, searchTerm, channelFilter, paymentStatusFilter])
+
+  // ── Cross-Session Verification Queue: All PAID_FOR_ADMIN_VERIFICATION records ──
+  const pendingVerificationQueue = useMemo(() => {
+    return registrations.filter(r => {
+      const isPending = ['PAID_FOR_ADMIN_VERIFICATION', 'PENDING_SCHEDULE_CONFIRMATION'].includes(r.status)
+      if (!isPending) return false
+      if (searchTerm) {
+        const q = searchTerm.toLowerCase()
+        const modName = r.session?.module?.name || r.session?.module?.title || ''
+        if (![r.customerName, r.customerEmail, r.customerPhone, r.bookingReference, r.shopifyOrder?.shopifyOrderNumber, modName]
+          .some((v: any) => v?.toLowerCase().includes(q))) return false
+      }
+      return true
+    })
+  }, [registrations, searchTerm])
 
   const filteredOpenSessions = useMemo(() => {
     if (walkInStep1Filter === 'ALL') return openSessions
@@ -606,18 +656,31 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
 
       {/* ── Stat Cards ── */}
       <div style={S.statGrid}>
-        {statCards.map(({ label, icon, value, sub, color, tab }) => (
-          <AdminStatCard
-            key={label}
-            title={label}
-            value={value}
-            subValue={sub}
-            color={color}
-            active={activeTab === tab}
-            onClick={() => { setActiveTab(tab); if (tab === 'ALL') clearFilters() }}
-            icon={<span style={{ fontSize: '0.95rem' }}>{icon}</span>}
-          />
-        ))}
+        {statCards.map(({ label, icon, value, sub, color, tab }) => {
+          const isPendingCard = label === 'Pending Verification'
+          const isActive = isPendingCard ? isVerificationQueueMode : (!isVerificationQueueMode && activeTab === tab)
+          return (
+            <AdminStatCard
+              key={label}
+              title={label}
+              value={value}
+              subValue={sub}
+              color={color}
+              active={isActive}
+              onClick={() => {
+                if (isPendingCard) {
+                  setIsVerificationQueueMode(true)
+                  setSearchScope('SESSION')
+                } else {
+                  setIsVerificationQueueMode(false)
+                  setActiveTab(tab)
+                  if (tab === 'ALL') clearFilters()
+                }
+              }}
+              icon={<span style={{ fontSize: '0.95rem' }}>{icon}</span>}
+            />
+          )
+        })}
       </div>
 
       {/* ════════════════════════════════════════════════════════════════
@@ -651,7 +714,178 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
 
         {/* ── RIGHT PANEL: Session Detail & Registration Table ── */}
         <div>
-          {activeTab === 'STAGING' ? (
+          {isVerificationQueueMode ? (
+            // ── Centralized Verification Queue View ──
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+              {/* Verification Queue Banner */}
+              <div style={{ background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)', border: '1px solid #fde68a', borderRadius: '12px', padding: '1rem 1.25rem', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ maxWidth: '650px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                    <span style={{ fontSize: '1.2rem' }}>⏳</span>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#92400e', margin: 0 }}>Pending Actions — Verification Queue</h3>
+                  </div>
+                  <p style={{ fontSize: '0.78rem', color: '#b45309', margin: 0, lineHeight: 1.45 }}>
+                    These registrations have been paid by customers (e.g. via GCash, bank transfer, or Shopify) and are awaiting staff review to lock in their workshop slot. Review proof and click "Reserve Slot" to finalize.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ background: '#ffffff', border: '1.5px solid #fcd34d', borderRadius: '10px', padding: '0.5rem 1rem', textAlign: 'center', boxShadow: '0 2px 8px rgba(245,158,11,0.1)' }}>
+                    <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Awaiting Lock</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#92400e', lineHeight: 1 }}>{pendingVerificationQueue.length}</div>
+                  </div>
+                  <button
+                    onClick={() => setIsVerificationQueueMode(false)}
+                    style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.5rem 0.85rem', fontSize: '0.74rem', fontWeight: 700, color: '#475569', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
+                  >
+                    ✕ Exit Queue
+                  </button>
+                </div>
+              </div>
+
+              {/* Queue Search & Count */}
+              <div style={{ display: 'flex', gap: '0.65rem', marginBottom: '1rem', alignItems: 'center' }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+                    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search queue by customer, ref #, email, workshop..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    style={{ ...S_shared.filterInput, paddingLeft: '2rem' }}
+                    onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')}
+                    onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
+                  />
+                </div>
+                {searchTerm && (
+                  <button onClick={() => setSearchTerm('')} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem' }}>✕ Clear</button>
+                )}
+              </div>
+
+              {/* Queue Table */}
+              <div style={S_shared.tableWrap}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
+                    <thead style={S_shared.thead}>
+                      <tr>
+                        <th style={{ ...S_shared.th, width: '170px' }}>Booking Reference</th>
+                        <th style={{ ...S_shared.th, minWidth: '200px' }}>Customer</th>
+                        <th style={{ ...S_shared.th, minWidth: '220px' }}>Workshop & Session Date</th>
+                        <th style={{ ...S_shared.th, width: '150px' }}>Payment Status</th>
+                        <th style={{ ...S_shared.th, width: '160px', textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pendingVerificationQueue.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} style={{ textAlign: 'center', padding: '3.5rem 1rem' }}>
+                            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🎉</div>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#475569' }}>All payments verified & locked!</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>No registrations currently awaiting admin slot reservation.</div>
+                          </td>
+                        </tr>
+                      ) : (
+                        pendingVerificationQueue.map(r => {
+                          const s = r.session
+                          const isFull = s ? s.availableSlots === 0 : false
+                          const ch = S_shared.channelTag(r.salesChannel)
+                          const isHovered = hoveredRow === r.id
+                          const sDate = s?.sessionDate ? new Date(s.sessionDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'No Session'
+
+                          return (
+                            <tr
+                              key={r.id}
+                              tabIndex={0}
+                              style={{
+                                ...S_shared.tdRow,
+                                background: isHovered ? '#fffbeb' : 'transparent',
+                                borderLeft: isHovered ? '3px solid #f59e0b' : '3px solid transparent',
+                                outline: 'none',
+                              }}
+                              onMouseEnter={() => setHoveredRow(r.id)}
+                              onMouseLeave={() => setHoveredRow(null)}
+                            >
+                              <td style={S_shared.td}>
+                                <button
+                                  onClick={() => setDrawerBooking(r)}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'monospace', fontWeight: 800, fontSize: '0.78rem', color: '#d97706', textDecoration: 'underline', textDecorationColor: '#fde68a', textUnderlineOffset: '3px', display: 'block', marginBottom: '0.35rem', padding: 0 }}
+                                >
+                                  {r.bookingReference}
+                                </button>
+                                <span style={S_shared.chip(ch.bg, ch.text, ch.border)}>{r.salesChannel}</span>
+                              </td>
+                              <td style={S_shared.td}>
+                                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.82rem' }}>{r.customerName}</div>
+                                <div style={{ color: '#64748b', fontSize: '0.72rem', marginTop: '0.1rem' }}>{r.customerEmail}</div>
+                                <div style={{ color: '#94a3b8', fontSize: '0.7rem' }}>{r.customerPhone}</div>
+                                <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                  <span>👤</span> {r.participantsCount} participant(s)
+                                </div>
+                              </td>
+                              <td style={S_shared.td}>
+                                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.8rem' }}>
+                                  {s?.module?.name || s?.module?.title || 'Workshop'}
+                                </div>
+                                <div style={{ color: '#64748b', fontSize: '0.72rem', marginTop: '0.1rem' }}>
+                                  📅 {sDate}
+                                </div>
+                                {s && (
+                                  <div style={{ color: '#94a3b8', fontSize: '0.7rem' }}>
+                                    ⏰ {s.startTime} – {s.endTime} • {s.availableSlots} slot(s) left
+                                  </div>
+                                )}
+                              </td>
+                              <td style={S_shared.td}>
+                                <AdminStatusBadge status="PAID_FOR_ADMIN_VERIFICATION" size="sm" />
+                                {r.shopifyOrder && (
+                                  <div style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 700, marginTop: '0.25rem' }}>
+                                    #{r.shopifyOrder.shopifyOrderNumber} • ₱{r.shopifyOrder.totalAmount?.toFixed(2)}
+                                  </div>
+                                )}
+                              </td>
+                              <td style={{ ...S_shared.td, textAlign: 'right' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
+                                  <button
+                                    onClick={() => {
+                                      if (!isFull) {
+                                        setSelectedReg(r); setIsOverride(false); setOverrideReason(''); setErrorMsg(''); setModalType('RESERVE')
+                                      }
+                                    }}
+                                    disabled={isFull}
+                                    title={isFull ? 'Session is full' : 'Confirm reservation & lock slot'}
+                                    style={S.reserveBtn(!isFull)}
+                                  >
+                                    Reserve Slot
+                                  </button>
+                                  <div style={{ position: 'relative' }}>
+                                    <button
+                                      onClick={() => setActionMenuOpenId(actionMenuOpenId === r.id ? null : r.id)}
+                                      style={S_shared.menuBtn}
+                                    >
+                                      ⋯
+                                    </button>
+                                    {actionMenuOpenId === r.id && (
+                                      <div style={S_shared.dropdownMenu}>
+                                        <button onClick={() => { setDrawerBooking(r); setActionMenuOpenId(null) }} style={S_shared.dropdownItem}>👁️ View Details</button>
+                                        <button onClick={() => { setSelectedReg(r); setRescheduleSessionId(openSessions[0]?.id || ''); setRescheduleReason(''); setErrorMsg(''); setModalType('RESCHEDULE'); setActionMenuOpenId(null) }} style={S_shared.dropdownItem}>🔄 Reschedule</button>
+                                        <button onClick={() => { setSelectedReg(r); setStagingReason(''); setErrorMsg(''); setModalType('MOVE_TO_STAGING'); setActionMenuOpenId(null) }} style={S_shared.dropdownItem}>📥 Move to Staging</button>
+                                        <button onClick={() => { setSelectedReg(r); setNewStatus(r.status); setStatusNotes(''); setErrorMsg(''); setModalType('STATUS'); setActionMenuOpenId(null) }} style={S_shared.dropdownItem}>⚙️ Update Status</button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          ) : activeTab === 'STAGING' ? (
             // ── Staging Area View ──
             <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
               <div style={{ ...S.tabBar, marginBottom: '1.25rem' }}>
@@ -931,6 +1165,55 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                 })}
               </div>
 
+              {/* Search Scope Toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+                <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: '0.2rem', borderRadius: '10px', gap: '0.2rem' }}>
+                  <button
+                    onClick={() => setSearchScope('SESSION')}
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '8px',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: searchScope === 'SESSION' ? '#ffffff' : 'transparent',
+                      color: searchScope === 'SESSION' ? '#0f172a' : '#64748b',
+                      boxShadow: searchScope === 'SESSION' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                      transition: 'all 0.15s ease',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                    }}
+                  >
+                    <span>🎯</span> Search This Session
+                  </button>
+                  <button
+                    onClick={() => setSearchScope('GLOBAL')}
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '8px',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: searchScope === 'GLOBAL' ? '#ffffff' : 'transparent',
+                      color: searchScope === 'GLOBAL' ? '#4f46e5' : '#64748b',
+                      boxShadow: searchScope === 'GLOBAL' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                      transition: 'all 0.15s ease',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                    }}
+                  >
+                    <span>🌐</span> Search All Registrations
+                  </button>
+                </div>
+                <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
+                  Press <kbd style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '0.1rem 0.35rem', fontSize: '0.65rem', fontFamily: 'monospace' }}>/</kbd> to focus search
+                </div>
+              </div>
+
               {/* Filter & Export Bar */}
               <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', alignItems: 'center', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '0.75rem', marginBottom: '0.85rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
                 <div style={{ position: 'relative', flex: '2 1 200px' }}>
@@ -938,8 +1221,9 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                     <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                   </svg>
                   <input
+                    id="registration-search-input"
                     type="text"
-                    placeholder="Search customer, ref #, email, order #..."
+                    placeholder={searchScope === 'GLOBAL' ? 'Global search by customer, ref #, email, order #, or workshop...' : 'Search this session by customer, ref #, email, order #...'}
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                     style={{ ...S_shared.filterInput, paddingLeft: '2rem' }}
@@ -999,38 +1283,152 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                 </div>
               )}
 
-              {/* Customer Registrations Table */}
-              <div style={S_shared.tableWrap}>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
-                    <thead style={S_shared.thead}>
-                      <tr>
-                        <th style={{ ...S_shared.th, width: '180px' }}>Booking Reference</th>
-                        <th style={{ ...S_shared.th, minWidth: '220px' }}>Customer</th>
-                        <th style={{ ...S_shared.th, width: '160px' }}>Booking Channel</th>
-                        <th style={{ ...S_shared.th, width: '140px' }}>Payment Status</th>
-                        <th style={{ ...S_shared.th, width: '140px' }}>Reservation Status</th>
-                        <th style={{ ...S_shared.th, width: '160px', textAlign: 'right' }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredSessionRegs.length === 0 ? (
+              {/* Customer Registrations Table / Global Search Results Table */}
+              {searchScope === 'GLOBAL' ? (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', fontSize: '0.74rem', color: '#64748b' }}>
+                    <span>🌐 Global Search: Showing <strong style={{ color: '#4f46e5' }}>{globalSearchResults.length}</strong> records across all workshop sessions</span>
+                    <button onClick={() => { setSearchTerm(''); setSearchScope('SESSION') }} style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', fontWeight: 700, fontSize: '0.72rem' }}>✕ Back to Session</button>
+                  </div>
+                  <div style={S_shared.tableWrap}>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
+                        <thead style={S_shared.thead}>
+                          <tr>
+                            <th style={{ ...S_shared.th, width: '170px' }}>Booking Reference</th>
+                            <th style={{ ...S_shared.th, minWidth: '190px' }}>Customer</th>
+                            <th style={{ ...S_shared.th, minWidth: '220px' }}>Workshop & Session Date</th>
+                            <th style={{ ...S_shared.th, width: '130px' }}>Payment</th>
+                            <th style={{ ...S_shared.th, width: '130px' }}>Reservation</th>
+                            <th style={{ ...S_shared.th, width: '120px', textAlign: 'right' }}>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {globalSearchResults.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} style={{ textAlign: 'center', padding: '3.5rem 1rem' }}>
+                                <div style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>🔍</div>
+                                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>No matching registrations found globally</div>
+                                <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.25rem' }}>Try different keywords or clear channel/payment filters</div>
+                              </td>
+                            </tr>
+                          ) : (
+                            globalSearchResults.map(r => {
+                              const s = r.session
+                              const ch = S_shared.channelTag(r.salesChannel)
+                              const isHovered = hoveredRow === r.id
+                              const sDate = s?.sessionDate ? new Date(s.sessionDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'No Session'
+
+                              return (
+                                <tr
+                                  key={r.id}
+                                  tabIndex={0}
+                                  style={{
+                                    ...S_shared.tdRow,
+                                    background: isHovered ? '#f0f4ff' : 'transparent',
+                                    borderLeft: isHovered ? '3px solid #6366f1' : '3px solid transparent',
+                                    outline: 'none',
+                                  }}
+                                  onMouseEnter={() => setHoveredRow(r.id)}
+                                  onMouseLeave={() => setHoveredRow(null)}
+                                >
+                                  <td style={S_shared.td}>
+                                    <button
+                                      onClick={() => setDrawerBooking(r)}
+                                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'monospace', fontWeight: 800, fontSize: '0.78rem', color: '#4f46e5', textDecoration: 'underline', textDecorationColor: '#c7d2fe', textUnderlineOffset: '3px', display: 'block', marginBottom: '0.35rem', padding: 0 }}
+                                    >
+                                      {r.bookingReference}
+                                    </button>
+                                    <span style={S_shared.chip(ch.bg, ch.text, ch.border)}>{r.salesChannel}</span>
+                                  </td>
+                                  <td style={S_shared.td}>
+                                    <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.82rem' }}>{r.customerName}</div>
+                                    <div style={{ color: '#64748b', fontSize: '0.72rem', marginTop: '0.1rem' }}>{r.customerEmail}</div>
+                                    <div style={{ color: '#94a3b8', fontSize: '0.7rem' }}>{r.customerPhone}</div>
+                                    <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.25rem' }}>👤 {r.participantsCount} pax</div>
+                                  </td>
+                                  <td style={S_shared.td}>
+                                    <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.8rem' }}>
+                                      {s?.module?.name || s?.module?.title || 'Workshop'}
+                                    </div>
+                                    <div style={{ color: '#64748b', fontSize: '0.72rem', marginTop: '0.1rem' }}>
+                                      📅 {sDate}
+                                    </div>
+                                    {s && (
+                                      <button
+                                        onClick={() => {
+                                          setSelectedSessionId(s.id)
+                                          setSearchScope('SESSION')
+                                        }}
+                                        style={{ background: 'none', border: 'none', color: '#4f46e5', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', padding: 0, marginTop: '0.2rem', textDecoration: 'underline' }}
+                                      >
+                                        Jump to this session →
+                                      </button>
+                                    )}
+                                  </td>
+                                  <td style={S_shared.td}>
+                                    {['PAID_FOR_ADMIN_VERIFICATION', 'RESERVED', 'CONFIRMED', 'CHECKED_IN', 'WALKIN_CONFIRMED'].includes(r.status) ? (
+                                      <AdminStatusBadge status="PAID" size="sm" />
+                                    ) : r.status === 'STAGING' ? (
+                                      <AdminStatusBadge status="STAGING" size="sm" />
+                                    ) : ['AWAITING_PAYMENT', 'PAYMENT_PENDING'].includes(r.status) ? (
+                                      <AdminStatusBadge status="AWAITING_PAYMENT" size="sm" />
+                                    ) : (
+                                      <AdminStatusBadge status={r.status} size="sm" />
+                                    )}
+                                  </td>
+                                  <td style={S_shared.td}>
+                                    <AdminStatusBadge status={r.status} size="sm" />
+                                  </td>
+                                  <td style={{ ...S_shared.td, textAlign: 'right' }}>
+                                    <button
+                                      onClick={() => setDrawerBooking(r)}
+                                      style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.35rem 0.65rem', fontSize: '0.72rem', fontWeight: 700, color: '#475569', cursor: 'pointer' }}
+                                    >
+                                      Inspect
+                                    </button>
+                                  </td>
+                                </tr>
+                              )
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={S_shared.tableWrap}>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
+                      <thead style={S_shared.thead}>
                         <tr>
-                          <td colSpan={6} style={{ textAlign: 'center', padding: '3.5rem 1rem' }}>
-                            <div style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>🔍</div>
-                            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>No registrations found</div>
-                            <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.25rem' }}>Try switching tabs or clearing filters</div>
-                          </td>
+                          <th style={{ ...S_shared.th, width: '180px' }}>Booking Reference</th>
+                          <th style={{ ...S_shared.th, minWidth: '220px' }}>Customer</th>
+                          <th style={{ ...S_shared.th, width: '160px' }}>Booking Channel</th>
+                          <th style={{ ...S_shared.th, width: '140px' }}>Payment Status</th>
+                          <th style={{ ...S_shared.th, width: '140px' }}>Reservation Status</th>
+                          <th style={{ ...S_shared.th, width: '160px', textAlign: 'right' }}>Actions</th>
                         </tr>
-                      ) : (
-                        filteredSessionRegs.map(r => {
-                          const s = selectedSessionData.session
-                          const isFull = s?.availableSlots === 0
-                          const isReservedOrConfirmed = ['RESERVED', 'CONFIRMED'].includes(r.status)
-                          const isPaid = ['PAID_FOR_ADMIN_VERIFICATION', 'RESERVED', 'CONFIRMED'].includes(r.status)
-                          const canReserve = isPaid && !isFull && !isReservedOrConfirmed
-                          const ch = S_shared.channelTag(r.salesChannel)
-                          const isHovered = hoveredRow === r.id
+                      </thead>
+                      <tbody>
+                        {filteredSessionRegs.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{ textAlign: 'center', padding: '3.5rem 1rem' }}>
+                              <div style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>🔍</div>
+                              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>No registrations found</div>
+                              <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.25rem' }}>Try switching tabs or clearing filters</div>
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredSessionRegs.map(r => {
+                            const s = selectedSessionData.session
+                            const isFull = s?.availableSlots === 0
+                            const isReservedOrConfirmed = ['RESERVED', 'CONFIRMED'].includes(r.status)
+                            const isPaid = ['PAID_FOR_ADMIN_VERIFICATION', 'RESERVED', 'CONFIRMED'].includes(r.status)
+                            const canReserve = isPaid && !isFull && !isReservedOrConfirmed
+                            const ch = S_shared.channelTag(r.salesChannel)
+                            const isHovered = hoveredRow === r.id
 
                           return (
                             <tr
@@ -1194,6 +1592,7 @@ export default function RegistrationsClient({ registrations, openSessions }: Reg
                   </table>
                 </div>
               </div>
+            )}
             </>
           )}
         </div>
