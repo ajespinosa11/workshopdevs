@@ -98,74 +98,162 @@ export default function EditSessionModal({
   if (!session) return null
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1.5rem' }}>
-      <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '780px', borderRadius: '1.5rem', background: '#ffffff', color: 'var(--foreground)', padding: '2.25rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(15, 23, 42, 0.45)',
+        backdropFilter: 'blur(6px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        padding: '1.5rem',
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div
+        className="animate-fade-in"
+        style={{
+          width: '100%',
+          maxWidth: '760px',
+          borderRadius: '1.25rem',
+          background: '#ffffff',
+          color: '#0f172a',
+          padding: '2rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1.25rem',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.18)',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem' }}>
           <div>
-            <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>Edit Workshop Event</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--admin-text-secondary)', margin: '4px 0 0 0' }}>
-              {new Date(session.sessionDate).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+              Workshop Management
+            </div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: '0.2rem 0 0 0' }}>
+              Edit Workshop Event
+            </h3>
+            <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '2px 0 0 0' }}>
+              Current Date: {new Date(session.sessionDate).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
             </p>
           </div>
-          <button 
+          <button
             type="button"
-            onClick={onClose} 
+            onClick={onClose}
             aria-label="Close modal"
-            style={{ background: 'none', border: 'none', fontSize: '1.75rem', color: 'var(--admin-text-secondary)', cursor: 'pointer' }}
+            style={{
+              background: '#f1f5f9',
+              border: 'none',
+              fontSize: '1.25rem',
+              color: '#64748b',
+              cursor: 'pointer',
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              lineHeight: 1,
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#e2e8f0' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#f1f5f9' }}
           >
             &times;
           </button>
         </div>
 
         <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
-          {editError && <div style={{ padding: '0.65rem 0.85rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.5rem', fontSize: '0.85rem', borderLeft: '3px solid #ef4444' }}>{editError}</div>}
-          {editReschedSuccess && <div style={{ padding: '0.65rem 0.85rem', background: '#dcfce7', color: '#15803d', borderRadius: '0.5rem', fontSize: '0.85rem', borderLeft: '3px solid #22c55e' }}>{editReschedSuccess}</div>}
+          {editError && (
+            <div style={{ padding: '0.75rem 1rem', background: '#fef2f2', color: '#b91c1c', borderRadius: '8px', fontSize: '0.82rem', border: '1px solid #fecaca', fontWeight: 600 }}>
+              ⚠️ {editError}
+            </div>
+          )}
+          {editReschedSuccess && (
+            <div style={{ padding: '0.75rem 1rem', background: '#f0fdf4', color: '#15803d', borderRadius: '8px', fontSize: '0.82rem', border: '1px solid #bbf7d0', fontWeight: 700 }}>
+              ✓ {editReschedSuccess}
+            </div>
+          )}
 
-          {/* Reschedule Date Field */}
-          <div className="input-group">
-            <label style={{ fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
-              <span>Event Date (Reschedule)</span>
-              {session.bookingsCount > 0 && (
-                <span style={{ fontSize: '0.78rem', color: '#f97316', fontWeight: 600 }}>
-                  ⚠️ {session.bookingsCount} customer(s) will be notified by email if rescheduled
-                </span>
-              )}
+          {/* Reschedule Date Input Box */}
+          <div style={{ background: '#f0f9ff', padding: '0.85rem 1rem', borderRadius: '10px', border: '1.5px solid #bae6fd' }}>
+            <label style={{ fontWeight: 800, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
+              <span>📅</span> Reschedule Workshop Date
             </label>
             <input
               type="date"
               value={editSessionDate}
               onChange={(e) => onSessionDateChange(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
               className="input-field"
               required
-              style={{ borderRadius: '0.5rem' }}
+              style={{
+                borderRadius: '8px',
+                background: '#ffffff',
+                fontWeight: 700,
+                border: '1px solid #7dd3fc',
+                padding: '0.55rem 0.75rem',
+                fontSize: '0.88rem',
+                width: '100%',
+              }}
             />
+            <p style={{ fontSize: '0.75rem', color: '#0284c7', margin: '0.35rem 0 0 0', lineHeight: 1.4, fontWeight: 500 }}>
+              📧 Changing this date or time automatically transmits email notifications to all registered attendees with their updated schedule.
+            </p>
           </div>
 
+          {/* Module Title */}
           <div className="input-group">
-            <label style={{ fontWeight: 600 }}>Workshop Event Module</label>
+            <label style={{ fontWeight: 700, fontSize: '0.82rem', color: '#334155' }}>Workshop Title</label>
             <select
               value={editModuleId}
               onChange={(e) => onModuleIdChange(e.target.value)}
               className="input-field"
               required
-              style={{ borderRadius: '0.5rem', padding: '0.55rem' }}
+              style={{
+                width: '100%',
+                borderRadius: '8px',
+                padding: '0.55rem 0.75rem',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                fontSize: '0.88rem',
+                color: '#0f172a',
+                outline: 'none',
+              }}
             >
               {modules.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
+                <option key={m.id} value={m.id}>{m.name}</option>
               ))}
             </select>
           </div>
 
+          {/* Pricing Section */}
           <div className="input-group">
-            <label style={{ fontWeight: 600 }}>Workshop Pricing Type</label>
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
-              <label style={{
-                flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.85rem',
-                borderRadius: '0.5rem', border: editPricingType === 'FREE' ? '2px solid #10b981' : '1px solid #cbd5e1',
-                background: editPricingType === 'FREE' ? '#ecfdf5' : '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem'
-              }}>
+            <label style={{ fontWeight: 700, fontSize: '0.82rem', color: '#334155' }}>Workshop Pricing Type</label>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.35rem' }}>
+              <label
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: '8px',
+                  border: editPricingType === 'FREE' ? '2px solid #10b981' : '1px solid #cbd5e1',
+                  background: editPricingType === 'FREE' ? '#ecfdf5' : '#ffffff',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: '0.84rem',
+                  color: editPricingType === 'FREE' ? '#047857' : '#475569',
+                }}
+              >
                 <input
                   type="radio"
                   name="editPricingType"
@@ -175,11 +263,23 @@ export default function EditSessionModal({
                 />
                 🎁 FREE Workshop
               </label>
-              <label style={{
-                flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.85rem',
-                borderRadius: '0.5rem', border: editPricingType === 'PAID' ? '2px solid #3b82f6' : '1px solid #cbd5e1',
-                background: editPricingType === 'PAID' ? '#eff6ff' : '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem'
-              }}>
+
+              <label
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: '8px',
+                  border: editPricingType === 'PAID' ? '2px solid #4f46e5' : '1px solid #cbd5e1',
+                  background: editPricingType === 'PAID' ? '#eef2ff' : '#ffffff',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: '0.84rem',
+                  color: editPricingType === 'PAID' ? '#4338ca' : '#475569',
+                }}
+              >
                 <input
                   type="radio"
                   name="editPricingType"
@@ -190,13 +290,24 @@ export default function EditSessionModal({
                 💳 PAID Workshop
               </label>
             </div>
+
             {editPricingType === 'FREE' && (
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                <label style={{
-                  flex: 1, display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.75rem',
-                  borderRadius: '0.4rem', border: editFreeSubCategory === 'ADULT' ? '2px solid #6366f1' : '1px solid #cbd5e1',
-                  background: editFreeSubCategory === 'ADULT' ? '#eef2ff' : '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem'
-                }}>
+                <label
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    padding: '0.45rem 0.75rem',
+                    borderRadius: '6px',
+                    border: editFreeSubCategory === 'ADULT' ? '2px solid #6366f1' : '1px solid #cbd5e1',
+                    background: editFreeSubCategory === 'ADULT' ? '#eef2ff' : '#ffffff',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '0.8rem',
+                  }}
+                >
                   <input
                     type="radio"
                     name="editFreeSubCategory"
@@ -206,11 +317,21 @@ export default function EditSessionModal({
                   />
                   🧑 ADULT (1 Pax)
                 </label>
-                <label style={{
-                  flex: 1, display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.75rem',
-                  borderRadius: '0.4rem', border: editFreeSubCategory === 'KID' ? '2px solid #10b981' : '1px solid #cbd5e1',
-                  background: editFreeSubCategory === 'KID' ? '#ecfdf5' : '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem'
-                }}>
+                <label
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    padding: '0.45rem 0.75rem',
+                    borderRadius: '6px',
+                    border: editFreeSubCategory === 'KID' ? '2px solid #10b981' : '1px solid #cbd5e1',
+                    background: editFreeSubCategory === 'KID' ? '#ecfdf5' : '#ffffff',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '0.8rem',
+                  }}
+                >
                   <input
                     type="radio"
                     name="editFreeSubCategory"
@@ -222,172 +343,237 @@ export default function EditSessionModal({
                 </label>
               </div>
             )}
+
             {editPricingType === 'PAID' && (
               <div style={{ marginTop: '0.65rem' }}>
-                <div className="input-group" style={{ margin: 0 }}>
-                  <label style={{ fontWeight: 600, fontSize: '0.88rem', display: 'block', marginBottom: '0.3rem' }}>💰 Workshop Price (₱) *</label>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '0.25rem' }}>
+                  Price per Participant (₱)
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', fontWeight: 800, color: '#64748b' }}>₱</span>
                   <input
                     type="number"
-                    min="0"
-                    step="0.01"
+                    min="1"
+                    step="1"
                     value={editPrice}
-                    onChange={e => onPriceChange(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => onPriceChange(Math.max(1, parseFloat(e.target.value) || 0))}
                     className="input-field"
-                    required
-                    placeholder="e.g. 1500"
-                    style={{ borderRadius: '0.5rem' }}
+                    placeholder="999"
+                    required={editPricingType === 'PAID'}
+                    style={{
+                      paddingLeft: '2rem',
+                      borderRadius: '8px',
+                      fontWeight: 800,
+                      fontSize: '0.95rem',
+                      color: '#0f172a',
+                      border: '1px solid #cbd5e1',
+                      width: '100%',
+                    }}
                   />
-                  <p style={{ fontSize: '0.78rem', color: '#6366f1', margin: '0.3rem 0 0 0' }}>
-                    🛍️ Updating price syncs directly to Shopify Admin API.
-                  </p>
                 </div>
               </div>
             )}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          {/* Time & Capacity Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
             <div className="input-group">
-              <label style={{ fontWeight: 600 }}>Start Time</label>
-              <input type="time" value={editStartTime} onChange={(e) => onStartTimeChange(e.target.value)} className="input-field" required style={{ borderRadius: '0.5rem' }} />
+              <label style={{ fontWeight: 700, fontSize: '0.82rem', color: '#334155' }}>Start Time</label>
+              <input
+                type="time"
+                value={editStartTime}
+                onChange={(e) => onStartTimeChange(e.target.value)}
+                className="input-field"
+                required
+                style={{ width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0.5rem 0.65rem' }}
+              />
             </div>
             <div className="input-group">
-              <label style={{ fontWeight: 600 }}>End Time</label>
-              <input type="time" value={editEndTime} onChange={(e) => onEndTimeChange(e.target.value)} className="input-field" required style={{ borderRadius: '0.5rem' }} />
+              <label style={{ fontWeight: 700, fontSize: '0.82rem', color: '#334155' }}>End Time</label>
+              <input
+                type="time"
+                value={editEndTime}
+                onChange={(e) => onEndTimeChange(e.target.value)}
+                className="input-field"
+                required
+                style={{ width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0.5rem 0.65rem' }}
+              />
             </div>
           </div>
 
-          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '0.75rem', padding: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>📊 Seat Allocation Breakdown</span>
-              <span style={{ fontSize: '0.78rem', color: '#6366f1', background: '#eef2ff', padding: '0.2rem 0.6rem', borderRadius: '99px' }}>
-                Total Backend Capacity: <strong>{editOnlineCapacity + editOfflineCapacity} seats</strong>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+            <div className="input-group">
+              <label style={{ fontWeight: 700, fontSize: '0.82rem', color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span>🌐</span> Online Capacity
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={editOnlineCapacity}
+                onChange={(e) => onOnlineCapacityChange(Math.max(0, parseInt(e.target.value) || 0))}
+                className="input-field"
+                required
+                style={{ width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0.5rem 0.65rem' }}
+              />
+              <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px', display: 'block' }}>
+                Website bookings
               </span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div className="input-group">
-                <label style={{ fontWeight: 600, fontSize: '0.82rem' }}>🌐 Online Seats (Website)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={editOnlineCapacity}
-                  onChange={(e) => onOnlineCapacityChange(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                  className="input-field"
-                  required
-                  style={{ borderRadius: '0.5rem' }}
-                />
-                <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Displayed on the website for public booking</span>
-              </div>
-              <div className="input-group">
-                <label style={{ fontWeight: 600, fontSize: '0.82rem' }}>🏢 Offline / Manual Reservation Seats</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={editOfflineCapacity}
-                  onChange={(e) => onOfflineCapacityChange(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                  className="input-field"
-                  required
-                  style={{ borderRadius: '0.5rem' }}
-                />
-                <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Reserved for walk-ins &amp; admin manual entries</span>
-              </div>
+            <div className="input-group">
+              <label style={{ fontWeight: 700, fontSize: '0.82rem', color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span>🚪</span> Offline Capacity
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={editOfflineCapacity}
+                onChange={(e) => onOfflineCapacityChange(Math.max(0, parseInt(e.target.value) || 0))}
+                className="input-field"
+                required
+                style={{ width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0.5rem 0.65rem' }}
+              />
+              <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px', display: 'block' }}>
+                Walk-ins & reserved
+              </span>
             </div>
-            {session.bookingsCount > 0 && (
-              <div style={{ fontSize: '0.78rem', color: '#b45309', marginTop: '2px' }}>
-                ⚠️ {session.bookingsCount} booking(s) already exist — total capacity is currently {editOnlineCapacity + editOfflineCapacity}.
-              </div>
-            )}
+          </div>
+
+          <div style={{ background: '#f8fafc', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Total Studio Seats:</span>
+            <span style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a' }}>
+              {editOnlineCapacity + editOfflineCapacity} seats
+            </span>
           </div>
 
           <FormattedTextarea
-            label="Event Description"
-            optionalHint="optional"
+            label="Workshop Description / Key Highlights"
+            optionalHint="Rich text formatting available"
             value={editDesc}
             onChange={onDescChange}
-            placeholder="Describe the workshop — what participants will learn, requirements, objectives..."
-            minHeight="160px"
-          />
-
-          <FormattedTextarea
-            label="Event Note"
-            optionalHint="optional"
-            value={editNotes}
-            onChange={onNotesChange}
-            placeholder="e.g. Bring your laptop, limited seats, parking info..."
-            minHeight="100px"
+            placeholder="What will participants learn in this session? Use the toolbar for bold, bullets, links..."
+            minHeight="120px"
           />
 
           <div className="input-group">
-            <label style={{ fontWeight: 600 }}>
-              In collaboration with: <span style={{ fontWeight: 400, color: 'var(--admin-text-secondary)', fontSize: '0.82rem' }}>(optional)</span>
-            </label>
+            <label style={{ fontWeight: 700, fontSize: '0.82rem', color: '#334155' }}>Internal Notes / Remarks</label>
+            <textarea
+              value={editNotes}
+              onChange={(e) => onNotesChange(e.target.value)}
+              className="input-field"
+              rows={2}
+              placeholder="e.g. Needs projector, instructor confirmed..."
+              style={{ width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0.5rem 0.65rem', resize: 'vertical' }}
+            />
+          </div>
+
+          <div className="input-group">
+            <label style={{ fontWeight: 700, fontSize: '0.82rem', color: '#334155' }}>Collaborators / Partners</label>
             <input
               type="text"
               value={editCollaborator}
               onChange={(e) => onCollaboratorChange(e.target.value)}
               className="input-field"
               placeholder="e.g. TechHub PH, DOST, UP Diliman..."
-              style={{ borderRadius: '0.5rem' }}
+              style={{ width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0.5rem 0.65rem' }}
             />
           </div>
 
-          {/* Copy this Event to Another Date UI */}
-          <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem', marginTop: '0.5rem' }}>
-            <label style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--primary)', display: 'block', marginBottom: '0.4rem' }}>
-              Copy this Event to Another Date
-            </label>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {/* Duplicate / Copy Session Section */}
+          <div style={{ background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.84rem', marginBottom: '0.45rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span>📋</span> Duplicate This Session to Another Date
+            </div>
+            <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center' }}>
               <input
                 type="date"
                 value={copyDate}
                 onChange={(e) => onCopyDateChange(e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
                 className="input-field"
-                style={{ borderRadius: '0.5rem', flex: 1, padding: '0.5rem' }}
+                style={{ flex: 1, borderRadius: '8px', padding: '0.45rem 0.65rem', fontSize: '0.84rem', border: '1px solid #cbd5e1' }}
               />
               <button
                 type="button"
                 onClick={onCopySession}
                 disabled={copyLoading || !copyDate}
                 style={{
-                  padding: '0.55rem 1.1rem',
-                  borderRadius: '0.5rem',
-                  background: 'var(--accent)',
-                  color: 'white',
+                  padding: '0.5rem 0.95rem',
+                  borderRadius: '8px',
+                  background: copyLoading || !copyDate ? '#f1f5f9' : '#0f172a',
                   border: 'none',
-                  fontWeight: 600,
-                  cursor: (copyLoading || !copyDate) ? 'not-allowed' : 'pointer',
-                  fontSize: '0.85rem'
+                  color: copyLoading || !copyDate ? '#94a3b8' : '#ffffff',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  cursor: copyLoading || !copyDate ? 'not-allowed' : 'pointer',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.15s ease',
                 }}
               >
-                {copyLoading ? 'Copying...' : 'Copy Event'}
+                {copyLoading ? 'Copying...' : 'Copy to Date'}
               </button>
             </div>
-            {copyError && <div style={{ color: '#b91c1c', fontSize: '0.78rem', marginTop: '4px' }}>{copyError}</div>}
-            {copySuccess && <div style={{ color: '#166534', fontSize: '0.78rem', marginTop: '4px' }}>{copySuccess}</div>}
+            {copyError && <div style={{ color: '#b91c1c', fontSize: '0.78rem', marginTop: '4px', fontWeight: 600 }}>{copyError}</div>}
+            {copySuccess && <div style={{ color: '#166534', fontSize: '0.78rem', marginTop: '4px', fontWeight: 700 }}>✓ {copySuccess}</div>}
           </div>
 
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+          {/* Action Row */}
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', paddingTop: '0.85rem', borderTop: '1px solid #f1f5f9' }}>
             <button
               type="button"
               onClick={onDeleteSession}
               disabled={deleteLoading}
               style={{
-                padding: '0.55rem 1.1rem',
-                borderRadius: '0.5rem',
-                background: '#fecaca',
+                padding: '0.65rem 1rem',
+                borderRadius: '8px',
+                background: '#fef2f2',
                 color: '#dc2626',
-                border: '1px solid #fca5a5',
-                fontWeight: 600,
-                cursor: 'pointer'
+                border: '1px solid #fecaca',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                cursor: deleteLoading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.15s ease',
               }}
-              onMouseOver={(e) => { e.currentTarget.style.background = '#fca5a5' }}
-              onMouseOut={(e) => { e.currentTarget.style.background = '#fecaca' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#fee2e2' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#fef2f2' }}
             >
-              {deleteLoading ? 'Deleting...' : '🗑️ Delete'}
+              {deleteLoading ? 'Processing...' : '🗑️ Cancel / Delete'}
             </button>
-            <button type="button" onClick={onClose} className="admin-btn-outline" style={{ flex: 1, padding: '0.55rem', borderRadius: '0.5rem' }}>Cancel</button>
-            <button type="submit" disabled={editLoading} className="pricing-btn pricing-btn-solid" style={{ flex: 1, padding: '0.55rem', borderRadius: '0.5rem', background: 'var(--accent)', border: 'none', color: 'white', fontWeight: 600 }}>
-              {editLoading ? 'Saving...' : 'Save Changes'}
+
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                flex: 1,
+                padding: '0.65rem',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                color: '#334155',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={editLoading}
+              style={{
+                flex: 1,
+                padding: '0.65rem',
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                border: 'none',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                cursor: editLoading ? 'not-allowed' : 'pointer',
+                boxShadow: '0 3px 12px rgba(99,102,241,0.3)',
+              }}
+            >
+              {editLoading ? 'Saving Changes...' : 'Save Changes'}
             </button>
           </div>
         </form>
