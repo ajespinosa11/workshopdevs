@@ -14,14 +14,11 @@ export default function BookingsModal({ session, onClose }: BookingsModalProps) 
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'CONFIRMED' | 'CHECKED_IN' | 'BALANCE_DUE'>('ALL')
 
-  if (!session) return null
-
   // Active bookings (excluding cancelled/refunded by default)
   const activeBookings = useMemo(() => {
-    return session.bookings
-      ? session.bookings.filter((b: any) => !['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED'].includes(b.status))
-      : []
-  }, [session.bookings])
+    if (!session || !session.bookings) return []
+    return session.bookings.filter((b: any) => !['CANCELLED', 'CANCELLED_BY_CUSTOMER', 'REFUNDED'].includes(b.status))
+  }, [session])
 
   const totalPax = useMemo(() => {
     return activeBookings.reduce((sum, b) => sum + (b.participantsCount || 1), 0)
@@ -61,6 +58,8 @@ export default function BookingsModal({ session, onClose }: BookingsModalProps) 
       )
     })
   }, [activeBookings, searchQuery, statusFilter])
+
+  if (!session) return null
 
   const handleExportCSV = () => {
     if (activeBookings.length === 0) return
